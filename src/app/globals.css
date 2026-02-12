@@ -1,0 +1,152 @@
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --liberty-red: #B22234;
+  --liberty-blue: #3C3B6E;
+  --liberty-gold: #D4AF37;
+  --liberty-dark: #0A0A0F;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background: var(--liberty-dark);
+  color: white;
+}
+
+.font-bebas {
+  font-family: 'Bebas Neue', sans-serif;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(212, 175, 55, 0.3);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(212, 175, 55, 0.5);
+}
+
+/* Animated background */
+.liberty-bg {
+  background: 
+    radial-gradient(ellipse at 20% 80%, rgba(178, 34, 52, 0.15) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 20%, rgba(60, 59, 110, 0.15) 0%, transparent 50%),
+    var(--liberty-dark);
+}
+
+/* Glow effects */
+.gold-glow {
+  text-shadow: 0 0 40px rgba(212, 175, 55, 0.5);
+}
+
+.red-glow {
+  box-shadow: 0 0 30px rgba(178, 34, 52, 0.4);
+}
+
+/* Button styles */
+.btn-primary {
+  @apply px-6 py-3 bg-gradient-to-r from-liberty-red to-red-800 text-white font-semibold rounded-lg 
+         transition-all duration-300 hover:shadow-lg hover:shadow-liberty-red/30 hover:-translate-y-0.5;
+}
+
+.btn-secondary {
+  @apply px-6 py-3 bg-white/10 border border-white/20 text-white font-semibold rounded-lg
+         transition-all duration-300 hover:bg-white/20;
+}
+
+.btn-gold {
+  @apply px-6 py-3 bg-gradient-to-r from-liberty-gold to-yellow-600 text-liberty-dark font-bold rounded-lg
+         transition-all duration-300 hover:shadow-lg hover:shadow-liberty-gold/30 hover:-translate-y-0.5;
+}
+
+/* Card styles */
+.card {
+  @apply bg-white/5 border border-white/10 rounded-xl backdrop-blur-sm;
+}
+
+.card-hover {
+  @apply transition-all duration-300 hover:bg-white/10 hover:border-liberty-gold/30;
+}
+
+/* Input styles */
+.input {
+  @apply w-full px-4 py-3 bg-white/5 border border-white/20 rounded-lg text-white
+         placeholder:text-white/40 focus:outline-none focus:border-liberty-gold transition-colors;
+}
+
+/* Progress bar */
+.progress-bar {
+  @apply h-4 bg-white/10 rounded-full overflow-hidden;
+}
+
+.progress-fill {
+  @apply h-full bg-gradient-to-r from-liberty-red via-liberty-gold to-liberty-blue 
+         transition-all duration-500 ease-out;
+}
+
+/* Leaderboard row */
+.leaderboard-row {
+  @apply flex items-center gap-4 p-4 rounded-lg transition-colors hover:bg-white/5;
+}
+
+.rank-badge {
+  @apply w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg;
+}
+
+.rank-1 { @apply bg-gradient-to-br from-yellow-400 to-yellow-600 text-liberty-dark; }
+.rank-2 { @apply bg-gradient-to-br from-gray-300 to-gray-400 text-liberty-dark; }
+.rank-3 { @apply bg-gradient-to-br from-orange-400 to-orange-600 text-liberty-dark; }
+.rank-default { @apply bg-white/10 text-white/70; }
+
+/* Achievement badge */
+.achievement {
+  @apply flex flex-col items-center gap-2 p-4 rounded-xl bg-white/5 border border-white/10
+         transition-all duration-300;
+}
+
+.achievement.earned {
+  @apply border-liberty-gold/50 bg-liberty-gold/10;
+}
+
+.achievement.locked {
+  @apply opacity-50 grayscale;
+}
+
+/* Streak flame animation */
+@keyframes flame {
+  0%, 100% { transform: scaleY(1); }
+  50% { transform: scaleY(1.1); }
+}
+
+.streak-flame {
+  animation: flame 0.5s ease-in-out infinite;
+}
+
+/* Number counter animation */
+@keyframes countUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.count-up {
+  animation: countUp 0.5s ease-out forwards;
+}
+
+/* Confetti burst for achievements */
+@keyframes confetti {
+  0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(-100px) rotate(720deg); opacity: 0; }
+}
