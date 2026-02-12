@@ -24,21 +24,32 @@ export default function Navigation() {
     return () => subscription.unsubscribe()
   }, [])
 
-  const navLinks = [
-    { href: '/', label: 'Home' },
-    { href: '/leaderboard', label: 'Leaderboard' },
-    { href: '/states', label: 'States' },
-    { href: '/contests', label: 'Contests' },
-  ]
+  // Different nav links for logged in vs logged out
+  const navLinks = user
+    ? [
+        { href: '/dashboard', label: 'Dashboard' },
+        { href: '/leaderboard', label: 'Leaderboard' },
+        { href: '/states', label: 'States' },
+        { href: '/contests', label: 'Contests' },
+      ]
+    : [
+        { href: '/', label: 'Home' },
+        { href: '/leaderboard', label: 'Leaderboard' },
+        { href: '/states', label: 'States' },
+        { href: '/contests', label: 'Contests' },
+      ]
 
   const isActive = (href: string) => pathname === href
+
+  // Home link goes to dashboard if logged in
+  const homeLink = user ? '/dashboard' : '/'
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-liberty-dark/80 backdrop-blur-md border-b border-white/10">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2">
+          <Link href={homeLink} className="flex items-center gap-2">
             <span className="text-2xl">🇺🇸</span>
             <span className="font-bebas text-2xl text-liberty-gold">LIBERTY LIFT</span>
           </Link>
@@ -63,17 +74,12 @@ export default function Navigation() {
           {/* Auth Buttons */}
           <div className="hidden md:flex items-center gap-4">
             {user ? (
-              <>
-                <Link href="/dashboard" className="btn-secondary text-sm py-2">
-                  Dashboard
-                </Link>
-                <button
-                  onClick={() => supabase.auth.signOut()}
-                  className="text-sm text-white/70 hover:text-white transition-colors"
-                >
-                  Sign Out
-                </button>
-              </>
+              <button
+                onClick={() => supabase.auth.signOut()}
+                className="text-sm text-white/70 hover:text-white transition-colors"
+              >
+                Sign Out
+              </button>
             ) : (
               <>
                 <Link href="/login" className="text-sm text-white/70 hover:text-white transition-colors">
@@ -118,20 +124,15 @@ export default function Navigation() {
             ))}
             <div className="mt-4 pt-4 border-t border-white/10 flex flex-col gap-2">
               {user ? (
-                <>
-                  <Link href="/dashboard" className="btn-secondary text-sm py-2 text-center">
-                    Dashboard
-                  </Link>
-                  <button
-                    onClick={() => { supabase.auth.signOut(); setMenuOpen(false); }}
-                    className="text-sm text-white/70 py-2"
-                  >
-                    Sign Out
-                  </button>
-                </>
+                <button
+                  onClick={() => { supabase.auth.signOut(); setMenuOpen(false); }}
+                  className="text-sm text-white/70 py-2 text-left"
+                >
+                  Sign Out
+                </button>
               ) : (
                 <>
-                  <Link href="/login" className="text-sm text-white/70 py-2 text-center">
+                  <Link href="/login" className="text-sm text-white/70 py-2">
                     Sign In
                   </Link>
                   <Link href="/signup" className="btn-primary text-sm py-2 text-center">
