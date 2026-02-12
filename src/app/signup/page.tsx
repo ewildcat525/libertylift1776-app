@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase'
 import { US_STATES } from '@/lib/supabase'
@@ -8,11 +9,12 @@ import Navigation from '@/components/Navigation'
 
 export default function SignupPage() {
   const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [displayName, setDisplayName] = useState('')
   const [stateCode, setStateCode] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState(false)
+  const router = useRouter()
   const supabase = createClient()
 
   const handleSignup = async (e: React.FormEvent) => {
@@ -20,11 +22,10 @@ export default function SignupPage() {
     setLoading(true)
     setError(null)
 
-    // Sign up with magic link
-    const { error: signUpError } = await supabase.auth.signInWithOtp({
+    const { data, error: signUpError } = await supabase.auth.signUp({
       email,
+      password,
       options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
         data: {
           display_name: displayName,
           state_code: stateCode || null,
@@ -34,30 +35,19 @@ export default function SignupPage() {
 
     if (signUpError) {
       setError(signUpError.message)
-    } else {
-      setSuccess(true)
+      setLoading(false)
+      return
     }
-    setLoading(false)
-  }
 
-  if (success) {
-    return (
-      <>
-        <Navigation />
-        <div className="min-h-screen flex items-center justify-center px-4 pt-16">
-          <div className="card p-8 max-w-md w-full text-center">
-            <div className="text-6xl mb-4">🎉</div>
-            <h1 className="font-bebas text-4xl text-liberty-gold mb-4">WELCOME, PATRIOT!</h1>
-            <p className="text-white/70 mb-6">
-              Check your email at <span className="text-white font-semibold">{email}</span> for a magic link to complete your signup.
-            </p>
-            <p className="text-white/50 text-sm">
-              Once verified, you'll be ready to start your journey to 1776!
-            </p>
-          </div>
-        </div>
-      </>
-    )
+    // Update profile with display name and state
+    if (data.user) {
+      await supabase.from('profiles').update({
+        display_name: displayName,
+        state_code: stateCode || null,
+      }).eq('id', data.user.id)
+    }
+
+    router.push('/dashboard')
   }
 
   return (
@@ -81,6 +71,19 @@ export default function SignupPage() {
                 className="input"
                 placeholder="patriot@example.com"
                 required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm text-white/70 mb-2">Password *</label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="input"
+                placeholder="At least 6 characters"
+                required
+                minLength={6}
               />
             </div>
 
