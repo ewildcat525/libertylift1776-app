@@ -2,18 +2,44 @@
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase'
 import Navigation from '@/components/Navigation'
 
 export default function Home() {
   const [daysUntilJuly, setDaysUntilJuly] = useState(0)
+  const [loading, setLoading] = useState(true)
+  const router = useRouter()
+  const supabase = createClient()
 
   useEffect(() => {
+    // Check if user is authenticated
+    const checkAuth = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        router.push('/dashboard')
+        return
+      }
+      setLoading(false)
+    }
+    checkAuth()
+
+    // Calculate days until July
     const july1 = new Date('2026-07-01T00:00:00')
     const now = new Date()
     const diff = july1.getTime() - now.getTime()
     const days = Math.max(0, Math.floor(diff / (1000 * 60 * 60 * 24)))
     setDaysUntilJuly(days)
-  }, [])
+  }, [router])
+
+  // Show nothing while checking auth to prevent flash
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-liberty-blue">
+        <div className="text-white/50">Loading...</div>
+      </div>
+    )
+  }
 
   return (
     <>
