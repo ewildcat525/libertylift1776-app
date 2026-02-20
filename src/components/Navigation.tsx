@@ -1,16 +1,23 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase'
 import type { User } from '@supabase/supabase-js'
 
 export default function Navigation() {
   const pathname = usePathname()
+  const router = useRouter()
   const [user, setUser] = useState<User | null>(null)
   const [menuOpen, setMenuOpen] = useState(false)
   const supabase = createClient()
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut()
+    setUser(null)
+    router.push('/')
+  }
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -75,7 +82,7 @@ export default function Navigation() {
           <div className="hidden md:flex items-center gap-4">
             {user ? (
               <button
-                onClick={() => supabase.auth.signOut()}
+                onClick={handleSignOut}
                 className="text-sm text-white/70 hover:text-white transition-colors"
               >
                 Sign Out
@@ -125,7 +132,7 @@ export default function Navigation() {
             <div className="mt-4 pt-4 border-t border-white/10 flex flex-col gap-2">
               {user ? (
                 <button
-                  onClick={() => { supabase.auth.signOut(); setMenuOpen(false); }}
+                  onClick={() => { handleSignOut(); setMenuOpen(false); }}
                   className="text-sm text-white/70 py-2 text-left"
                 >
                   Sign Out
