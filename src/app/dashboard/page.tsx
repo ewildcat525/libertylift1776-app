@@ -25,20 +25,48 @@ export default function DashboardPage() {
       }
       setUser(user)
 
-      // Load profile
-      const { data: profileData } = await supabase
+      // Load profile (create if missing - handles users created before trigger was added)
+      let { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', user.id)
         .single()
+      
+      if (profileError && profileError.code === 'PGRST116') {
+        // No profile exists, create one
+        const { data: newProfile, error: insertError } = await supabase
+          .from('profiles')
+          .insert({ id: user.id, email: user.email })
+          .select()
+          .single()
+        if (!insertError) {
+          profileData = newProfile
+        } else {
+          console.error('Failed to create profile:', insertError)
+        }
+      }
       setProfile(profileData)
 
-      // Load stats
-      const { data: statsData } = await supabase
+      // Load stats (create if missing - handles users created before trigger was added)
+      let { data: statsData, error: statsError } = await supabase
         .from('user_stats')
         .select('*')
         .eq('user_id', user.id)
         .single()
+      
+      if (statsError && statsError.code === 'PGRST116') {
+        // No stats row exists, create one
+        const { data: newStats, error: insertError } = await supabase
+          .from('user_stats')
+          .insert({ user_id: user.id })
+          .select()
+          .single()
+        if (!insertError) {
+          statsData = newStats
+        } else {
+          console.error('Failed to create user_stats:', insertError)
+        }
+      }
       setStats(statsData)
     }
 
@@ -54,6 +82,13 @@ export default function DashboardPage() {
     const { error } = await supabase
       .from('pushup_logs')
       .insert({ user_id: user.id, count })
+
+    if (error) {
+      console.error('Error logging pushups:', error)
+      alert(`Error: ${error.message}`)
+      setLogging(false)
+      return
+    }
 
     if (!error) {
       // Refresh stats
