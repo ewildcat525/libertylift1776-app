@@ -11,13 +11,11 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Liberty Lift 1776',
     description: 'Complete 1776 push-ups in July. Are you ready to earn your freedom?',
-    images: ['/og-image.png'],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Liberty Lift 1776',
     description: 'Complete 1776 push-ups in July. Are you ready to earn your freedom?',
-    images: ['/og-image.png'],
   },
 }
 
