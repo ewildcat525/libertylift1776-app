@@ -102,6 +102,12 @@ export default function DashboardPage() {
     const count = parseInt(pushupCount)
     if (!count || count < 1 || !user) return
 
+    // Validate date is in July 2026
+    if (!logDate.startsWith('2026-07-')) {
+      alert('🇺🇸 The Liberty Lift challenge is for the month of July only!')
+      return
+    }
+
     setLogging(true)
 
     // Create timestamp for the selected date (noon to avoid timezone issues)
