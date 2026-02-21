@@ -38,20 +38,6 @@ export default function LeaderboardPage() {
     return b.total_pushups - a.total_pushups
   })
 
-  const getRankStyle = (rank: number) => {
-    if (rank === 1) return 'rank-1'
-    if (rank === 2) return 'rank-2'
-    if (rank === 3) return 'rank-3'
-    return 'rank-default'
-  }
-
-  const getRankEmoji = (rank: number) => {
-    if (rank === 1) return '🥇'
-    if (rank === 2) return '🥈'
-    if (rank === 3) return '🥉'
-    return rank.toString()
-  }
-
   return (
     <>
       <Navigation />
@@ -74,7 +60,7 @@ export default function LeaderboardPage() {
             ].map((tab) => (
               <button
                 key={tab.key}
-                onClick={() => setFilter(tab.key as any)}
+                onClick={() => setFilter(tab.key as 'all' | 'streak' | 'daily')}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                   filter === tab.key
                     ? 'bg-liberty-gold text-liberty-dark'
@@ -86,7 +72,7 @@ export default function LeaderboardPage() {
             ))}
           </div>
 
-          {/* Leaderboard */}
+          {/* Leaderboard Content */}
           {loading ? (
             <div className="text-center text-white/50 py-12">Loading leaderboard...</div>
           ) : leaderboard.length === 0 ? (
@@ -96,93 +82,38 @@ export default function LeaderboardPage() {
               <p className="text-white/60">Be the first to log your push-ups and claim the top spot.</p>
             </div>
           ) : (
-            <div className="card overflow-hidden">
-              {/* Top 3 Podium */}
-              {sortedLeaderboard.length >= 3 && (
-                <div className="bg-gradient-to-b from-liberty-gold/10 to-transparent p-8">
-                  <div className="flex items-end justify-center gap-4">
-                    {/* 2nd Place */}
-                    <div className="text-center flex-1 max-w-[150px]">
-                      <div className="text-4xl mb-2">🥈</div>
-                      <div className="font-semibold text-white truncate">
-                        {sortedLeaderboard[1].display_name || 'Anonymous'}
-                      </div>
-                      <div className="text-sm text-white/50">
-                        {sortedLeaderboard[1].state_code && US_STATES[sortedLeaderboard[1].state_code]}
-                      </div>
-                      <div className="font-bebas text-2xl text-white mt-1">
-                        {filter === 'streak' ? sortedLeaderboard[1].current_streak :
-                         filter === 'daily' ? sortedLeaderboard[1].best_day :
-                         sortedLeaderboard[1].total_pushups.toLocaleString()}
-                      </div>
+            <div className="card overflow-hidden divide-y divide-white/10">
+              {sortedLeaderboard.map((entry, index) => (
+                <div key={entry.id} className="flex items-center gap-4 p-4 hover:bg-white/5 transition-colors">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg ${
+                    index === 0 ? 'bg-gradient-to-br from-yellow-400 to-yellow-600 text-liberty-dark' :
+                    index === 1 ? 'bg-gradient-to-br from-gray-300 to-gray-400 text-liberty-dark' :
+                    index === 2 ? 'bg-gradient-to-br from-orange-400 to-orange-600 text-liberty-dark' :
+                    'bg-white/10 text-white/70'
+                  }`}>
+                    {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : index + 1}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-white truncate">
+                      {entry.display_name || 'Anonymous'}
                     </div>
-
-                    {/* 1st Place */}
-                    <div className="text-center flex-1 max-w-[180px] -mt-4">
-                      <div className="text-5xl mb-2">🥇</div>
-                      <div className="font-bold text-liberty-gold text-lg truncate">
-                        {sortedLeaderboard[0].display_name || 'Anonymous'}
-                      </div>
-                      <div className="text-sm text-white/50">
-                        {sortedLeaderboard[0].state_code && US_STATES[sortedLeaderboard[0].state_code]}
-                      </div>
-                      <div className="font-bebas text-4xl text-liberty-gold mt-1">
-                        {filter === 'streak' ? sortedLeaderboard[0].current_streak :
-                         filter === 'daily' ? sortedLeaderboard[0].best_day :
-                         sortedLeaderboard[0].total_pushups.toLocaleString()}
-                      </div>
+                    <div className="text-sm text-white/50">
+                      {entry.state_code ? US_STATES[entry.state_code] : 'No state'}
+                      {entry.current_streak > 0 && ` • 🔥 ${entry.current_streak} day streak`}
                     </div>
-
-                    {/* 3rd Place */}
-                    <div className="text-center flex-1 max-w-[150px]">
-                      <div className="text-4xl mb-2">🥉</div>
-                      <div className="font-semibold text-white truncate">
-                        {sortedLeaderboard[2].display_name || 'Anonymous'}
-                      </div>
-                      <div className="text-sm text-white/50">
-                        {sortedLeaderboard[2].state_code && US_STATES[sortedLeaderboard[2].state_code]}
-                      </div>
-                      <div className="font-bebas text-2xl text-white mt-1">
-                        {filter === 'streak' ? sortedLeaderboard[2].current_streak :
-                         filter === 'daily' ? sortedLeaderboard[2].best_day :
-                         sortedLeaderboard[2].total_pushups.toLocaleString()}
-                      </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-bebas text-2xl text-white">
+                      {filter === 'streak' ? entry.current_streak :
+                       filter === 'daily' ? entry.best_day :
+                       entry.total_pushups.toLocaleString()}
+                    </div>
+                    <div className="text-xs text-white/50">
+                      {filter === 'streak' ? 'days' : filter === 'daily' ? 'in one day' : 'push-ups'}
                     </div>
                   </div>
                 </div>
-              )}
-
-              {/* Rest of leaderboard */}
-              <div className="divide-y divide-white/10">
-                {sortedLeaderboard.slice(3).map((entry, index) => (
-                  <div key={entry.id} className="leaderboard-row">
-                    <div className={`rank-badge ${getRankStyle(index + 4)}`}>
-                      {index + 4}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="font-semibold text-white truncate">
-                        {entry.display_name || 'Anonymous'}
-                      </div>
-                      <div className="text-sm text-white/50">
-                        {entry.state_code ? US_STATES[entry.state_code] : 'No state'}
-                        {entry.current_streak > 0 && ` • 🔥 ${entry.current_streak} day streak`}
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="font-bebas text-2xl text-white">
-                        {filter === 'streak' ? entry.current_streak :
-                         filter === 'daily' ? entry.best_day :
-                         entry.total_pushups.toLocaleString()}
-                      </div>
-                      <div className="text-xs text-white/50">
-                        {filter === 'streak' ? 'days' :
-                         filter === 'daily' ? 'in one day' :
-                         'push-ups'}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              ))}
             </div>
           )}
         </div>
