@@ -20,6 +20,7 @@ export default function DashboardPage() {
   })
   const [logging, setLogging] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
+  const [showError, setShowError] = useState<string | null>(null)
   const [currentFact, setCurrentFact] = useState<string | null>(null)
   const [dailyLogs, setDailyLogs] = useState<Record<string, number>>({})
   const [calendarMonth] = useState(() => new Date(2026, 6, 1)) // July is month 6 (0-indexed)
@@ -104,7 +105,8 @@ export default function DashboardPage() {
 
     // Validate date is in July 2026
     if (!logDate.startsWith('2026-07-')) {
-      alert('🇺🇸 The Liberty Lift challenge is for the month of July only!')
+      setShowError('🇺🇸 The Liberty Lift challenge is for the month of July only!')
+      setTimeout(() => setShowError(null), 4000)
       return
     }
 
@@ -119,7 +121,8 @@ export default function DashboardPage() {
 
     if (error) {
       console.error('Error logging pushups:', error)
-      alert(`Error: ${error.message}`)
+      setShowError(`Error: ${error.message}`)
+      setTimeout(() => setShowError(null), 4000)
       setLogging(false)
       return
     }
@@ -308,6 +311,13 @@ export default function DashboardPage() {
             {showSuccess && (
               <div className="mt-4 p-4 bg-green-500/20 border border-green-500/50 rounded-lg text-center text-green-300">
                 🎉 Push-ups logged! Keep going, patriot!
+              </div>
+            )}
+
+            {/* Error Message */}
+            {showError && (
+              <div className="mt-4 p-4 bg-red-500/20 border border-red-500/50 rounded-lg text-center text-red-300">
+                {showError}
               </div>
             )}
 
