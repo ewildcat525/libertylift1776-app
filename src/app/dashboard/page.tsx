@@ -14,6 +14,8 @@ export default function DashboardPage() {
   const [logging, setLogging] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
   const [currentFact, setCurrentFact] = useState<string | null>(null)
+  const [dailyLogs, setDailyLogs] = useState<Record<string, number>>({})
+  const [calendarMonth, setCalendarMonth] = useState(() => new Date())
   const router = useRouter()
   const supabase = createClient()
 
@@ -69,6 +71,21 @@ export default function DashboardPage() {
         }
       }
       setStats(statsData)
+
+      // Load daily logs for calendar
+      const { data: logsData } = await supabase
+        .from('pushup_logs')
+        .select('logged_at, count')
+        .eq('user_id', user.id)
+      
+      if (logsData) {
+        const grouped: Record<string, number> = {}
+        logsData.forEach(log => {
+          const date = new Date(log.logged_at).toISOString().split('T')[0]
+          grouped[date] = (grouped[date] || 0) + log.count
+        })
+        setDailyLogs(grouped)
+      }
     }
 
     loadData()
@@ -111,12 +128,42 @@ export default function DashboardPage() {
       }
 
       setStats(newStats)
+      
+      // Update daily logs for calendar
+      setDailyLogs(prev => ({
+        ...prev,
+        [logDate]: (prev[logDate] || 0) + count
+      }))
+      
       setPushupCount('')
       setShowSuccess(true)
       setTimeout(() => setShowSuccess(false), 3000)
     }
 
     setLogging(false)
+  }
+
+  // Calendar helpers
+  const getDaysInMonth = (date: Date) => {
+    const year = date.getFullYear()
+    const month = date.getMonth()
+    const firstDay = new Date(year, month, 1)
+    const lastDay = new Date(year, month + 1, 0)
+    const daysInMonth = lastDay.getDate()
+    const startingDay = firstDay.getDay()
+    return { daysInMonth, startingDay, year, month }
+  }
+
+  const formatMonthYear = (date: Date) => {
+    return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+  }
+
+  const prevMonth = () => {
+    setCalendarMonth(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1))
+  }
+
+  const nextMonth = () => {
+    setCalendarMonth(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1))
   }
 
   const progress = stats ? (stats.total_pushups / 1776) * 100 : 0
@@ -278,7 +325,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Pace Indicator */}
-          <div className="card p-6 text-center">
+          <div className="card p-6 text-center mb-8">
             <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full ${
               pace === 'ahead' ? 'bg-green-500/20 text-green-300' :
               pace === 'behind' ? 'bg-yellow-500/20 text-yellow-300' :
@@ -294,6 +341,98 @@ export default function DashboardPage() {
             <p className="text-sm text-white/50 mt-2">
               Target: ~{dailyTarget} push-ups per day to hit 1,776 by July 31st
             </p>
+          </div>
+
+          {/* Calendar */}
+          <div className="card p-6">
+            <div className="flex items-center justify-between mb-4">
+              <button 
+                onClick={prevMonth}
+                className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+              >
+                ←
+              </button>
+              <h2 className="font-bebas text-2xl text-liberty-red">
+                {formatMonthYear(calendarMonth)}
+              </h2>
+              <button 
+                onClick={nextMonth}
+                className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+              >
+                →
+              </button>
+            </div>
+            
+            {/* Day headers */}
+            <div className="grid grid-cols-7 gap-1 mb-2">
+              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                <div key={day} className="text-center text-xs text-white/50 font-semibold py-1">
+                  {day}
+                </div>
+              ))}
+            </div>
+            
+            {/* Calendar grid */}
+            <div className="grid grid-cols-7 gap-1">
+              {(() => {
+                const { daysInMonth, startingDay, year, month } = getDaysInMonth(calendarMonth)
+                const days = []
+                
+                // Empty cells for days before the 1st
+                for (let i = 0; i < startingDay; i++) {
+                  days.push(<div key={`empty-${i}`} className="aspect-square" />)
+                }
+                
+                // Days of the month
+                for (let day = 1; day <= daysInMonth; day++) {
+                  const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+                  const count = dailyLogs[dateStr] || 0
+                  const isToday = dateStr === new Date().toISOString().split('T')[0]
+                  
+                  days.push(
+                    <div 
+                      key={day}
+                      onClick={() => setLogDate(dateStr)}
+                      className={`aspect-square rounded-lg flex flex-col items-center justify-center cursor-pointer transition-all text-xs
+                        ${count > 0 
+                          ? count >= 57 
+                            ? 'bg-liberty-red/40 border border-liberty-red/60' 
+                            : 'bg-liberty-red/20 border border-liberty-red/30'
+                          : 'bg-white/5 hover:bg-white/10'
+                        }
+                        ${isToday ? 'ring-2 ring-liberty-gold' : ''}
+                        ${logDate === dateStr ? 'ring-2 ring-white' : ''}
+                      `}
+                    >
+                      <span className={`font-semibold ${count > 0 ? 'text-white' : 'text-white/60'}`}>
+                        {day}
+                      </span>
+                      {count > 0 && (
+                        <span className="text-[10px] text-liberty-red font-bold">{count}</span>
+                      )}
+                    </div>
+                  )
+                }
+                
+                return days
+              })()}
+            </div>
+            
+            {/* Legend */}
+            <div className="flex items-center justify-center gap-4 mt-4 text-xs text-white/50">
+              <div className="flex items-center gap-1">
+                <div className="w-3 h-3 bg-liberty-red/20 border border-liberty-red/30 rounded"></div>
+                <span>Logged</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-3 h-3 bg-liberty-red/40 border border-liberty-red/60 rounded"></div>
+                <span>57+ (on pace)</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-3 h-3 ring-2 ring-liberty-gold rounded"></div>
+                <span>Today</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
