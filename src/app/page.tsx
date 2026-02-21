@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import Navigation from '@/components/Navigation'
+import Countdown from '@/components/Countdown'
 
 export default function Home() {
   const [daysUntilJuly, setDaysUntilJuly] = useState(0)
@@ -89,14 +90,7 @@ export default function Home() {
           </div>
 
           {/* Countdown */}
-          {daysUntilJuly > 0 && (
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-liberty-red/30">
-              <span className="w-2 h-2 bg-liberty-red rounded-full animate-pulse"></span>
-              <span className="text-sm text-white/70">
-                Launching in <span className="text-liberty-red font-semibold">{daysUntilJuly}</span> days
-              </span>
-            </div>
-          )}
+          <Countdown />
         </div>
       </section>
 
