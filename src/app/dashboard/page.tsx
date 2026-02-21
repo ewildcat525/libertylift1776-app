@@ -365,9 +365,9 @@ export default function DashboardPage() {
                   days.push(<div key={`empty-${i}`} className="aspect-square" />)
                 }
                 
-                // Days of the month
+                // Days of the month (hardcoded to July 2026)
                 for (let day = 1; day <= daysInMonth; day++) {
-                  const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+                  const dateStr = `2026-07-${String(day).padStart(2, '0')}`
                   const count = dailyLogs[dateStr] || 0
                   const isToday = dateStr === new Date().toISOString().split('T')[0]
                   
