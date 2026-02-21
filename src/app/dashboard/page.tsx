@@ -10,12 +10,19 @@ export default function DashboardPage() {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [stats, setStats] = useState<UserStats | null>(null)
   const [pushupCount, setPushupCount] = useState('')
-  const [logDate, setLogDate] = useState(() => new Date().toISOString().split('T')[0])
+  const [logDate, setLogDate] = useState(() => {
+    const now = new Date()
+    const julyStart = new Date('2026-07-01')
+    const julyEnd = new Date('2026-07-31')
+    if (now < julyStart) return '2026-07-01'
+    if (now > julyEnd) return '2026-07-31'
+    return now.toISOString().split('T')[0]
+  })
   const [logging, setLogging] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
   const [currentFact, setCurrentFact] = useState<string | null>(null)
   const [dailyLogs, setDailyLogs] = useState<Record<string, number>>({})
-  const [calendarMonth, setCalendarMonth] = useState(() => new Date())
+  const [calendarMonth] = useState(() => new Date('2026-07-01'))
   const router = useRouter()
   const supabase = createClient()
 
@@ -154,18 +161,6 @@ export default function DashboardPage() {
     return { daysInMonth, startingDay, year, month }
   }
 
-  const formatMonthYear = (date: Date) => {
-    return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
-  }
-
-  const prevMonth = () => {
-    setCalendarMonth(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1))
-  }
-
-  const nextMonth = () => {
-    setCalendarMonth(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1))
-  }
-
   const progress = stats ? (stats.total_pushups / 1776) * 100 : 0
   const dailyTarget = 57
   const daysInJuly = 31
@@ -276,7 +271,8 @@ export default function DashboardPage() {
                   type="date"
                   value={logDate}
                   onChange={(e) => setLogDate(e.target.value)}
-                  max={new Date().toISOString().split('T')[0]}
+                  min="2026-07-01"
+                  max="2026-07-31"
                   className="input text-center w-40"
                 />
               </div>
@@ -345,23 +341,9 @@ export default function DashboardPage() {
 
           {/* Calendar */}
           <div className="card p-6">
-            <div className="flex items-center justify-between mb-4">
-              <button 
-                onClick={prevMonth}
-                className="p-2 hover:bg-white/10 rounded-lg transition-colors"
-              >
-                ←
-              </button>
-              <h2 className="font-bebas text-2xl text-liberty-red">
-                {formatMonthYear(calendarMonth)}
-              </h2>
-              <button 
-                onClick={nextMonth}
-                className="p-2 hover:bg-white/10 rounded-lg transition-colors"
-              >
-                →
-              </button>
-            </div>
+            <h2 className="font-bebas text-2xl text-liberty-red text-center mb-4">
+              JULY 2026 🇺🇸
+            </h2>
             
             {/* Day headers */}
             <div className="grid grid-cols-7 gap-1 mb-2">
