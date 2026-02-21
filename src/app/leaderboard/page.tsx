@@ -12,11 +12,15 @@ export default function LeaderboardPage() {
 
   useEffect(() => {
     const loadLeaderboard = async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('leaderboard')
         .select('*')
         .limit(100)
       
+      if (error) {
+        console.error('Leaderboard error:', error)
+      }
+      console.log('Leaderboard data:', data)
       setLeaderboard(data || [])
       setLoading(false)
     }
