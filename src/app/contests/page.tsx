@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { createClient, Contest } from '@/lib/supabase'
 import Navigation from '@/components/Navigation'
 
@@ -238,26 +239,29 @@ export default function ContestsPage() {
               <h2 className="font-bebas text-2xl text-liberty-gold mb-4">My Contests</h2>
               <div className="space-y-4">
                 {myContests.map((contest) => (
-                  <div key={contest.id} className="card p-4 card-hover">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="font-semibold text-white">{contest.name}</h3>
-                        {contest.description && (
-                          <p className="text-sm text-white/60">{contest.description}</p>
-                        )}
-                        <div className="text-xs text-white/40 mt-1">
-                          Invite code: <span className="text-liberty-gold font-mono">{contest.invite_code}</span>
+                  <Link key={contest.id} href={`/contests/${contest.id}`}>
+                    <div className="card p-4 card-hover cursor-pointer">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="font-semibold text-white">{contest.name}</h3>
+                          {contest.description && (
+                            <p className="text-sm text-white/60">{contest.description}</p>
+                          )}
+                          <div className="text-xs text-white/40 mt-1">
+                            Invite code: <span className="text-liberty-gold font-mono">{contest.invite_code}</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className={`text-xs px-2 py-1 rounded ${
+                            contest.is_public ? 'bg-green-500/20 text-green-300' : 'bg-white/10 text-white/50'
+                          }`}>
+                            {contest.is_public ? 'Public' : 'Private'}
+                          </span>
+                          <span className="text-white/30">→</span>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <span className={`text-xs px-2 py-1 rounded ${
-                          contest.is_public ? 'bg-green-500/20 text-green-300' : 'bg-white/10 text-white/50'
-                        }`}>
-                          {contest.is_public ? 'Public' : 'Private'}
-                        </span>
-                      </div>
                     </div>
-                  </div>
+                  </Link>
                 ))}
               </div>
             </div>
