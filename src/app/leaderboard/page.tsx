@@ -12,32 +12,24 @@ export default function LeaderboardPage() {
 
   useEffect(() => {
     const loadLeaderboard = async () => {
-      const { data, error } = await supabase
-        .from('leaderboard')
-        .select('*')
-        .limit(100)
-      
-      if (error) {
-        console.error('Leaderboard error:', error)
+      try {
+        const { data, error } = await supabase
+          .from('leaderboard')
+          .select('*')
+          .limit(100)
+        
+        if (error) {
+          console.error('Leaderboard error:', error)
+        }
+        setLeaderboard(data || [])
+      } catch (err) {
+        console.error('Leaderboard fetch failed:', err)
+      } finally {
+        setLoading(false)
       }
-      console.log('Leaderboard data:', data)
-      setLeaderboard(data || [])
-      setLoading(false)
     }
 
     loadLeaderboard()
-
-    // Subscribe to real-time updates
-    const channel = supabase
-      .channel('leaderboard-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'user_stats' }, () => {
-        loadLeaderboard()
-      })
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
   }, [])
 
   const sortedLeaderboard = [...leaderboard].sort((a, b) => {
