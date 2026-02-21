@@ -12,8 +12,8 @@ export default function DashboardPage() {
   const [pushupCount, setPushupCount] = useState('')
   const [logDate, setLogDate] = useState(() => {
     const now = new Date()
-    const julyStart = new Date('2026-07-01')
-    const julyEnd = new Date('2026-07-31')
+    const julyStart = new Date(2026, 6, 1)
+    const julyEnd = new Date(2026, 6, 31, 23, 59, 59)
     if (now < julyStart) return '2026-07-01'
     if (now > julyEnd) return '2026-07-31'
     return now.toISOString().split('T')[0]
@@ -22,7 +22,7 @@ export default function DashboardPage() {
   const [showSuccess, setShowSuccess] = useState(false)
   const [currentFact, setCurrentFact] = useState<string | null>(null)
   const [dailyLogs, setDailyLogs] = useState<Record<string, number>>({})
-  const [calendarMonth] = useState(() => new Date('2026-07-01'))
+  const [calendarMonth] = useState(() => new Date(2026, 6, 1)) // July is month 6 (0-indexed)
   const router = useRouter()
   const supabase = createClient()
 
