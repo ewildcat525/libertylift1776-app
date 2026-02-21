@@ -58,7 +58,7 @@ export default function Navigation() {
           {/* Logo */}
           <Link href={homeLink} className="flex items-center gap-2">
             <span className="text-2xl">🇺🇸</span>
-            <span className="font-bebas text-2xl text-liberty-gold">LIBERTY LIFT</span>
+            <span className="font-bebas text-2xl text-liberty-red">LIBERTY LIFT</span>
           </Link>
 
           {/* Desktop Nav */}

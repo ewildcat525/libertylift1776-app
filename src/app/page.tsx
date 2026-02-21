@@ -50,11 +50,11 @@ export default function Home() {
         <div className="text-center max-w-4xl mx-auto">
           <div className="text-6xl mb-6 animate-bounce">🇺🇸</div>
           
-          <h1 className="font-bebas text-6xl sm:text-8xl md:text-9xl text-transparent bg-clip-text bg-gradient-to-b from-white to-liberty-gold gold-glow">
+          <h1 className="font-bebas text-6xl sm:text-8xl md:text-9xl text-transparent bg-clip-text bg-gradient-to-r from-liberty-red via-white to-liberty-blue">
             LIBERTY LIFT
           </h1>
           
-          <div className="font-bebas text-7xl sm:text-9xl md:text-[12rem] text-liberty-gold gold-glow leading-none">
+          <div className="font-bebas text-7xl sm:text-9xl md:text-[12rem] text-liberty-red leading-none" style={{textShadow: '0 0 40px rgba(178, 34, 52, 0.6)'}}>
             1776
           </div>
           
@@ -90,10 +90,10 @@ export default function Home() {
 
           {/* Countdown */}
           {daysUntilJuly > 0 && (
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10">
-              <span className="w-2 h-2 bg-liberty-gold rounded-full animate-pulse"></span>
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-liberty-red/30">
+              <span className="w-2 h-2 bg-liberty-red rounded-full animate-pulse"></span>
               <span className="text-sm text-white/70">
-                Launching in <span className="text-liberty-gold font-semibold">{daysUntilJuly}</span> days
+                Launching in <span className="text-liberty-red font-semibold">{daysUntilJuly}</span> days
               </span>
             </div>
           )}
@@ -103,7 +103,7 @@ export default function Home() {
       {/* How It Works */}
       <section className="py-24 px-4">
         <div className="max-w-6xl mx-auto">
-          <h2 className="font-bebas text-5xl text-center text-liberty-gold mb-16">
+          <h2 className="font-bebas text-5xl text-center text-liberty-red mb-16">
             HOW IT WORKS
           </h2>
           
@@ -138,7 +138,7 @@ export default function Home() {
       {/* Features */}
       <section className="py-24 px-4 bg-white/5">
         <div className="max-w-6xl mx-auto">
-          <h2 className="font-bebas text-5xl text-center text-liberty-gold mb-16">
+          <h2 className="font-bebas text-5xl text-center text-white mb-16">
             FEATURES
           </h2>
           
@@ -166,7 +166,7 @@ export default function Home() {
       {/* Achievements Preview */}
       <section className="py-24 px-4">
         <div className="max-w-6xl mx-auto">
-          <h2 className="font-bebas text-5xl text-center text-liberty-gold mb-4">
+          <h2 className="font-bebas text-5xl text-center text-liberty-red mb-4">
             EARN YOUR BADGES
           </h2>
           <p className="text-center text-white/60 mb-16 max-w-2xl mx-auto">
@@ -205,7 +205,7 @@ export default function Home() {
       {/* Final CTA */}
       <section className="py-24 px-4">
         <div className="max-w-2xl mx-auto text-center">
-          <h2 className="font-bebas text-5xl text-liberty-gold mb-6">
+          <h2 className="font-bebas text-5xl text-liberty-red mb-6">
             READY TO EARN YOUR FREEDOM?
           </h2>
           <p className="text-white/70 mb-8">
@@ -223,7 +223,7 @@ export default function Home() {
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <span>🇺🇸</span>
-            <span className="font-bebas text-xl text-liberty-gold">LIBERTY LIFT 1776</span>
+            <span className="font-bebas text-xl text-liberty-red">LIBERTY LIFT 1776</span>
           </div>
           <div className="text-sm text-white/50">
             © 2026 Liberty Lift 1776. All rights reserved.

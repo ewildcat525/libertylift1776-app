@@ -106,7 +106,7 @@ export default function DashboardPage() {
         <div className="max-w-4xl mx-auto">
           {/* Header */}
           <div className="text-center mb-8">
-            <h1 className="font-bebas text-4xl text-liberty-gold mb-2">
+            <h1 className="font-bebas text-4xl text-liberty-red mb-2">
               Welcome back, {profile?.display_name || 'Patriot'}!
             </h1>
             <p className="text-white/60">Your journey to 1776</p>
@@ -142,8 +142,8 @@ export default function DashboardPage() {
 
             {/* Quick Stats */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <div className="text-center p-4 bg-white/5 rounded-lg">
-                <div className="font-bebas text-3xl text-liberty-gold">
+              <div className="text-center p-4 bg-white/5 rounded-lg border border-liberty-red/20">
+                <div className="font-bebas text-3xl text-liberty-red">
                   {stats?.current_streak || 0}
                 </div>
                 <div className="text-xs text-white/50 uppercase">Day Streak 🔥</div>
@@ -171,7 +171,7 @@ export default function DashboardPage() {
 
           {/* Log Push-ups Card */}
           <div className="card p-8 mb-8">
-            <h2 className="font-bebas text-2xl text-liberty-gold mb-4 text-center">
+            <h2 className="font-bebas text-2xl text-liberty-red mb-4 text-center">
               LOG YOUR PUSH-UPS
             </h2>
             
@@ -216,8 +216,8 @@ export default function DashboardPage() {
 
             {/* Fun Fact */}
             {currentFact && (
-              <div className="mt-4 p-4 bg-liberty-gold/20 border border-liberty-gold/50 rounded-lg text-center">
-                <div className="text-liberty-gold font-semibold mb-1">🇺🇸 Milestone Reached!</div>
+              <div className="mt-4 p-4 bg-liberty-red/20 border border-liberty-red/50 rounded-lg text-center">
+                <div className="text-liberty-red font-semibold mb-1">🇺🇸 Milestone Reached!</div>
                 <div className="text-white/80">{currentFact}</div>
                 <button 
                   onClick={() => setCurrentFact(null)}
