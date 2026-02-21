@@ -256,16 +256,29 @@ export default function DashboardPage() {
               LOG YOUR PUSH-UPS
             </h2>
             
-            <div className="flex flex-col gap-4 items-center justify-center">
-              <div className="flex flex-col sm:flex-row gap-4 items-center">
+            {/* Quick Add Buttons */}
+            <div className="grid grid-cols-5 gap-2 mb-4">
+              {[10, 25, 50, 57, 100].map((num) => (
+                <button
+                  key={num}
+                  onClick={() => setPushupCount(num.toString())}
+                  className="py-2 bg-white/10 hover:bg-white/20 rounded-lg text-sm transition-colors"
+                >
+                  +{num}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex flex-col gap-3 items-center justify-center">
+              <div className="flex gap-3 items-center w-full max-w-xs">
                 <input
                   type="number"
                   value={pushupCount}
                   onChange={(e) => setPushupCount(e.target.value)}
-                  placeholder="How many?"
+                  placeholder="0"
                   min="1"
                   max="1000"
-                  className="input text-center text-2xl font-bold w-40"
+                  className="input text-center text-2xl font-bold flex-1"
                 />
                 <input
                   type="date"
@@ -273,29 +286,16 @@ export default function DashboardPage() {
                   onChange={(e) => setLogDate(e.target.value)}
                   min="2026-07-01"
                   max="2026-07-31"
-                  className="input text-center w-40"
+                  className="input text-center flex-1"
                 />
               </div>
               <button
                 onClick={logPushups}
                 disabled={logging || !pushupCount}
-                className="btn-gold px-8 py-3 disabled:opacity-50"
+                className="btn-gold px-8 py-3 disabled:opacity-50 w-full max-w-xs"
               >
                 {logging ? 'Logging...' : '💪 Log Push-ups'}
               </button>
-            </div>
-
-            {/* Quick Add Buttons */}
-            <div className="flex flex-wrap justify-center gap-2 mt-4">
-              {[10, 25, 50, 57, 100].map((num) => (
-                <button
-                  key={num}
-                  onClick={() => setPushupCount(num.toString())}
-                  className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-sm transition-colors"
-                >
-                  +{num}
-                </button>
-              ))}
             </div>
 
             {/* Success Message */}
