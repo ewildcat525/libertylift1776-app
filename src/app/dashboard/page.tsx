@@ -10,6 +10,7 @@ export default function DashboardPage() {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [stats, setStats] = useState<UserStats | null>(null)
   const [pushupCount, setPushupCount] = useState('')
+  const [logDate, setLogDate] = useState(() => new Date().toISOString().split('T')[0])
   const [logging, setLogging] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
   const [currentFact, setCurrentFact] = useState<string | null>(null)
@@ -79,9 +80,12 @@ export default function DashboardPage() {
 
     setLogging(true)
 
+    // Create timestamp for the selected date (noon to avoid timezone issues)
+    const loggedAt = new Date(logDate + 'T12:00:00').toISOString()
+    
     const { error } = await supabase
       .from('pushup_logs')
-      .insert({ user_id: user.id, count })
+      .insert({ user_id: user.id, count, logged_at: loggedAt })
 
     if (error) {
       console.error('Error logging pushups:', error)
@@ -210,16 +214,25 @@ export default function DashboardPage() {
               LOG YOUR PUSH-UPS
             </h2>
             
-            <div className="flex flex-col sm:flex-row gap-4 items-center justify-center">
-              <input
-                type="number"
-                value={pushupCount}
-                onChange={(e) => setPushupCount(e.target.value)}
-                placeholder="How many?"
-                min="1"
-                max="1000"
-                className="input text-center text-2xl font-bold w-40"
-              />
+            <div className="flex flex-col gap-4 items-center justify-center">
+              <div className="flex flex-col sm:flex-row gap-4 items-center">
+                <input
+                  type="number"
+                  value={pushupCount}
+                  onChange={(e) => setPushupCount(e.target.value)}
+                  placeholder="How many?"
+                  min="1"
+                  max="1000"
+                  className="input text-center text-2xl font-bold w-40"
+                />
+                <input
+                  type="date"
+                  value={logDate}
+                  onChange={(e) => setLogDate(e.target.value)}
+                  max={new Date().toISOString().split('T')[0]}
+                  className="input text-center w-40"
+                />
+              </div>
               <button
                 onClick={logPushups}
                 disabled={logging || !pushupCount}
