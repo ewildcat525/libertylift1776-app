@@ -159,6 +159,54 @@ export default function DashboardPage() {
     setLogging(false)
   }
 
+  const clearLogsForDay = async () => {
+    if (!user || !logDate) return
+    
+    const count = dailyLogs[logDate] || 0
+    if (count === 0) {
+      setShowError('No push-ups logged for this day')
+      setTimeout(() => setShowError(null), 3000)
+      return
+    }
+
+    if (!confirm(`Clear all ${count} push-ups for ${logDate}?`)) return
+
+    // Delete all logs for this date
+    const startOfDay = new Date(logDate + 'T00:00:00').toISOString()
+    const endOfDay = new Date(logDate + 'T23:59:59').toISOString()
+
+    const { error } = await supabase
+      .from('pushup_logs')
+      .delete()
+      .eq('user_id', user.id)
+      .gte('logged_at', startOfDay)
+      .lte('logged_at', endOfDay)
+
+    if (error) {
+      setShowError(`Error: ${error.message}`)
+      setTimeout(() => setShowError(null), 4000)
+      return
+    }
+
+    // Update local state
+    setDailyLogs(prev => {
+      const updated = { ...prev }
+      delete updated[logDate]
+      return updated
+    })
+
+    // Refresh stats
+    const { data: newStats } = await supabase
+      .from('user_stats')
+      .select('*')
+      .eq('user_id', user.id)
+      .single()
+    setStats(newStats)
+
+    setShowSuccess(true)
+    setTimeout(() => setShowSuccess(false), 3000)
+  }
+
   // Calendar helpers
   const getDaysInMonth = (date: Date) => {
     const year = date.getFullYear()
@@ -431,6 +479,16 @@ export default function DashboardPage() {
                 <span>Today</span>
               </div>
             </div>
+
+            {/* Clear day button */}
+            {dailyLogs[logDate] > 0 && (
+              <button
+                onClick={clearLogsForDay}
+                className="mt-4 w-full py-2 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors"
+              >
+                🗑️ Clear {dailyLogs[logDate]} push-ups for {new Date(logDate + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+              </button>
+            )}
           </div>
         </div>
       </div>
