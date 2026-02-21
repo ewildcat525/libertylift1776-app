@@ -4,6 +4,17 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient, UserStats, Profile, AMERICAN_FACTS } from '@/lib/supabase'
 import Navigation from '@/components/Navigation'
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  ReferenceLine,
+} from 'recharts'
 
 export default function DashboardPage() {
   const [user, setUser] = useState<any>(null)
@@ -24,6 +35,7 @@ export default function DashboardPage() {
   const [currentFact, setCurrentFact] = useState<string | null>(null)
   const [dailyLogs, setDailyLogs] = useState<Record<string, number>>({})
   const [calendarMonth] = useState(() => new Date(2026, 6, 1)) // July is month 6 (0-indexed)
+  const [chartData, setChartData] = useState<{ day: number; pace: number; you: number }[]>([])
   const router = useRouter()
   const supabase = createClient()
 
@@ -93,6 +105,31 @@ export default function DashboardPage() {
           grouped[date] = (grouped[date] || 0) + log.count
         })
         setDailyLogs(grouped)
+
+        // Build chart data for July
+        const julyLogs: Record<number, number> = {}
+        for (let d = 1; d <= 31; d++) julyLogs[d] = 0
+        
+        logsData.forEach(log => {
+          const logDate = new Date(log.logged_at)
+          if (logDate.getFullYear() === 2026 && logDate.getMonth() === 6) {
+            const day = logDate.getDate()
+            julyLogs[day] += log.count
+          }
+        })
+
+        // Build cumulative data
+        let cumulative = 0
+        const chartPoints: { day: number; pace: number; you: number }[] = []
+        for (let day = 1; day <= 31; day++) {
+          cumulative += julyLogs[day]
+          chartPoints.push({
+            day,
+            pace: Math.round(57.29 * day),
+            you: cumulative,
+          })
+        }
+        setChartData(chartPoints)
       }
     }
 
@@ -513,6 +550,81 @@ export default function DashboardPage() {
                 🗑️ Clear {dailyLogs[logDate]} push-ups for {new Date(logDate + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
               </button>
             )}
+          </div>
+
+          {/* Personal Progress Chart */}
+          <div className="card p-6 mt-8">
+            <h2 className="font-bebas text-2xl text-liberty-red mb-4 text-center">
+              📈 YOUR PROGRESS TO 1776
+            </h2>
+            <div className="h-[300px] sm:h-[350px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+                  <XAxis 
+                    dataKey="day" 
+                    stroke="#666"
+                    tick={{ fill: '#999', fontSize: 12 }}
+                    label={{ value: 'July', position: 'insideBottom', offset: -5, fill: '#666' }}
+                  />
+                  <YAxis 
+                    stroke="#666"
+                    tick={{ fill: '#999', fontSize: 12 }}
+                    domain={[0, 1776]}
+                    ticks={[0, 444, 888, 1332, 1776]}
+                  />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: '#1a1a1a', 
+                      border: '1px solid #333',
+                      borderRadius: '8px',
+                    }}
+                    labelStyle={{ color: '#999' }}
+                    formatter={(value: number, name: string) => [
+                      value.toLocaleString(),
+                      name === 'you' ? 'Your Push-ups' : '57/day Pace'
+                    ]}
+                    labelFormatter={(day) => `July ${day}`}
+                  />
+                  <Legend 
+                    formatter={(value) => value === 'you' ? 'Your Push-ups' : '57/day Pace'}
+                  />
+                  
+                  {/* Pace line (57/day) */}
+                  <Line
+                    type="monotone"
+                    dataKey="pace"
+                    name="pace"
+                    stroke="#666"
+                    strokeDasharray="5 5"
+                    strokeWidth={2}
+                    dot={false}
+                  />
+                  
+                  {/* User's line */}
+                  <Line
+                    type="monotone"
+                    dataKey="you"
+                    name="you"
+                    stroke="#DC2626"
+                    strokeWidth={3}
+                    dot={false}
+                    activeDot={{ r: 5, fill: '#DC2626' }}
+                  />
+
+                  {/* 1776 goal line */}
+                  <ReferenceLine 
+                    y={1776} 
+                    stroke="#FFD700" 
+                    strokeDasharray="3 3" 
+                    label={{ value: '🎆 1776', fill: '#FFD700', fontSize: 12, position: 'right' }} 
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+            <p className="text-center text-white/40 text-sm mt-2">
+              Dashed gray line = 57 push-ups/day pace to hit 1776 by July 31
+            </p>
           </div>
         </div>
       </div>
