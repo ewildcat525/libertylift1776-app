@@ -52,27 +52,41 @@ export default function ContestDetailPage() {
 
       setContest(contestData)
 
-      // Get contest members with their stats
+      // Get contest participants
       const { data: participants } = await supabase
         .from('contest_participants')
-        .select(`
-          user_id,
-          joined_at,
-          profiles!inner(display_name, state_code),
-          user_stats(total_pushups, current_streak, best_day)
-        `)
+        .select('user_id, joined_at')
         .eq('contest_id', contestId)
 
-      if (participants) {
-        const memberData: ContestMember[] = participants.map((p: any) => ({
-          user_id: p.user_id,
-          display_name: p.profiles?.display_name || null,
-          state_code: p.profiles?.state_code || null,
-          total_pushups: p.user_stats?.total_pushups || 0,
-          current_streak: p.user_stats?.current_streak || 0,
-          best_day: p.user_stats?.best_day || 0,
-          joined_at: p.joined_at,
-        }))
+      if (participants && participants.length > 0) {
+        const userIds = participants.map(p => p.user_id)
+        
+        // Get profiles for these users
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, display_name, state_code')
+          .in('id', userIds)
+
+        // Get stats for these users  
+        const { data: stats } = await supabase
+          .from('user_stats')
+          .select('user_id, total_pushups, current_streak, best_day')
+          .in('user_id', userIds)
+
+        // Combine the data
+        const memberData: ContestMember[] = participants.map((p: any) => {
+          const profile = profiles?.find(pr => pr.id === p.user_id)
+          const stat = stats?.find(s => s.user_id === p.user_id)
+          return {
+            user_id: p.user_id,
+            display_name: profile?.display_name || null,
+            state_code: profile?.state_code || null,
+            total_pushups: stat?.total_pushups || 0,
+            current_streak: stat?.current_streak || 0,
+            best_day: stat?.best_day || 0,
+            joined_at: p.joined_at,
+          }
+        })
 
         // Sort by total pushups
         memberData.sort((a, b) => b.total_pushups - a.total_pushups)
