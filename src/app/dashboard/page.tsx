@@ -222,9 +222,23 @@ export default function DashboardPage() {
   const dailyTarget = 57
   const daysInJuly = 31
   const today = new Date()
-  const dayOfMonth = today.getDate()
-  const expectedProgress = (dayOfMonth / daysInJuly) * 1776
-  const pace = stats ? (stats.total_pushups >= expectedProgress ? 'ahead' : 'behind') : 'on-track'
+  const julyStart = new Date(2026, 6, 1)
+  const julyEnd = new Date(2026, 6, 31, 23, 59, 59)
+  
+  // Determine challenge phase and pace
+  let pace: 'before' | 'ahead' | 'behind' | 'complete'
+  let expectedProgress = 0
+  
+  if (today < julyStart) {
+    pace = 'before'
+  } else if (today > julyEnd) {
+    pace = stats && stats.total_pushups >= 1776 ? 'complete' : 'behind'
+  } else {
+    // During July - calculate based on day of month
+    const dayOfJuly = today.getDate()
+    expectedProgress = (dayOfJuly / daysInJuly) * 1776
+    pace = stats && stats.total_pushups >= expectedProgress ? 'ahead' : 'behind'
+  }
 
   if (!user) {
     return (
@@ -389,17 +403,27 @@ export default function DashboardPage() {
             <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full ${
               pace === 'ahead' ? 'bg-green-500/20 text-green-300' :
               pace === 'behind' ? 'bg-yellow-500/20 text-yellow-300' :
-              'bg-white/10 text-white/70'
+              pace === 'complete' ? 'bg-liberty-gold/20 text-liberty-gold' :
+              'bg-liberty-blue/20 text-blue-300'
             }`}>
-              <span>{pace === 'ahead' ? '🚀' : pace === 'behind' ? '⚠️' : '✅'}</span>
+              <span>
+                {pace === 'ahead' ? '🚀' : 
+                 pace === 'behind' ? '⚠️' : 
+                 pace === 'complete' ? '🏆' : '🇺🇸'}
+              </span>
               <span className="font-semibold">
                 {pace === 'ahead' ? "You're ahead of pace!" :
                  pace === 'behind' ? "You're a bit behind - let's catch up!" :
-                 "You're on track!"}
+                 pace === 'complete' ? "Challenge complete! You're a Founding Father! 🎆" :
+                 "Challenge starts July 1st!"}
               </span>
             </div>
             <p className="text-sm text-white/50 mt-2">
-              Target: ~{dailyTarget} push-ups per day to hit 1,776 by July 31st
+              {pace === 'before' 
+                ? "Get ready — 1,776 push-ups in 31 days"
+                : pace === 'complete'
+                ? "You did it! 1,776 push-ups in July 🇺🇸"
+                : `Target: ~${dailyTarget} push-ups per day to hit 1,776 by July 31st`}
             </p>
           </div>
 
