@@ -8,11 +8,11 @@ export default function LeaderboardPage() {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'all' | 'streak' | 'daily'>('all')
-  const supabase = createClient()
 
   useEffect(() => {
     const loadLeaderboard = async () => {
       try {
+        const supabase = createClient()
         const { data, error } = await supabase
           .from('leaderboard')
           .select('*')
