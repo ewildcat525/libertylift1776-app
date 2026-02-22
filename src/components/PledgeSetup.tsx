@@ -243,9 +243,9 @@ export default function PledgeSetup({ userId, onComplete, existingPledge }: Pled
                       {pledgeType === p.id && <span className="text-liberty-gold">✓</span>}
                     </div>
                     <p className="text-white/60 mt-1">{p.description}</p>
-                    <div className="mt-2 flex items-center gap-2">
-                      <span className="text-xs px-2 py-1 rounded-full bg-white/10 text-white/70">{p.vibe}</span>
-                      <span className="text-xs text-white/40">e.g. {p.example}</span>
+                    <div className="mt-3 text-xs text-white/50">
+                      <span className="inline-block px-2 py-1 rounded bg-white/10 text-white/60 mr-2">{p.vibe}</span>
+                      <span className="text-white/40">e.g. {p.example}</span>
                     </div>
                   </div>
                 </div>
