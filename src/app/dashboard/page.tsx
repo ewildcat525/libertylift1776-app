@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient, UserStats, Profile, AMERICAN_FACTS } from '@/lib/supabase'
 import Navigation from '@/components/Navigation'
+import PledgeWidget from '@/components/PledgeWidget'
 import {
   LineChart,
   Line,
@@ -356,6 +357,11 @@ export default function DashboardPage() {
                 <div className="text-xs text-white/50 uppercase">Remaining</div>
               </div>
             </div>
+          </div>
+
+          {/* Pledge Widget */}
+          <div className="mb-8">
+            <PledgeWidget userId={user.id} totalPushups={stats?.total_pushups || 0} />
           </div>
 
           {/* Log Push-ups Card */}

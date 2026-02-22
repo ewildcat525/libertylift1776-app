@@ -36,12 +36,14 @@ export default function Navigation() {
     ? [
         { href: '/dashboard', label: 'Dashboard' },
         { href: '/leaderboard', label: 'Leaderboard' },
+        { href: '/pledge/leaderboard', label: 'Pledges' },
         { href: '/states', label: 'States' },
         { href: '/contests', label: 'Contests' },
       ]
     : [
         { href: '/', label: 'Home' },
         { href: '/leaderboard', label: 'Leaderboard' },
+        { href: '/pledge/leaderboard', label: 'Pledges' },
         { href: '/states', label: 'States' },
         { href: '/contests', label: 'Contests' },
       ]
