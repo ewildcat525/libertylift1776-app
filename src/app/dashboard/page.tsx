@@ -37,6 +37,7 @@ export default function DashboardPage() {
   const [dailyLogs, setDailyLogs] = useState<Record<string, number>>({})
   const [calendarMonth] = useState(() => new Date(2026, 6, 1)) // July is month 6 (0-indexed)
   const [chartData, setChartData] = useState<{ day: number; pace: number; you: number }[]>([])
+  const [allUsers, setAllUsers] = useState<Profile[]>([])
   const router = useRouter()
   const supabase = createClient()
 
@@ -92,6 +93,14 @@ export default function DashboardPage() {
         }
       }
       setStats(statsData)
+
+      // Load all users for admin section
+      const { data: allUsersData } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: false })
+      
+      if (allUsersData) setAllUsers(allUsersData)
 
       // Load daily logs for calendar
       const { data: logsData } = await supabase
@@ -631,6 +640,49 @@ export default function DashboardPage() {
             <p className="text-center text-white/40 text-sm mt-2">
               Dashed gray line = 57 push-ups/day pace to hit 1776 by July 31
             </p>
+          </div>
+
+          {/* All Users Admin Section */}
+          <div className="card p-6 mt-8">
+            <h2 className="font-bebas text-2xl text-liberty-red mb-4 text-center">
+              👥 ALL USERS ({allUsers.length})
+            </h2>
+            {allUsers.length === 0 ? (
+              <p className="text-center text-white/50">No users yet</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-white/10">
+                      <th className="text-left py-2 px-2 text-white/60 font-semibold">Name</th>
+                      <th className="text-left py-2 px-2 text-white/60 font-semibold">State</th>
+                      <th className="text-left py-2 px-2 text-white/60 font-semibold">Joined</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {allUsers.map((u) => (
+                      <tr key={u.id} className="border-b border-white/5 hover:bg-white/5">
+                        <td className="py-2 px-2 text-white">
+                          {u.display_name || u.email || 'Unknown'}
+                        </td>
+                        <td className="py-2 px-2 text-white/70">
+                          {u.state || '—'}
+                        </td>
+                        <td className="py-2 px-2 text-white/70">
+                          {u.created_at 
+                            ? new Date(u.created_at).toLocaleDateString('en-US', { 
+                                month: 'short', 
+                                day: 'numeric', 
+                                year: 'numeric' 
+                              })
+                            : '—'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
       </div>
