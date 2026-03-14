@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import Navigation from '@/components/Navigation'
 import Countdown from '@/components/Countdown'
+import EmailCapture from '@/components/EmailCapture'
 
 export default function Home() {
   const [daysUntilJuly, setDaysUntilJuly] = useState(0)
@@ -92,6 +93,11 @@ export default function Home() {
           {/* Countdown */}
           <Countdown />
         </div>
+      </section>
+
+      {/* Email Capture */}
+      <section className="py-16 px-4">
+        <EmailCapture />
       </section>
 
       {/* How It Works */}
