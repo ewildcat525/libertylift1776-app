@@ -666,7 +666,7 @@ export default function DashboardPage() {
                           {u.display_name || u.email || 'Unknown'}
                         </td>
                         <td className="py-2 px-2 text-white/70">
-                          {u.state || '—'}
+                          {u.state_code || '—'}
                         </td>
                         <td className="py-2 px-2 text-white/70">
                           {u.created_at 
