@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient, UserStats, Profile, AMERICAN_FACTS } from '@/lib/supabase'
+import { createClient, UserStats, Profile, AMERICAN_FACTS, DAILY_PACE } from '@/lib/supabase'
 import Navigation from '@/components/Navigation'
 import PledgeWidget from '@/components/PledgeWidget'
 import {
@@ -37,7 +37,6 @@ export default function DashboardPage() {
   const [dailyLogs, setDailyLogs] = useState<Record<string, number>>({})
   const [calendarMonth] = useState(() => new Date(2026, 6, 1)) // July is month 6 (0-indexed)
   const [chartData, setChartData] = useState<{ day: number; pace: number; you: number }[]>([])
-  const [allUsers, setAllUsers] = useState<Profile[]>([])
   const router = useRouter()
   const supabase = createClient()
 
@@ -94,14 +93,6 @@ export default function DashboardPage() {
       }
       setStats(statsData)
 
-      // Load all users for admin section
-      const { data: allUsersData } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false })
-      
-      if (allUsersData) setAllUsers(allUsersData)
-
       // Load daily logs for calendar
       const { data: logsData } = await supabase
         .from('pushup_logs')
@@ -135,7 +126,7 @@ export default function DashboardPage() {
           cumulative += julyLogs[day]
           chartPoints.push({
             day,
-            pace: Math.round(57.29 * day),
+            pace: Math.round(DAILY_PACE * day),
             you: cumulative,
           })
         }
@@ -192,12 +183,13 @@ export default function DashboardPage() {
 
       setStats(newStats)
       
-      // Update daily logs for calendar
-      setDailyLogs(prev => ({
-        ...prev,
-        [logDate]: (prev[logDate] || 0) + count
-      }))
-      
+      // Update daily logs for calendar and rebuild chart
+      setDailyLogs(prev => {
+        const updated = { ...prev, [logDate]: (prev[logDate] || 0) + count }
+        setChartData(buildChartData(updated))
+        return updated
+      })
+
       setPushupCount('')
       setShowSuccess(true)
       setTimeout(() => setShowSuccess(false), 3000)
@@ -235,10 +227,11 @@ export default function DashboardPage() {
       return
     }
 
-    // Update local state
+    // Update local state and rebuild chart
     setDailyLogs(prev => {
       const updated = { ...prev }
       delete updated[logDate]
+      setChartData(buildChartData(updated))
       return updated
     })
 
@@ -252,6 +245,23 @@ export default function DashboardPage() {
 
     setShowSuccess(true)
     setTimeout(() => setShowSuccess(false), 3000)
+  }
+
+  const buildChartData = (logs: Record<string, number>) => {
+    const julyLogs: Record<number, number> = {}
+    for (let d = 1; d <= 31; d++) julyLogs[d] = 0
+    Object.entries(logs).forEach(([dateStr, count]) => {
+      if (dateStr.startsWith('2026-07-')) {
+        const day = parseInt(dateStr.split('-')[2], 10)
+        julyLogs[day] = count
+      }
+    })
+    let cumulative = 0
+    return Array.from({ length: 31 }, (_, i) => {
+      const day = i + 1
+      cumulative += julyLogs[day]
+      return { day, pace: Math.round(DAILY_PACE * day), you: cumulative }
+    })
   }
 
   // Calendar helpers
@@ -361,7 +371,7 @@ export default function DashboardPage() {
               </div>
               <div className="text-center p-4 bg-white/5 rounded-lg">
                 <div className="font-bebas text-3xl text-white">
-                  {1776 - (stats?.total_pushups || 0)}
+                  {Math.max(0, 1776 - (stats?.total_pushups || 0))}
                 </div>
                 <div className="text-xs text-white/50 uppercase">Remaining</div>
               </div>
@@ -642,48 +652,6 @@ export default function DashboardPage() {
             </p>
           </div>
 
-          {/* All Users Admin Section */}
-          <div className="card p-6 mt-8">
-            <h2 className="font-bebas text-2xl text-liberty-red mb-4 text-center">
-              👥 ALL USERS ({allUsers.length})
-            </h2>
-            {allUsers.length === 0 ? (
-              <p className="text-center text-white/50">No users yet</p>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-white/10">
-                      <th className="text-left py-2 px-2 text-white/60 font-semibold">Name</th>
-                      <th className="text-left py-2 px-2 text-white/60 font-semibold">State</th>
-                      <th className="text-left py-2 px-2 text-white/60 font-semibold">Joined</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {allUsers.map((u) => (
-                      <tr key={u.id} className="border-b border-white/5 hover:bg-white/5">
-                        <td className="py-2 px-2 text-white">
-                          {u.display_name || u.email || 'Unknown'}
-                        </td>
-                        <td className="py-2 px-2 text-white/70">
-                          {u.state_code || '—'}
-                        </td>
-                        <td className="py-2 px-2 text-white/70">
-                          {u.created_at 
-                            ? new Date(u.created_at).toLocaleDateString('en-US', { 
-                                month: 'short', 
-                                day: 'numeric', 
-                                year: 'numeric' 
-                              })
-                            : '—'}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
         </div>
       </div>
     </>

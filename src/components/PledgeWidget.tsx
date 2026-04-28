@@ -1,15 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { createClient } from '@/lib/supabase'
+import { createClient, Pledge } from '@/lib/supabase'
 import Link from 'next/link'
-
-interface Pledge {
-  id: string
-  charity: 'wounded_warrior' | 'save_the_children'
-  pledge_type: 'per_completed' | 'per_short'
-  rate_cents: number
-}
 
 interface PledgeWidgetProps {
   userId: string

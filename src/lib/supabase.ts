@@ -76,6 +76,17 @@ export interface UserAchievement {
   earned_at: string
 }
 
+export interface Pledge {
+  id: string
+  user_id: string
+  charity: 'wounded_warrior' | 'save_the_children'
+  pledge_type: 'per_completed' | 'per_short'
+  rate_cents: number
+  is_active: boolean
+}
+
+export const DAILY_PACE = 1776 / 31 // ≈57.29 push-ups/day to finish by July 31
+
 // American fun facts for milestones
 export const AMERICAN_FACTS = [
   { threshold: 1, fact: "The first push-up in recorded history was performed by a Colonial soldier in 1776!" },
@@ -87,7 +98,7 @@ export const AMERICAN_FACTS = [
   { threshold: 250, fact: "George Washington stood 6'2\" - tall for his era. Your strength is growing!" },
   { threshold: 444, fact: "Quarter of the way! The Revolutionary War lasted 8 years - your challenge is just 31 days!" },
   { threshold: 500, fact: "500 strong! Paul Revere rode about 20 miles on his midnight ride." },
-  { threshold: 776, fact: "More than halfway to 1776! Benjamin Franklin was 70 years old when he signed the Declaration." },
+  { threshold: 776, fact: "776 down! Benjamin Franklin was 70 years old when he signed the Declaration — still going strong, just like you!" },
   { threshold: 888, fact: "Exactly halfway! The Liberty Bell weighs about 2,080 pounds." },
   { threshold: 1000, fact: "ONE THOUSAND! The American flag has had 27 versions since 1777." },
   { threshold: 1492, fact: "1492 - Columbus sailed the ocean blue, and you're sailing toward victory!" },

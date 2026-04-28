@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { createClient, Contest, US_STATES } from '@/lib/supabase'
+import { createClient, Contest, US_STATES, DAILY_PACE } from '@/lib/supabase'
 import Navigation from '@/components/Navigation'
 import Link from 'next/link'
 import {
@@ -151,7 +151,7 @@ export default function ContestDetailPage() {
         for (let day = 1; day <= 31; day++) {
           const point: DailyData = {
             day,
-            pace: Math.round(57.29 * day), // 1776 / 31 ≈ 57.29
+            pace: Math.round(DAILY_PACE * day),
           }
 
           memberData.forEach((member, idx) => {
