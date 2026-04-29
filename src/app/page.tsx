@@ -75,7 +75,7 @@ export default function Home() {
               <div className="text-sm text-white/50 uppercase tracking-wider">Days</div>
             </div>
             <div className="text-center">
-              <div className="font-bebas text-5xl sm:text-6xl text-white">~57</div>
+              <div className="font-bebas text-5xl sm:text-6xl text-white">~58</div>
               <div className="text-sm text-white/50 uppercase tracking-wider">Per Day</div>
             </div>
           </div>
@@ -120,7 +120,7 @@ export default function Home() {
               <div className="text-5xl mb-4">💪</div>
               <h3 className="font-bebas text-2xl text-white mb-2">2. DO PUSH-UPS</h3>
               <p className="text-white/60">
-                Log your push-ups daily. Break them up however you want — 57 a day, 100 some days, rest others.
+                Log your push-ups daily. Break them up however you want — 58 a day, 100 some days, rest others.
               </p>
             </div>
             

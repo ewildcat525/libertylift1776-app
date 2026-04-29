@@ -276,7 +276,7 @@ export default function DashboardPage() {
   }
 
   const progress = stats ? (stats.total_pushups / 1776) * 100 : 0
-  const dailyTarget = 57
+  const dailyTarget = 58
   const daysInJuly = 31
   const today = new Date()
   const julyStart = new Date(2026, 6, 1)
@@ -391,7 +391,7 @@ export default function DashboardPage() {
             
             {/* Quick Add Buttons */}
             <div className="grid grid-cols-5 gap-2 mb-4">
-              {[10, 25, 50, 57, 100].map((num) => (
+              {[10, 25, 50, 58, 100].map((num) => (
                 <button
                   key={num}
                   onClick={() => setPushupCount(num.toString())}
@@ -485,7 +485,7 @@ export default function DashboardPage() {
                 ? "Get ready — 1,776 push-ups in 31 days"
                 : pace === 'complete'
                 ? "You did it! 1,776 push-ups in July 🇺🇸"
-                : `Target: ~${dailyTarget} push-ups per day to hit 1,776 by July 31st`}
+                : `Target: ${dailyTarget} push-ups per day to hit 1,776 by July 31st`}
             </p>
           </div>
 
@@ -527,7 +527,7 @@ export default function DashboardPage() {
                       onClick={() => setLogDate(dateStr)}
                       className={`aspect-square rounded-lg flex flex-col items-center justify-center cursor-pointer transition-all text-xs
                         ${count > 0 
-                          ? count >= 57 
+                          ? count >= 58 
                             ? 'bg-liberty-red/40 border border-liberty-red/60' 
                             : 'bg-liberty-red/20 border border-liberty-red/30'
                           : 'bg-white/5 hover:bg-white/10'
@@ -558,7 +558,7 @@ export default function DashboardPage() {
               </div>
               <div className="flex items-center gap-1">
                 <div className="w-3 h-3 bg-liberty-red/40 border border-liberty-red/60 rounded"></div>
-                <span>57+ (on pace)</span>
+                <span>58+ (on pace)</span>
               </div>
               <div className="flex items-center gap-1">
                 <div className="w-3 h-3 ring-2 ring-liberty-gold rounded"></div>
@@ -607,15 +607,15 @@ export default function DashboardPage() {
                     labelStyle={{ color: '#999' }}
                     formatter={(value: number, name: string) => [
                       value.toLocaleString(),
-                      name === 'you' ? 'Your Push-ups' : '57/day Pace'
+                      name === 'you' ? 'Your Push-ups' : '58/day Pace'
                     ]}
                     labelFormatter={(day) => `July ${day}`}
                   />
                   <Legend 
-                    formatter={(value) => value === 'you' ? 'Your Push-ups' : '57/day Pace'}
+                    formatter={(value) => value === 'you' ? 'Your Push-ups' : '58/day Pace'}
                   />
                   
-                  {/* Pace line (57/day) */}
+                  {/* Pace line (58/day) */}
                   <Line
                     type="monotone"
                     dataKey="pace"
@@ -648,7 +648,7 @@ export default function DashboardPage() {
               </ResponsiveContainer>
             </div>
             <p className="text-center text-white/40 text-sm mt-2">
-              Dashed gray line = 57 push-ups/day pace to hit 1776 by July 31
+              Dashed gray line = 58 push-ups/day pace to hit 1776 by July 31
             </p>
           </div>
 

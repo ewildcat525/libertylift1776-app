@@ -106,7 +106,7 @@ export default async function Image() {
             <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.5)', letterSpacing: '0.15em' }}>DAYS</div>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <div style={{ fontSize: 42, fontWeight: 900, color: '#FFFFFF' }}>~57</div>
+            <div style={{ fontSize: 42, fontWeight: 900, color: '#FFFFFF' }}>~58</div>
             <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.5)', letterSpacing: '0.15em' }}>PER DAY</div>
           </div>
         </div>

@@ -85,7 +85,7 @@ export interface Pledge {
   is_active: boolean
 }
 
-export const DAILY_PACE = 1776 / 31 // ≈57.29 push-ups/day to finish by July 31
+export const DAILY_PACE = 58 // push-ups/day target to finish by July 31
 
 // American fun facts for milestones
 export const AMERICAN_FACTS = [

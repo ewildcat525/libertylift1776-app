@@ -302,11 +302,11 @@ export default function ContestDetailPage() {
                     />
                     <Legend />
                     
-                    {/* Pace line (57/day) */}
+                    {/* Pace line (58/day) */}
                     <Line
                       type="monotone"
                       dataKey="pace"
-                      name="57/day pace"
+                      name="58/day pace"
                       stroke="#666"
                       strokeDasharray="5 5"
                       strokeWidth={2}
@@ -332,7 +332,7 @@ export default function ContestDetailPage() {
                 </ResponsiveContainer>
               </div>
               <p className="text-center text-white/40 text-sm mt-2">
-                Dashed line = 57 push-ups/day pace to reach 1776 by July 31
+                Dashed line = 58 push-ups/day pace to reach 1776 by July 31
               </p>
             </div>
           )}
