@@ -14,6 +14,7 @@ export default function ContestsPage() {
   const [showCreate, setShowCreate] = useState(false)
   const [joinCode, setJoinCode] = useState('')
   const [joinError, setJoinError] = useState<string | null>(null)
+  const [createError, setCreateError] = useState<string | null>(null)
   
   // Create form
   const [contestName, setContestName] = useState('')
@@ -70,6 +71,7 @@ export default function ContestsPage() {
     }
 
     setCreating(true)
+    setCreateError(null)
     const inviteCode = Math.random().toString(36).substring(2, 10).toUpperCase()
     
     const { data: contest, error } = await supabase
@@ -97,22 +99,25 @@ export default function ContestsPage() {
       setShowCreate(false)
       setContestName('')
       setContestDesc('')
+    } else if (error) {
+      setCreateError('Failed to create contest. Please try again.')
     }
 
     setCreating(false)
   }
 
-  const joinContest = async () => {
+  const joinContest = async (directCode?: string) => {
     if (!user) {
       router.push('/login')
       return
     }
 
+    const codeToUse = directCode ?? joinCode
     setJoinError(null)
     const { data: contest } = await supabase
       .from('contests')
       .select('*')
-      .eq('invite_code', joinCode.toUpperCase())
+      .eq('invite_code', codeToUse.toUpperCase())
       .single()
 
     if (!contest) {
@@ -167,7 +172,7 @@ export default function ContestsPage() {
                 placeholder="Enter invite code"
                 className="input flex-1"
               />
-              <button onClick={joinContest} className="btn-secondary px-4">
+              <button onClick={() => joinContest()} className="btn-secondary px-4">
                 Join
               </button>
             </div>
@@ -217,13 +222,18 @@ export default function ContestsPage() {
                     Make this contest public (anyone can find and join)
                   </label>
                 </div>
+                {createError && (
+                  <div className="p-3 bg-liberty-red/20 border border-liberty-red/50 rounded-lg text-sm text-red-300">
+                    {createError}
+                  </div>
+                )}
                 <div className="flex gap-2">
                   <button type="submit" disabled={creating} className="btn-gold flex-1">
                     {creating ? 'Creating...' : 'Create Contest'}
                   </button>
                   <button
                     type="button"
-                    onClick={() => setShowCreate(false)}
+                    onClick={() => { setShowCreate(false); setCreateError(null) }}
                     className="btn-secondary"
                   >
                     Cancel
@@ -290,10 +300,7 @@ export default function ContestsPage() {
                         )}
                       </div>
                       <button
-                        onClick={() => {
-                          setJoinCode(contest.invite_code)
-                          joinContest()
-                        }}
+                        onClick={() => joinContest(contest.invite_code)}
                         className="btn-secondary text-sm py-2"
                       >
                         Join
