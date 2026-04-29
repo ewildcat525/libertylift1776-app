@@ -36,9 +36,12 @@ export default function EmailCapture() {
       } else {
         setStatus('success')
       }
-    } catch (err) {
-      console.error('Email capture error:', err)
-      setErrorMsg('Something went wrong. Please try again.')
+    } catch (err: any) {
+      console.error('Email capture error:', err?.code, err?.message, err)
+      const msg = err?.code === '42P01'
+        ? 'Service unavailable. Please try again later.'
+        : 'Something went wrong. Please try again.'
+      setErrorMsg(msg)
       setStatus('error')
     }
   }

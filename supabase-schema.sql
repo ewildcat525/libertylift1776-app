@@ -257,3 +257,21 @@ join public.user_stats s on p.id = s.user_id
 where p.state_code is not null and s.total_pushups > 0
 group by state_code
 order by total_pushups desc;
+
+-- Email subscribers (pre-launch list)
+create table if not exists public.email_subscribers (
+  id uuid default gen_random_uuid() primary key,
+  email text not null unique,
+  subscribed_at timestamptz default now(),
+  source text default 'landing_page'
+);
+
+create index if not exists idx_email_subscribers_email on public.email_subscribers(email);
+
+alter table public.email_subscribers enable row level security;
+
+create policy "Allow anonymous email signups" on public.email_subscribers
+  for insert to anon with check (true);
+
+create policy "Users cannot read emails" on public.email_subscribers
+  for select to anon using (false);
