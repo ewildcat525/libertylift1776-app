@@ -68,10 +68,10 @@ export default function PledgePage() {
     return (
       <>
         <Navigation />
-        <div className="min-h-screen flex items-center justify-center">
+        <div className="min-h-screen flex items-center justify-center app-surface">
           <div className="text-center">
-            <div className="text-7xl mb-4 animate-bounce">🎖️</div>
-            <h1 className="font-bebas text-4xl text-liberty-gold mb-2">Pledge Saved!</h1>
+            <div className="app-eyebrow justify-center mb-3">Pledge saved</div>
+            <h1 className="app-title text-5xl mb-2">You are on the board.</h1>
             <p className="text-white/60">Redirecting to dashboard...</p>
           </div>
         </div>
@@ -82,15 +82,15 @@ export default function PledgePage() {
   return (
     <>
       <Navigation />
-      <div className="min-h-screen pt-20 pb-12 px-4">
+      <div className="min-h-screen pt-24 pb-12 px-4 app-surface">
         <div className="max-w-2xl mx-auto">
           {/* Header */}
-          <div className="text-center mb-8">
-            <div className="text-5xl mb-4">🎗️</div>
-            <h1 className="font-bebas text-5xl text-liberty-red mb-2">
+          <div className="mb-8">
+            <div className="app-eyebrow mb-3">Push-ups with purpose</div>
+            <h1 className="app-title text-6xl sm:text-7xl">
               {existingPledge ? 'Update Your Pledge' : 'Make a Pledge'}
             </h1>
-            <p className="text-white/60 max-w-md mx-auto">
+            <p className="text-white/60 max-w-md mt-3">
               Turn your push-ups into real impact. Make an honor-system pledge to donate to charity based on your July performance.
             </p>
           </div>
@@ -105,7 +105,7 @@ export default function PledgePage() {
           </div>
 
           {/* Info section */}
-          <div className="mt-8 p-6 rounded-xl bg-white/5 border border-white/10">
+          <div className="mt-8 p-6 bg-white/[0.035] border border-white/15">
             <h3 className="font-semibold text-white mb-3">How it works</h3>
             <ul className="space-y-2 text-white/60 text-sm">
               <li className="flex items-start gap-2">

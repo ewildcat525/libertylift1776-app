@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient, UserStats, Profile, AMERICAN_FACTS, DAILY_PACE } from '@/lib/supabase'
+import { createClient, UserStats, Profile, AMERICAN_FACTS, DAILY_PACE, isValidStateCode } from '@/lib/supabase'
+import { clearPendingSignup, generateDisplayName, readPendingSignup } from '@/lib/onboarding'
 import Navigation from '@/components/Navigation'
 import PledgeWidget from '@/components/PledgeWidget'
 import {
@@ -69,6 +70,39 @@ export default function DashboardPage() {
           console.error('Failed to create profile:', insertError)
         }
       }
+
+      const pendingSignup = readPendingSignup()
+      if (profileData) {
+        const profileUpdates: Partial<Profile> = {}
+
+        if (!profileData.display_name) {
+          profileUpdates.display_name = pendingSignup?.displayName || generateDisplayName(profileData.state_code || undefined)
+        }
+
+        if (!profileData.state_code && pendingSignup && isValidStateCode(pendingSignup.stateCode)) {
+          profileUpdates.state_code = pendingSignup.stateCode
+        }
+
+        if (Object.keys(profileUpdates).length > 0) {
+          const { data: updatedProfile, error: updateError } = await supabase
+            .from('profiles')
+            .update(profileUpdates)
+            .eq('id', user.id)
+            .select()
+            .single()
+
+          if (!updateError && updatedProfile) {
+            profileData = updatedProfile
+          } else if (updateError) {
+            console.error('Failed to update onboarding profile:', updateError)
+          }
+        }
+      }
+
+      if (pendingSignup) {
+        clearPendingSignup()
+      }
+
       setProfile(profileData)
 
       // Load stats (create if missing - handles users created before trigger was added)
@@ -311,14 +345,15 @@ export default function DashboardPage() {
   return (
     <>
       <Navigation />
-      <div className="min-h-screen pt-20 pb-12 px-4">
+      <div className="min-h-screen pt-24 pb-12 px-4 app-surface">
         <div className="max-w-4xl mx-auto">
           {/* Header */}
-          <div className="text-center mb-8">
-            <h1 className="font-bebas text-4xl text-liberty-red mb-2">
-              Welcome back, {profile?.display_name || 'Patriot'}!
+          <div className="mb-8">
+            <div className="app-eyebrow mb-3">Personal board</div>
+            <h1 className="app-title text-5xl sm:text-7xl">
+              Welcome back, <em>{profile?.display_name || 'Patriot'}</em>
             </h1>
-            <p className="text-white/60">Your journey to 1776</p>
+            <p className="text-white/60 mt-3">Your journey to 1,776.</p>
           </div>
 
           {/* Main Stats Card */}
@@ -351,25 +386,25 @@ export default function DashboardPage() {
 
             {/* Quick Stats */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <div className="text-center p-4 bg-white/5 rounded-lg border border-liberty-red/20">
+              <div className="text-center p-4 bg-white/[0.04] border border-liberty-red/30">
                 <div className="font-bebas text-3xl text-liberty-red">
                   {stats?.current_streak || 0}
                 </div>
-                <div className="text-xs text-white/50 uppercase">Day Streak 🔥</div>
+                <div className="text-xs text-white/50 uppercase">Day Streak</div>
               </div>
-              <div className="text-center p-4 bg-white/5 rounded-lg">
+              <div className="text-center p-4 bg-white/[0.04] border border-white/10">
                 <div className="font-bebas text-3xl text-white">
                   {stats?.best_day || 0}
                 </div>
                 <div className="text-xs text-white/50 uppercase">Best Day</div>
               </div>
-              <div className="text-center p-4 bg-white/5 rounded-lg">
+              <div className="text-center p-4 bg-white/[0.04] border border-white/10">
                 <div className="font-bebas text-3xl text-white">
                   {stats?.days_logged || 0}
                 </div>
                 <div className="text-xs text-white/50 uppercase">Days Logged</div>
               </div>
-              <div className="text-center p-4 bg-white/5 rounded-lg">
+              <div className="text-center p-4 bg-white/[0.04] border border-white/10">
                 <div className="font-bebas text-3xl text-white">
                   {Math.max(0, 1776 - (stats?.total_pushups || 0))}
                 </div>
@@ -427,28 +462,28 @@ export default function DashboardPage() {
                 disabled={logging || !pushupCount}
                 className="btn-gold px-8 py-3 disabled:opacity-50 w-full max-w-xs"
               >
-                {logging ? 'Logging...' : '💪 Log Push-ups'}
+                {logging ? 'Logging...' : 'Log push-ups'}
               </button>
             </div>
 
             {/* Success Message */}
             {showSuccess && (
-              <div className="mt-4 p-4 bg-green-500/20 border border-green-500/50 rounded-lg text-center text-green-300">
-                🎉 Push-ups logged! Keep going, patriot!
+              <div className="mt-4 p-4 bg-green-500/20 border border-green-500/50 text-center text-green-300">
+                Push-ups logged. Keep going.
               </div>
             )}
 
             {/* Error Message */}
             {showError && (
-              <div className="mt-4 p-4 bg-red-500/20 border border-red-500/50 rounded-lg text-center text-red-300">
+              <div className="mt-4 p-4 bg-red-500/20 border border-red-500/50 text-center text-red-300">
                 {showError}
               </div>
             )}
 
             {/* Fun Fact */}
             {currentFact && (
-              <div className="mt-4 p-4 bg-liberty-red/20 border border-liberty-red/50 rounded-lg text-center">
-                <div className="text-liberty-red font-semibold mb-1">🇺🇸 Milestone Reached!</div>
+              <div className="mt-4 p-4 bg-liberty-red/20 border border-liberty-red/50 text-center">
+                <div className="text-liberty-red font-semibold mb-1">Milestone reached.</div>
                 <div className="text-white/80">{currentFact}</div>
                 <button 
                   onClick={() => setCurrentFact(null)}
@@ -491,8 +526,8 @@ export default function DashboardPage() {
 
           {/* Calendar */}
           <div className="card p-6">
-            <h2 className="font-bebas text-2xl text-liberty-red text-center mb-4">
-              JULY 2026 🇺🇸
+            <h2 className="font-bebas text-3xl text-liberty-red text-center mb-4">
+              JULY 2026
             </h2>
             
             {/* Day headers */}
@@ -525,7 +560,7 @@ export default function DashboardPage() {
                     <div 
                       key={day}
                       onClick={() => setLogDate(dateStr)}
-                      className={`aspect-square rounded-lg flex flex-col items-center justify-center cursor-pointer transition-all text-xs
+                      className={`aspect-square flex flex-col items-center justify-center cursor-pointer transition-all text-xs
                         ${count > 0 
                           ? count >= 58 
                             ? 'bg-liberty-red/40 border border-liberty-red/60' 
@@ -553,15 +588,15 @@ export default function DashboardPage() {
             {/* Legend */}
             <div className="flex items-center justify-center gap-4 mt-4 text-xs text-white/50">
               <div className="flex items-center gap-1">
-                <div className="w-3 h-3 bg-liberty-red/20 border border-liberty-red/30 rounded"></div>
+                <div className="w-3 h-3 bg-liberty-red/20 border border-liberty-red/30"></div>
                 <span>Logged</span>
               </div>
               <div className="flex items-center gap-1">
-                <div className="w-3 h-3 bg-liberty-red/40 border border-liberty-red/60 rounded"></div>
+                <div className="w-3 h-3 bg-liberty-red/40 border border-liberty-red/60"></div>
                 <span>58+ (on pace)</span>
               </div>
               <div className="flex items-center gap-1">
-                <div className="w-3 h-3 ring-2 ring-liberty-gold rounded"></div>
+                <div className="w-3 h-3 ring-2 ring-liberty-gold"></div>
                 <span>Today</span>
               </div>
             </div>
@@ -570,9 +605,9 @@ export default function DashboardPage() {
             {dailyLogs[logDate] > 0 && (
               <button
                 onClick={clearLogsForDay}
-                className="mt-4 w-full py-2 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors"
+                className="mt-4 w-full py-2 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors"
               >
-                🗑️ Clear {dailyLogs[logDate]} push-ups for {new Date(logDate + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                Clear {dailyLogs[logDate]} push-ups for {new Date(logDate + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
               </button>
             )}
           </div>
@@ -580,7 +615,7 @@ export default function DashboardPage() {
           {/* Personal Progress Chart */}
           <div className="card p-6 mt-8">
             <h2 className="font-bebas text-2xl text-liberty-red mb-4 text-center">
-              📈 YOUR PROGRESS TO 1776
+              YOUR PROGRESS TO 1776
             </h2>
             <div className="h-[300px] sm:h-[350px]">
               <ResponsiveContainer width="100%" height="100%">

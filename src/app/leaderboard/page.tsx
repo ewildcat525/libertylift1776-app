@@ -41,14 +41,13 @@ export default function LeaderboardPage() {
   return (
     <>
       <Navigation />
-      <div className="min-h-screen pt-20 pb-12 px-4">
+      <div className="min-h-screen pt-24 pb-12 px-4 app-surface">
         <div className="max-w-4xl mx-auto">
           {/* Header */}
-          <div className="text-center mb-8">
-            <h1 className="font-bebas text-5xl text-liberty-gold mb-2">
-              🏆 LEADERBOARD
-            </h1>
-            <p className="text-white/60">The most dedicated patriots</p>
+          <div className="mb-8">
+            <div className="app-eyebrow mb-3">National board</div>
+            <h1 className="app-title text-6xl sm:text-7xl">Leaderboard</h1>
+            <p className="text-white/60 mt-3">The people putting in the work.</p>
           </div>
 
           {/* Filter Tabs */}
@@ -61,10 +60,10 @@ export default function LeaderboardPage() {
               <button
                 key={tab.key}
                 onClick={() => setFilter(tab.key as 'all' | 'streak' | 'daily')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                className={`px-4 py-2 text-xs font-extrabold uppercase tracking-[0.1em] transition-colors border ${
                   filter === tab.key
-                    ? 'bg-liberty-gold text-liberty-dark'
-                    : 'bg-white/10 text-white/70 hover:bg-white/20'
+                    ? 'bg-liberty-red border-liberty-red text-white'
+                    : 'bg-transparent border-white/20 text-white/70 hover:bg-white hover:text-liberty-dark'
                 }`}
               >
                 {tab.label}
@@ -77,21 +76,20 @@ export default function LeaderboardPage() {
             <div className="text-center text-white/50 py-12">Loading leaderboard...</div>
           ) : leaderboard.length === 0 ? (
             <div className="card p-12 text-center">
-              <div className="text-5xl mb-4">🦅</div>
-              <h2 className="font-bebas text-2xl text-liberty-gold mb-2">No Patriots Yet!</h2>
+              <h2 className="font-bebas text-3xl text-liberty-red mb-2">No one on the board yet.</h2>
               <p className="text-white/60">Be the first to log your push-ups and claim the top spot.</p>
             </div>
           ) : (
             <div className="card overflow-hidden divide-y divide-white/10">
               {sortedLeaderboard.map((entry, index) => (
                 <div key={entry.id} className="flex items-center gap-4 p-4 hover:bg-white/5 transition-colors">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg ${
-                    index === 0 ? 'bg-gradient-to-br from-yellow-400 to-yellow-600 text-liberty-dark' :
-                    index === 1 ? 'bg-gradient-to-br from-gray-300 to-gray-400 text-liberty-dark' :
-                    index === 2 ? 'bg-gradient-to-br from-orange-400 to-orange-600 text-liberty-dark' :
+                  <div className={`w-10 h-10 flex items-center justify-center font-bold text-lg ${
+                    index === 0 ? 'bg-liberty-red text-white' :
+                    index === 1 ? 'bg-white text-liberty-dark' :
+                    index === 2 ? 'bg-white/70 text-liberty-dark' :
                     'bg-white/10 text-white/70'
                   }`}>
-                    {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : index + 1}
+                    {String(index + 1).padStart(2, '0')}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="font-semibold text-white truncate">
@@ -99,7 +97,7 @@ export default function LeaderboardPage() {
                     </div>
                     <div className="text-sm text-white/50">
                       {entry.state_code ? US_STATES[entry.state_code] : 'No state'}
-                      {entry.current_streak > 0 && ` • 🔥 ${entry.current_streak} day streak`}
+                      {entry.current_streak > 0 && ` / ${entry.current_streak} day streak`}
                     </div>
                   </div>
                   <div className="text-right">

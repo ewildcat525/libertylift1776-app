@@ -146,14 +146,13 @@ export default function ContestsPage() {
   return (
     <>
       <Navigation />
-      <div className="min-h-screen pt-20 pb-12 px-4">
+      <div className="min-h-screen pt-24 pb-12 px-4 app-surface">
         <div className="max-w-4xl mx-auto">
           {/* Header */}
-          <div className="text-center mb-8">
-            <h1 className="font-bebas text-5xl text-liberty-gold mb-2">
-              🏆 CONTESTS
-            </h1>
-            <p className="text-white/60">Create private challenges or join public competitions</p>
+          <div className="mb-8">
+            <div className="app-eyebrow mb-3">Private rivalries</div>
+            <h1 className="app-title text-6xl sm:text-7xl">Contests</h1>
+            <p className="text-white/60 mt-3">Create private challenges or join public competitions.</p>
           </div>
 
           {/* Actions */}
@@ -162,7 +161,7 @@ export default function ContestsPage() {
               onClick={() => user ? setShowCreate(true) : router.push('/login')}
               className="btn-gold flex-1"
             >
-              ➕ Create Contest
+              Create contest
             </button>
             <div className="flex-1 flex gap-2">
               <input
@@ -179,7 +178,7 @@ export default function ContestsPage() {
           </div>
 
           {joinError && (
-            <div className="mb-4 p-3 bg-liberty-red/20 border border-liberty-red/50 rounded-lg text-sm text-red-300">
+            <div className="mb-4 p-3 bg-liberty-red/20 border border-liberty-red/50 text-sm text-red-300">
               {joinError}
             </div>
           )}
@@ -187,7 +186,7 @@ export default function ContestsPage() {
           {/* Create Contest Modal */}
           {showCreate && (
             <div className="card p-6 mb-8">
-              <h2 className="font-bebas text-2xl text-liberty-gold mb-4">Create New Contest</h2>
+              <h2 className="font-bebas text-3xl text-liberty-red mb-4">Create New Contest</h2>
               <form onSubmit={createContest} className="space-y-4">
                 <div>
                   <label className="block text-sm text-white/70 mb-2">Contest Name *</label>
@@ -223,7 +222,7 @@ export default function ContestsPage() {
                   </label>
                 </div>
                 {createError && (
-                  <div className="p-3 bg-liberty-red/20 border border-liberty-red/50 rounded-lg text-sm text-red-300">
+                  <div className="p-3 bg-liberty-red/20 border border-liberty-red/50 text-sm text-red-300">
                     {createError}
                   </div>
                 )}
@@ -246,7 +245,7 @@ export default function ContestsPage() {
           {/* My Contests */}
           {user && myContests.length > 0 && (
             <div className="mb-8">
-              <h2 className="font-bebas text-2xl text-liberty-gold mb-4">My Contests</h2>
+              <h2 className="font-bebas text-3xl text-liberty-red mb-4">My Contests</h2>
               <div className="space-y-4">
                 {myContests.map((contest) => (
                   <Link key={contest.id} href={`/contests/${contest.id}`}>
@@ -279,12 +278,11 @@ export default function ContestsPage() {
 
           {/* Public Contests */}
           <div>
-            <h2 className="font-bebas text-2xl text-liberty-gold mb-4">Public Contests</h2>
+              <h2 className="font-bebas text-3xl text-liberty-red mb-4">Public Contests</h2>
             {loading ? (
               <div className="text-center text-white/50 py-12">Loading contests...</div>
             ) : contests.length === 0 ? (
               <div className="card p-12 text-center">
-                <div className="text-5xl mb-4">🎯</div>
                 <h3 className="font-bebas text-xl text-white mb-2">No Public Contests Yet</h3>
                 <p className="text-white/60">Create the first public contest!</p>
               </div>

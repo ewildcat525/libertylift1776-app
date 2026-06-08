@@ -1,10 +1,31 @@
 import { createBrowserClient } from '@supabase/ssr'
+import type { SupabaseClient } from '@supabase/supabase-js'
+
+let browserClient: SupabaseClient<any> | undefined
 
 export function createClient() {
-  return createBrowserClient(
+  if (browserClient) {
+    return browserClient
+  }
+
+  const client = createBrowserClient<any>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookieOptions: {
+        name: 'libertylift-auth',
+      },
+      auth: {
+        flowType: 'pkce',
+        autoRefreshToken: true,
+        detectSessionInUrl: false,
+        persistSession: true,
+      },
+    }
   )
+
+  browserClient = client
+  return browserClient
 }
 
 // Types for our database
@@ -119,4 +140,8 @@ export const US_STATES: Record<string, string> = {
   SD: 'South Dakota', TN: 'Tennessee', TX: 'Texas', UT: 'Utah', VT: 'Vermont',
   VA: 'Virginia', WA: 'Washington', WV: 'West Virginia', WI: 'Wisconsin', WY: 'Wyoming',
   DC: 'Washington D.C.'
+}
+
+export function isValidStateCode(stateCode: string | null | undefined) {
+  return Boolean(stateCode && US_STATES[stateCode])
 }

@@ -1,99 +1,146 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase'
-import Navigation from '@/components/Navigation'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [loading, setLoading] = useState(false)
+  const [loadingProvider, setLoadingProvider] = useState<'google' | 'email' | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const router = useRouter()
+  const [emailSent, setEmailSent] = useState(false)
   const supabase = createClient()
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError(null)
+  const redirectTo = typeof window === 'undefined'
+    ? undefined
+    : `${window.location.origin}/auth/callback?next=/dashboard`
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
+  const handleGoogleLogin = async () => {
+    setError(null)
+    setEmailSent(false)
+    setLoadingProvider('google')
+
+    const { error: oauthError } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo,
+      },
     })
 
-    if (error) {
-      setError(error.message)
-      setLoading(false)
+    if (oauthError) {
+      setError(oauthError.message)
+      setLoadingProvider(null)
+    }
+  }
+
+  const handleEmailLogin = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError(null)
+    setEmailSent(false)
+    setLoadingProvider('email')
+
+    const { error: otpError } = await supabase.auth.signInWithOtp({
+      email: email.trim().toLowerCase(),
+      options: {
+        emailRedirectTo: redirectTo,
+        shouldCreateUser: false,
+      },
+    })
+
+    if (otpError) {
+      setError(otpError.message)
+      setLoadingProvider(null)
       return
     }
 
-    router.push('/dashboard')
+    setEmailSent(true)
+    setLoadingProvider(null)
   }
 
   return (
-    <>
-      <Navigation />
-      <div className="min-h-screen flex items-center justify-center px-4 pt-16">
-        <div className="card p-8 max-w-md w-full">
-          <div className="text-center mb-8">
-            <div className="text-4xl mb-2">🦅</div>
-            <h1 className="font-bebas text-4xl text-liberty-gold">SIGN IN</h1>
-            <p className="text-white/60 mt-2">Welcome back, patriot</p>
+    <main className="auth-page">
+      <header className="conversion-nav">
+        <Link href="/" className="flex items-center gap-3 campaign-nav-mark">
+          <span className="campaign-nav-monogram">LL</span>
+          <span className="campaign-nav-name">Liberty Lift / 1776</span>
+        </Link>
+
+        <div className="conversion-nav-actions">
+          <Link href="/signup" className="campaign-nav-cta">
+            Join
+          </Link>
+        </div>
+      </header>
+
+      <section className="auth-shell auth-shell-center">
+        <div className="auth-card">
+          <div className="text-center mb-7">
+            <div className="app-eyebrow justify-center mb-3">Welcome back</div>
+            <h1 className="app-title text-5xl">Sign in</h1>
+            <p className="text-white/60 mt-3">Get back to your reps and state board.</p>
           </div>
 
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div>
-              <label className="block text-sm text-white/70 mb-2">Email</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="input"
-                placeholder="patriot@example.com"
-                required
-              />
-            </div>
+          <button
+            type="button"
+            onClick={handleGoogleLogin}
+            disabled={loadingProvider !== null}
+            className="auth-google-button"
+          >
+            <span aria-hidden="true">G</span>
+            {loadingProvider === 'google' ? 'Opening Google...' : 'Continue with Google'}
+          </button>
 
-            <div>
-              <label className="block text-sm text-white/70 mb-2">Password</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="input"
-                placeholder="Your password"
-                required
-              />
-            </div>
+          <div className="auth-divider">
+            <span>or use email</span>
+          </div>
 
-            {error && (
-              <div className="p-3 bg-liberty-red/20 border border-liberty-red/50 rounded-lg text-sm text-red-300">
-                {error}
-              </div>
-            )}
+          <form onSubmit={handleEmailLogin} className="auth-email-form">
+            <label className="auth-label" htmlFor="email">
+              Email
+            </label>
+            <input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(event) => {
+                setEmail(event.target.value)
+                setError(null)
+                setEmailSent(false)
+              }}
+              className="input"
+              placeholder="you@example.com"
+              required
+            />
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={loadingProvider !== null}
               className="btn-gold w-full py-3 disabled:opacity-50"
             >
-              {loading ? 'Signing in...' : 'Sign In'}
+              {loadingProvider === 'email' ? 'Sending link...' : 'Email me a sign-in link'}
             </button>
           </form>
 
-          <div className="mt-6 text-center">
-            <p className="text-white/60 text-sm">
-              Don't have an account?{' '}
-              <Link href="/signup" className="text-liberty-gold hover:underline">
-                Join the Revolution
-              </Link>
-            </p>
-          </div>
+          {emailSent && (
+            <div className="auth-success" role="status">
+              Check your email for the sign-in link.
+            </div>
+          )}
+
+          {error && (
+            <div className="auth-error" role="alert">
+              {error}
+            </div>
+          )}
+
+          <p className="auth-footnote">
+            New here?{' '}
+            <Link href="/signup" className="text-liberty-gold hover:underline">
+              Join your state
+            </Link>
+          </p>
         </div>
-      </div>
-    </>
+      </section>
+    </main>
   )
 }

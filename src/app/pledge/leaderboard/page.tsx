@@ -114,20 +114,19 @@ export default function PledgeLeaderboardPage() {
   return (
     <>
       <Navigation />
-      <div className="min-h-screen pt-20 pb-12 px-4">
+      <div className="min-h-screen pt-24 pb-12 px-4 app-surface">
         <div className="max-w-4xl mx-auto">
           {/* Header */}
-          <div className="text-center mb-8">
-            <h1 className="font-bebas text-5xl text-liberty-gold mb-2">
-              🎗️ PLEDGE LEADERBOARD
-            </h1>
-            <p className="text-white/60">Patriots putting their push-ups where their mouth is</p>
+          <div className="mb-8">
+            <div className="app-eyebrow mb-3">Pledge board</div>
+            <h1 className="app-title text-6xl sm:text-7xl">Pledge Leaderboard</h1>
+            <p className="text-white/60 mt-3">People putting their push-ups where their mouth is.</p>
           </div>
 
           {/* Total Pledged Banner */}
-          <div className="card p-8 mb-8 text-center bg-gradient-to-br from-liberty-blue/20 to-liberty-red/20">
+          <div className="card p-8 mb-8 text-center">
             <div className="text-white/60 mb-2">Total Pledged by Patriots</div>
-            <div className="font-bebas text-7xl text-liberty-gold mb-2">
+            <div className="font-bebas text-7xl text-liberty-red mb-2">
               ${totalPledged.toFixed(2)}
             </div>
             <div className="flex justify-center gap-8 text-sm text-white/50">
@@ -145,20 +144,19 @@ export default function PledgeLeaderboardPage() {
           {/* Filter Tabs */}
           <div className="flex justify-center gap-2 mb-8">
             {[
-              { key: 'all', label: 'All Pledges', icon: '🎗️' },
-              { key: 'wounded_warrior', label: 'Wounded Warrior', icon: '🎖️' },
-              { key: 'save_the_children', label: 'Save the Children', icon: '🌍' },
+              { key: 'all', label: 'All Pledges' },
+              { key: 'wounded_warrior', label: 'Wounded Warrior' },
+              { key: 'save_the_children', label: 'Save the Children' },
             ].map((tab) => (
               <button
                 key={tab.key}
                 onClick={() => setFilter(tab.key as any)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
+                className={`px-4 py-2 text-xs font-extrabold uppercase tracking-[0.1em] transition-colors border ${
                   filter === tab.key
-                    ? 'bg-liberty-gold text-liberty-dark'
-                    : 'bg-white/10 text-white/70 hover:bg-white/20'
+                    ? 'bg-liberty-red border-liberty-red text-white'
+                    : 'bg-transparent border-white/20 text-white/70 hover:bg-white hover:text-liberty-dark'
                 }`}
               >
-                <span>{tab.icon}</span>
                 <span>{tab.label}</span>
               </button>
             ))}
@@ -169,8 +167,7 @@ export default function PledgeLeaderboardPage() {
             <div className="text-center text-white/50 py-12">Loading pledges...</div>
           ) : filteredEntries.length === 0 ? (
             <div className="card p-12 text-center">
-              <div className="text-5xl mb-4">🎗️</div>
-              <h2 className="font-bebas text-2xl text-liberty-gold mb-2">No Pledges Yet!</h2>
+              <h2 className="font-bebas text-3xl text-liberty-red mb-2">No pledges yet.</h2>
               <p className="text-white/60 mb-6">Be the first to make a pledge and support a great cause.</p>
               <Link href="/pledge" className="btn-gold px-6 py-3 inline-block">
                 Make a Pledge
@@ -183,13 +180,13 @@ export default function PledgeLeaderboardPage() {
                 return (
                   <div key={entry.user_id} className="flex items-center gap-4 p-4 hover:bg-white/5 transition-colors">
                     {/* Rank */}
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg ${
-                      index === 0 ? 'bg-gradient-to-br from-yellow-400 to-yellow-600 text-liberty-dark' :
-                      index === 1 ? 'bg-gradient-to-br from-gray-300 to-gray-400 text-liberty-dark' :
-                      index === 2 ? 'bg-gradient-to-br from-orange-400 to-orange-600 text-liberty-dark' :
+                    <div className={`w-10 h-10 flex items-center justify-center font-bold text-lg ${
+                      index === 0 ? 'bg-liberty-red text-white' :
+                      index === 1 ? 'bg-white text-liberty-dark' :
+                      index === 2 ? 'bg-white/70 text-liberty-dark' :
                       'bg-white/10 text-white/70'
                     }`}>
-                      {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : index + 1}
+                      {String(index + 1).padStart(2, '0')}
                     </div>
 
                     {/* User info */}

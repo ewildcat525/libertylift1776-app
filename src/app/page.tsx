@@ -2,234 +2,226 @@
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import type { User } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase'
-import Navigation from '@/components/Navigation'
 import Countdown from '@/components/Countdown'
-import EmailCapture from '@/components/EmailCapture'
+
+const challengeSteps = [
+  {
+    number: '01',
+    title: 'Choose your ground',
+    copy: 'Join your home state and put your reps on the national board.',
+  },
+  {
+    number: '02',
+    title: 'Put in the work',
+    copy: 'Log 1,776 push-ups across July. That is roughly 58 a day.',
+  },
+  {
+    number: '03',
+    title: 'Bring your people',
+    copy: 'Challenge friends, build a streak, and move your state up the ranks.',
+  },
+]
+
+const stateRanks = [
+  { rank: '01', state: 'Virginia', total: '184,932', width: '100%' },
+  { rank: '02', state: 'Texas', total: '172,410', width: '91%' },
+  { rank: '03', state: 'California', total: '161,088', width: '84%' },
+  { rank: '04', state: 'Pennsylvania', total: '142,776', width: '72%' },
+]
 
 export default function Home() {
-  const [daysUntilJuly, setDaysUntilJuly] = useState(0)
-  const [loading, setLoading] = useState(true)
-  const router = useRouter()
+  const [user, setUser] = useState<User | null>(null)
   const supabase = createClient()
 
   useEffect(() => {
-    // Check if user is authenticated
-    const checkAuth = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
-        router.push('/dashboard')
-        return
-      }
-      setLoading(false)
-    }
-    checkAuth()
+    supabase.auth.getUser().then(({ data: { user: currentUser } }) => {
+      setUser(currentUser)
+    })
+  }, [])
 
-    // Calculate days until July
-    const july1 = new Date('2026-07-01T00:00:00')
-    const now = new Date()
-    const diff = july1.getTime() - now.getTime()
-    const days = Math.max(0, Math.floor(diff / (1000 * 60 * 60 * 24)))
-    setDaysUntilJuly(days)
-  }, [router])
-
-  // Show nothing while checking auth to prevent flash
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-liberty-blue">
-        <div className="text-white/50">Loading...</div>
-      </div>
-    )
-  }
+  const primaryHref = user ? '/dashboard' : '/signup'
+  const primaryLabel = user ? 'Open dashboard' : 'Join the challenge'
 
   return (
-    <>
-      <Navigation />
-      
-      {/* Hero Section */}
-      <section className="min-h-screen flex flex-col items-center justify-center px-4 pt-16">
-        <div className="text-center max-w-4xl mx-auto">
-          <div className="text-6xl mb-6 animate-bounce">🇺🇸</div>
-          
-          <h1 className="font-bebas text-6xl sm:text-8xl md:text-9xl text-transparent bg-clip-text bg-gradient-to-r from-liberty-red via-white to-liberty-blue">
-            LIBERTY LIFT
+    <main className="campaign-page">
+      <header className="conversion-nav">
+        <Link href="/" className="flex items-center gap-3 campaign-nav-mark">
+          <span className="campaign-nav-monogram">LL</span>
+          <span className="campaign-nav-name">Liberty Lift / 1776</span>
+        </Link>
+
+        <div className="conversion-nav-actions">
+          {user ? (
+            <Link href="/dashboard" className="conversion-signin">
+              Dashboard
+            </Link>
+          ) : (
+            <Link href="/login" className="conversion-signin">
+              Sign in
+            </Link>
+          )}
+          <Link href={primaryHref} className="campaign-nav-cta">
+            {primaryLabel}
+          </Link>
+        </div>
+      </header>
+
+      <section className="campaign-hero">
+        <video
+          className="campaign-hero-video"
+          autoPlay
+          muted
+          loop
+          playsInline
+          poster="/liberty-lift-hero-vintage.png"
+          aria-hidden="true"
+        >
+          <source src="/liberty-lift-pushup-loop.mp4" type="video/mp4" />
+        </video>
+        <div className="campaign-hero-wash" aria-hidden="true" />
+        <div className="film-grain" aria-hidden="true" />
+
+        <div className="campaign-hero-content">
+          <div className="campaign-kicker">
+            <span>July 1-31, 2026</span>
+            <span className="campaign-kicker-line" />
+            <span>All 50 states</span>
+          </div>
+
+          <h1 className="campaign-title">
+            <span>1,776</span>
+            <span>Push-ups.</span>
           </h1>
-          
-          <div className="font-bebas text-7xl sm:text-9xl md:text-[12rem] text-liberty-red leading-none" style={{textShadow: '0 0 40px rgba(178, 34, 52, 0.6)'}}>
-            1776
-          </div>
-          
-          <p className="text-lg sm:text-xl text-white/70 tracking-[0.3em] uppercase mt-4 mb-8">
-            One Nation. One Month. One Challenge.
+
+          <p className="campaign-declaration">
+            Join your state. Log your reps.
+            <br />
+            Move the board.
           </p>
 
-          {/* Stats */}
-          <div className="flex flex-wrap justify-center gap-8 sm:gap-12 mb-12">
-            <div className="text-center">
-              <div className="font-bebas text-5xl sm:text-6xl text-white">1,776</div>
-              <div className="text-sm text-white/50 uppercase tracking-wider">Push-ups</div>
-            </div>
-            <div className="text-center">
-              <div className="font-bebas text-5xl sm:text-6xl text-white">31</div>
-              <div className="text-sm text-white/50 uppercase tracking-wider">Days</div>
-            </div>
-            <div className="text-center">
-              <div className="font-bebas text-5xl sm:text-6xl text-white">~58</div>
-              <div className="text-sm text-white/50 uppercase tracking-wider">Per Day</div>
-            </div>
-          </div>
-
-          {/* CTA */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
-            <Link href="/signup" className="btn-gold text-lg px-8 py-4">
-              🦅 Join the Revolution
-            </Link>
-            <Link href="/leaderboard" className="btn-secondary text-lg px-8 py-4">
-              View Leaderboard
-            </Link>
-          </div>
-
-          {/* Countdown */}
           <Countdown />
+
+          <div className="campaign-actions">
+            <Link href={primaryHref} className="campaign-button campaign-button-primary">
+              {primaryLabel}
+              <span aria-hidden="true">→</span>
+            </Link>
+            {!user && (
+              <Link href="/login" className="campaign-button campaign-button-quiet">
+                Already joined? Sign in
+              </Link>
+            )}
+          </div>
         </div>
-      </section>
 
-      {/* Email Capture */}
-      <section className="py-16 px-4">
-        <EmailCapture />
-      </section>
-
-      {/* How It Works */}
-      <section className="py-24 px-4">
-        <div className="max-w-6xl mx-auto">
-          <h2 className="font-bebas text-5xl text-center text-liberty-red mb-16">
-            HOW IT WORKS
-          </h2>
-          
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="card p-8 text-center">
-              <div className="text-5xl mb-4">📝</div>
-              <h3 className="font-bebas text-2xl text-white mb-2">1. SIGN UP</h3>
-              <p className="text-white/60">
-                Create your account and choose your state. Rep your home turf in the state vs state battle.
-              </p>
-            </div>
-            
-            <div className="card p-8 text-center">
-              <div className="text-5xl mb-4">💪</div>
-              <h3 className="font-bebas text-2xl text-white mb-2">2. DO PUSH-UPS</h3>
-              <p className="text-white/60">
-                Log your push-ups daily. Break them up however you want — 58 a day, 100 some days, rest others.
-              </p>
-            </div>
-            
-            <div className="card p-8 text-center">
-              <div className="text-5xl mb-4">🏆</div>
-              <h3 className="font-bebas text-2xl text-white mb-2">3. COMPETE</h3>
-              <p className="text-white/60">
-                Climb the leaderboard, earn badges, and challenge friends. Hit 1,776 to become a Founding Father.
-              </p>
-            </div>
+        <div className="campaign-hero-footer">
+          <div>
+            <span className="campaign-stat-value">58</span>
+            <span className="campaign-stat-label">reps a day</span>
+          </div>
+          <div>
+            <span className="campaign-stat-value">31</span>
+            <span className="campaign-stat-label">days in July</span>
+          </div>
+          <div className="campaign-scroll-cue">
+            <span>Scroll to enter</span>
+            <span aria-hidden="true">↓</span>
           </div>
         </div>
       </section>
 
-      {/* Features */}
-      <section className="py-24 px-4 bg-white/5">
-        <div className="max-w-6xl mx-auto">
-          <h2 className="font-bebas text-5xl text-center text-white mb-16">
-            FEATURES
-          </h2>
-          
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {[
-              { icon: '📊', title: 'Personal Dashboard', desc: 'Track your progress with detailed stats and charts' },
-              { icon: '🏅', title: 'Achievements', desc: 'Earn badges like Minuteman, Patriot, and Founding Father' },
-              { icon: '🗺️', title: 'State Battle', desc: '50 states compete for push-up supremacy' },
-              { icon: '🔥', title: 'Streak Tracking', desc: 'Build your streak and never break the chain' },
-              { icon: '👥', title: 'Private Contests', desc: 'Create challenges with friends, family, or coworkers' },
-              { icon: '📱', title: 'Social Sharing', desc: 'Share milestones and flex on social media' },
-              { icon: '📜', title: 'Fun Facts', desc: 'Learn American history as you progress' },
-              { icon: '🎯', title: 'Daily Goals', desc: 'Stay on pace with personalized targets' },
-            ].map((feature, i) => (
-              <div key={i} className="card card-hover p-6">
-                <div className="text-3xl mb-3">{feature.icon}</div>
-                <h3 className="font-semibold text-white mb-1">{feature.title}</h3>
-                <p className="text-sm text-white/60">{feature.desc}</p>
-              </div>
-            ))}
-          </div>
+      <section className="movement-strip" aria-label="Challenge activity">
+        <div className="movement-strip-track">
+          <span>One nation moving</span>
+          <b>1,776 push-ups</b>
+          <span>Fifty states competing</span>
+          <b>Thirty-one days</b>
+          <span>One nation moving</span>
+          <b>1,776 push-ups</b>
         </div>
       </section>
 
-      {/* Achievements Preview */}
-      <section className="py-24 px-4">
-        <div className="max-w-6xl mx-auto">
-          <h2 className="font-bebas text-5xl text-center text-liberty-red mb-4">
-            EARN YOUR BADGES
+      <section className="campaign-section campaign-manifesto">
+        <div className="campaign-section-label">The challenge</div>
+        <div className="campaign-manifesto-copy">
+          <h2>
+            Your body.
+            <br />
+            Your state.
+            <br />
+            <em>Your move.</em>
           </h2>
-          <p className="text-center text-white/60 mb-16 max-w-2xl mx-auto">
-            Complete milestones to earn achievement badges. Can you collect them all?
+          <p>
+            This July, turn ordinary effort into a national challenge. Every rep
+            moves your personal total and your state&apos;s place on the board.
           </p>
-          
-          <div className="flex flex-wrap justify-center gap-6">
-            {[
-              { icon: '💪', name: 'First Rep', desc: '1 push-up' },
-              { icon: '🎖️', name: 'Minuteman', desc: '100 push-ups' },
-              { icon: '⚔️', name: 'Continental', desc: '500 push-ups' },
-              { icon: '🦅', name: 'Patriot', desc: '888 push-ups' },
-              { icon: '🏛️', name: 'Founding Father', desc: '1776 push-ups' },
-              { icon: '🐎', name: 'Paul Revere', desc: '7-day streak' },
-            ].map((badge, i) => (
-              <div key={i} className="achievement w-32">
-                <div className="text-4xl">{badge.icon}</div>
-                <div className="font-semibold text-sm text-white">{badge.name}</div>
-                <div className="text-xs text-white/50">{badge.desc}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Quote */}
-      <section className="py-24 px-4 bg-white/5">
-        <div className="max-w-3xl mx-auto text-center">
-          <blockquote className="text-2xl sm:text-3xl text-white/80 italic mb-6">
-            "The Constitution only guarantees the American people the right to pursue happiness. You have to catch it yourself."
-          </blockquote>
-          <cite className="text-liberty-gold font-semibold">— Benjamin Franklin</cite>
-        </div>
-      </section>
-
-      {/* Final CTA */}
-      <section className="py-24 px-4">
-        <div className="max-w-2xl mx-auto text-center">
-          <h2 className="font-bebas text-5xl text-liberty-red mb-6">
-            READY TO EARN YOUR FREEDOM?
-          </h2>
-          <p className="text-white/70 mb-8">
-            Join thousands of patriots in the ultimate fitness challenge. 
-            1,776 push-ups. 31 days. Are you in?
-          </p>
-          <Link href="/signup" className="btn-gold text-xl px-10 py-5 inline-block">
-            🇺🇸 Join the Revolution
+          <Link href={primaryHref} className="campaign-text-link">
+            {primaryLabel} <span aria-hidden="true">→</span>
           </Link>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="py-8 px-4 border-t border-white/10">
-        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <span>🇺🇸</span>
-            <span className="font-bebas text-xl text-liberty-red">LIBERTY LIFT 1776</span>
-          </div>
-          <div className="text-sm text-white/50">
-            © 2026 Liberty Lift 1776. All rights reserved.
-          </div>
+      <section className="campaign-section challenge-steps-section">
+        <div className="campaign-section-label">How it works</div>
+        <div className="challenge-steps">
+          {challengeSteps.map((step) => (
+            <article key={step.number} className="challenge-step">
+              <span className="challenge-step-number">{step.number}</span>
+              <h3>{step.title}</h3>
+              <p>{step.copy}</p>
+            </article>
+          ))}
         </div>
-      </footer>
-    </>
+      </section>
+
+      <section className="state-race">
+        <div className="state-race-copy">
+          <div className="campaign-section-label">State versus state</div>
+          <h2>Every rep counts twice.</h2>
+          <p>
+            Once for you. Once for everyone back home. Join the board, invite
+            your crew, and give your state something to rally around.
+          </p>
+          <Link href={primaryHref} className="campaign-button campaign-button-light">
+            Join your state <span aria-hidden="true">→</span>
+          </Link>
+        </div>
+
+        <div className="state-board" aria-label="Example state leaderboard">
+          <div className="state-board-header">
+            <span>National board</span>
+            <span>Push-ups logged</span>
+          </div>
+          {stateRanks.map((state) => (
+            <div key={state.state} className="state-rank">
+              <span className="state-rank-number">{state.rank}</span>
+              <div className="state-rank-main">
+                <div className="state-rank-text">
+                  <strong>{state.state}</strong>
+                  <span>{state.total}</span>
+                </div>
+                <div className="state-rank-bar">
+                  <span style={{ width: state.width }} />
+                </div>
+              </div>
+            </div>
+          ))}
+          <p className="state-board-note">Preview totals shown for campaign concept.</p>
+        </div>
+      </section>
+
+      <section className="campaign-final">
+        <div className="campaign-final-rule" />
+        <span className="campaign-final-eyebrow">July 1-31, 2026</span>
+        <h2>Will your state answer?</h2>
+        <p>1,776 push-ups. Thirty-one days. No spectators.</p>
+        <Link href={primaryHref} className="campaign-button campaign-button-primary">
+          {primaryLabel} <span aria-hidden="true">→</span>
+        </Link>
+        <div className="campaign-final-mark">LIBERTY LIFT / 1776</div>
+      </section>
+    </main>
   )
 }

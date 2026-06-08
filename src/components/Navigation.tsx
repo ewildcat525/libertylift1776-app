@@ -8,6 +8,7 @@ import type { User } from '@supabase/supabase-js'
 
 export default function Navigation() {
   const pathname = usePathname()
+  const isCampaignHome = pathname === '/'
   const router = useRouter()
   const [user, setUser] = useState<User | null>(null)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -32,7 +33,14 @@ export default function Navigation() {
   }, [])
 
   // Different nav links for logged in vs logged out
-  const navLinks = user
+  const navLinks = isCampaignHome
+    ? [
+        { href: '/leaderboard', label: 'Leaderboard' },
+        { href: '/pledge/leaderboard', label: 'Pledges' },
+        { href: '/states', label: 'States' },
+        { href: '/contests', label: 'Contests' },
+      ]
+    : user
     ? [
         { href: '/dashboard', label: 'Dashboard' },
         { href: '/leaderboard', label: 'Leaderboard' },
@@ -50,17 +58,18 @@ export default function Navigation() {
 
   const isActive = (href: string) => pathname === href
 
-  // Home link goes to dashboard if logged in
-  const homeLink = user ? '/dashboard' : '/'
+  const homeLink = '/'
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-liberty-dark/80 backdrop-blur-md border-b border-white/10">
+    <nav className={`fixed top-0 left-0 right-0 z-50 ${
+      isCampaignHome ? 'campaign-nav' : 'campaign-nav app-nav'
+    }`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link href={homeLink} className="flex items-center gap-2">
-            <span className="text-2xl">🇺🇸</span>
-            <span className="font-bebas text-2xl text-liberty-red">LIBERTY LIFT</span>
+          <Link href={homeLink} className="flex items-center gap-3 campaign-nav-mark">
+            <span className="campaign-nav-monogram">LL</span>
+            <span className="campaign-nav-name">Liberty Lift / 1776</span>
           </Link>
 
           {/* Desktop Nav */}
@@ -71,8 +80,8 @@ export default function Navigation() {
                 href={link.href}
                 className={`text-sm font-medium transition-colors ${
                   isActive(link.href)
-                    ? 'text-liberty-gold'
-                    : 'text-white/70 hover:text-white'
+                    ? 'text-liberty-red'
+                    : 'text-white/62 hover:text-white'
                 }`}
               >
                 {link.label}
@@ -85,17 +94,17 @@ export default function Navigation() {
             {user ? (
               <button
                 onClick={handleSignOut}
-                className="text-sm text-white/70 hover:text-white transition-colors"
+                className="text-xs font-bold uppercase tracking-[0.12em] text-white/62 hover:text-white transition-colors"
               >
                 Sign Out
               </button>
             ) : (
               <>
-                <Link href="/login" className="text-sm text-white/70 hover:text-white transition-colors">
+                <Link href="/login" className="text-xs font-bold uppercase tracking-[0.12em] text-white/62 hover:text-white transition-colors">
                   Sign In
                 </Link>
-                <Link href="/signup" className="btn-primary text-sm py-2">
-                  Join the Revolution
+                <Link href="/signup" className="campaign-nav-cta">
+                  Accept the challenge
                 </Link>
               </>
             )}
@@ -125,7 +134,7 @@ export default function Navigation() {
                 href={link.href}
                 onClick={() => setMenuOpen(false)}
                 className={`block py-2 text-sm font-medium ${
-                  isActive(link.href) ? 'text-liberty-gold' : 'text-white/70'
+                  isActive(link.href) ? 'text-liberty-red' : 'text-white/70'
                 }`}
               >
                 {link.label}
@@ -135,7 +144,7 @@ export default function Navigation() {
               {user ? (
                 <button
                   onClick={() => { handleSignOut(); setMenuOpen(false); }}
-                  className="text-sm text-white/70 py-2 text-left"
+                  className="text-sm font-bold uppercase tracking-[0.12em] text-white/70 py-2 text-left"
                 >
                   Sign Out
                 </button>
@@ -144,8 +153,8 @@ export default function Navigation() {
                   <Link href="/login" className="text-sm text-white/70 py-2">
                     Sign In
                   </Link>
-                  <Link href="/signup" className="btn-primary text-sm py-2 text-center">
-                    Join the Revolution
+                  <Link href="/signup" className="campaign-nav-cta text-center">
+                    Accept the challenge
                   </Link>
                 </>
               )}

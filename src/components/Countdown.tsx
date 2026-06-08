@@ -42,10 +42,8 @@ export default function Countdown() {
 
   if (isLive) {
     return (
-      <div className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-liberty-red/20 border border-liberty-red animate-pulse">
-        <span className="text-2xl">🔥</span>
-        <span className="text-lg font-bold text-liberty-red">CHALLENGE IS LIVE!</span>
-        <span className="text-2xl">🔥</span>
+      <div className="campaign-countdown campaign-countdown-live">
+        <span>Challenge is live</span>
       </div>
     )
   }
@@ -55,15 +53,14 @@ export default function Countdown() {
   }
 
   return (
-    <div className="text-center">
-      <div className="text-sm text-white/60 uppercase tracking-widest mb-4">
-        ⭐ Challenge begins in ⭐
+    <div className="campaign-countdown" aria-label="Challenge countdown">
+      <div className="campaign-countdown-label">
+        Starts July 1
       </div>
-      <div className="flex justify-center gap-3 sm:gap-4">
+      <div className="campaign-countdown-units">
         <CountdownUnit value={timeLeft.days} label="Days" />
         <CountdownUnit value={timeLeft.hours} label="Hours" />
         <CountdownUnit value={timeLeft.minutes} label="Min" />
-        <CountdownUnit value={timeLeft.seconds} label="Sec" />
       </div>
     </div>
   )
@@ -71,11 +68,11 @@ export default function Countdown() {
 
 function CountdownUnit({ value, label }: { value: number; label: string }) {
   return (
-    <div className="bg-white/5 border border-liberty-gold/30 rounded-lg px-3 sm:px-5 py-3 min-w-[60px] sm:min-w-[80px] transition-all hover:border-liberty-gold hover:bg-liberty-gold/10">
-      <div className="font-bebas text-3xl sm:text-4xl text-liberty-gold leading-none">
+    <div className="campaign-countdown-unit">
+      <div className="campaign-countdown-value">
         {String(value).padStart(2, '0')}
       </div>
-      <div className="text-[10px] sm:text-xs text-white/50 uppercase tracking-wider mt-1">
+      <div className="campaign-countdown-unit-label">
         {label}
       </div>
     </div>
