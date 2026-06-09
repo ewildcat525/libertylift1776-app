@@ -15,7 +15,7 @@ const challengeSteps = [
   {
     number: '02',
     title: 'Put in the work',
-    copy: 'Log 1,776 push-ups across July. That is roughly 58 a day.',
+    copy: 'Log 1776 push-ups across July. That is roughly 58 a day.',
   },
   {
     number: '03',
@@ -91,7 +91,7 @@ export default function Home() {
           </div>
 
           <h1 className="campaign-title">
-            <span>1,776</span>
+            <span>1776</span>
             <span>Push-ups.</span>
           </h1>
 
@@ -135,11 +135,11 @@ export default function Home() {
       <section className="movement-strip" aria-label="Challenge activity">
         <div className="movement-strip-track">
           <span>One nation moving</span>
-          <b>1,776 push-ups</b>
+          <b>1776 push-ups</b>
           <span>Fifty states competing</span>
           <b>Thirty-one days</b>
           <span>One nation moving</span>
-          <b>1,776 push-ups</b>
+          <b>1776 push-ups</b>
         </div>
       </section>
 
@@ -216,7 +216,7 @@ export default function Home() {
         <div className="campaign-final-rule" />
         <span className="campaign-final-eyebrow">July 1-31, 2026</span>
         <h2>Will your state answer?</h2>
-        <p>1,776 push-ups. Thirty-one days. No spectators.</p>
+        <p>1776 push-ups. Thirty-one days. No spectators.</p>
         <Link href={primaryHref} className="campaign-button campaign-button-primary">
           {primaryLabel} <span aria-hidden="true">→</span>
         </Link>

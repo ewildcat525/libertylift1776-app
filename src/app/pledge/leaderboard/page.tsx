@@ -21,6 +21,8 @@ const CHARITY_INFO = {
   save_the_children: { name: 'Save the Children', logo: '🌍', shortName: 'STC' },
 }
 
+const LEADERBOARD_LIMIT = 100
+
 const US_STATES: Record<string, string> = {
   AL: 'Alabama', AK: 'Alaska', AZ: 'Arizona', AR: 'Arkansas', CA: 'California',
   CO: 'Colorado', CT: 'Connecticut', DE: 'Delaware', FL: 'Florida', GA: 'Georgia',
@@ -44,58 +46,21 @@ export default function PledgeLeaderboardPage() {
 
   useEffect(() => {
     const loadLeaderboard = async () => {
-      // Get all active pledges with user info and stats
-      const { data: pledges } = await supabase
-        .from('pledges')
-        .select('user_id, charity, pledge_type, rate_cents')
-        .eq('is_active', true)
+      const { data: leaders } = await supabase
+        .from('pledge_leaderboard')
+        .select('user_id, display_name, state_code, charity, pledge_type, rate_cents, total_pushups, pledged_amount')
+        .order('pledged_amount', { ascending: false })
+        .limit(LEADERBOARD_LIMIT)
 
-      if (!pledges || pledges.length === 0) {
+      if (!leaders || leaders.length === 0) {
         setLoading(false)
         return
       }
 
-      // Get profiles and stats for these users
-      const userIds = pledges.map(p => p.user_id)
-      
-      const { data: profiles } = await supabase
-        .from('profiles')
-        .select('id, display_name, state_code')
-        .in('id', userIds)
-
-      const { data: stats } = await supabase
-        .from('user_stats')
-        .select('user_id, total_pushups')
-        .in('user_id', userIds)
-
-      // Combine data
-      const combined: PledgeLeaderEntry[] = pledges.map(pledge => {
-        const profile = profiles?.find(p => p.id === pledge.user_id)
-        const userStats = stats?.find(s => s.user_id === pledge.user_id)
-        const totalPushups = userStats?.total_pushups || 0
-
-        let pledgedAmount: number
-        if (pledge.pledge_type === 'per_completed') {
-          pledgedAmount = (totalPushups * pledge.rate_cents) / 100
-        } else {
-          const short = Math.max(0, 1776 - totalPushups)
-          pledgedAmount = (short * pledge.rate_cents) / 100
-        }
-
-        return {
-          user_id: pledge.user_id,
-          display_name: profile?.display_name || 'Anonymous Patriot',
-          state_code: profile?.state_code,
-          charity: pledge.charity,
-          pledge_type: pledge.pledge_type,
-          rate_cents: pledge.rate_cents,
-          total_pushups: totalPushups,
-          pledged_amount: pledgedAmount,
-        }
-      })
-
-      // Sort by pledged amount
-      combined.sort((a, b) => b.pledged_amount - a.pledged_amount)
+      const combined = leaders.map((leader) => ({
+        ...leader,
+        pledged_amount: Number(leader.pledged_amount),
+      })) as PledgeLeaderEntry[]
       
       setEntries(combined)
       setTotalPledged(combined.reduce((sum, e) => sum + e.pledged_amount, 0))
@@ -120,12 +85,12 @@ export default function PledgeLeaderboardPage() {
           <div className="mb-8">
             <div className="app-eyebrow mb-3">Pledge board</div>
             <h1 className="app-title text-6xl sm:text-7xl">Pledge Leaderboard</h1>
-            <p className="text-white/60 mt-3">People putting their push-ups where their mouth is.</p>
+            <p className="text-white/60 mt-3">Top {LEADERBOARD_LIMIT} active pledges, ranked by current amount.</p>
           </div>
 
           {/* Total Pledged Banner */}
           <div className="card p-8 mb-8 text-center">
-            <div className="text-white/60 mb-2">Total Pledged by Patriots</div>
+            <div className="text-white/60 mb-2">Top {LEADERBOARD_LIMIT} pledged total</div>
             <div className="font-bebas text-7xl text-liberty-red mb-2">
               ${totalPledged.toFixed(2)}
             </div>

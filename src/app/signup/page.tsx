@@ -108,7 +108,7 @@ export default function SignupPage() {
         <div className="auth-copy">
           <div className="app-eyebrow mb-4">Join your state</div>
           <h1 className="app-title auth-title">
-            1,776 push-ups.
+            1776 push-ups.
             <br />
             <em>One team.</em>
           </h1>

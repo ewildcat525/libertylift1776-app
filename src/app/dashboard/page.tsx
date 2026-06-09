@@ -56,7 +56,7 @@ export default function DashboardPage() {
         .select('*')
         .eq('id', user.id)
         .single()
-      
+
       if (profileError && profileError.code === 'PGRST116') {
         // No profile exists, create one
         const { data: newProfile, error: insertError } = await supabase
@@ -111,7 +111,7 @@ export default function DashboardPage() {
         .select('*')
         .eq('user_id', user.id)
         .single()
-      
+
       if (statsError && statsError.code === 'PGRST116') {
         // No stats row exists, create one
         const { data: newStats, error: insertError } = await supabase
@@ -132,7 +132,7 @@ export default function DashboardPage() {
         .from('pushup_logs')
         .select('logged_at, count')
         .eq('user_id', user.id)
-      
+
       if (logsData) {
         const grouped: Record<string, number> = {}
         logsData.forEach(log => {
@@ -144,7 +144,7 @@ export default function DashboardPage() {
         // Build chart data for July
         const julyLogs: Record<number, number> = {}
         for (let d = 1; d <= 31; d++) julyLogs[d] = 0
-        
+
         logsData.forEach(log => {
           const logDate = new Date(log.logged_at)
           if (logDate.getFullYear() === 2026 && logDate.getMonth() === 6) {
@@ -186,7 +186,7 @@ export default function DashboardPage() {
 
     // Create timestamp for the selected date (noon to avoid timezone issues)
     const loggedAt = new Date(logDate + 'T12:00:00').toISOString()
-    
+
     const { error } = await supabase
       .from('pushup_logs')
       .insert({ user_id: user.id, count, logged_at: loggedAt })
@@ -206,7 +206,7 @@ export default function DashboardPage() {
         .select('*')
         .eq('user_id', user.id)
         .single()
-      
+
       // Check for milestone
       const newTotal = newStats?.total_pushups || 0
       const oldTotal = stats?.total_pushups || 0
@@ -216,7 +216,7 @@ export default function DashboardPage() {
       }
 
       setStats(newStats)
-      
+
       // Update daily logs for calendar and rebuild chart
       setDailyLogs(prev => {
         const updated = { ...prev, [logDate]: (prev[logDate] || 0) + count }
@@ -234,7 +234,7 @@ export default function DashboardPage() {
 
   const clearLogsForDay = async () => {
     if (!user || !logDate) return
-    
+
     const count = dailyLogs[logDate] || 0
     if (count === 0) {
       setShowError('No push-ups logged for this day')
@@ -310,16 +310,16 @@ export default function DashboardPage() {
   }
 
   const progress = stats ? (stats.total_pushups / 1776) * 100 : 0
-  const dailyTarget = 58
+  const dailyTarget = DAILY_PACE
   const daysInJuly = 31
   const today = new Date()
   const julyStart = new Date(2026, 6, 1)
   const julyEnd = new Date(2026, 6, 31, 23, 59, 59)
-  
+
   // Determine challenge phase and pace
   let pace: 'before' | 'ahead' | 'behind' | 'complete'
   let expectedProgress = 0
-  
+
   if (today < julyStart) {
     pace = 'before'
   } else if (today > julyEnd) {
@@ -353,7 +353,107 @@ export default function DashboardPage() {
             <h1 className="app-title text-5xl sm:text-7xl">
               Welcome back, <em>{profile?.display_name || 'Patriot'}</em>
             </h1>
-            <p className="text-white/60 mt-3">Your journey to 1,776.</p>
+            <p className="text-white/60 mt-3">Your journey to 1776.</p>
+          </div>
+
+          {/* Pace Indicator */}
+          <div className="card p-6 text-center mb-8">
+            <div className={`inline-flex items-center gap-2 px-4 py-2 border ${
+              pace === 'ahead' ? 'bg-green-500/20 text-green-300 border-green-500/40' :
+              pace === 'behind' ? 'bg-yellow-500/20 text-yellow-300 border-yellow-500/40' :
+              pace === 'complete' ? 'bg-liberty-red/20 text-liberty-red border-liberty-red/40' :
+              'bg-white/[0.04] text-white border-white/15'
+            }`}>
+              <span>
+                {pace === 'ahead' ? 'Ahead' :
+                 pace === 'behind' ? 'Behind' :
+                 pace === 'complete' ? 'Complete' : 'Get ready'}
+              </span>
+            </div>
+            <p className="text-sm text-white/60 mt-3">
+              {pace === 'before'
+                ? "Starts July 1, 2026. America turns 250, and your board opens at 1776 push-ups in 31 days."
+                : pace === 'complete'
+                ? "You did it: 1776 push-ups in July."
+                : `Target: ${dailyTarget} push-ups per day to hit 1776 by July 31.`}
+            </p>
+          </div>
+
+          {/* Log Push-ups Card */}
+          <div className="card p-8 mb-8">
+            <h2 className="font-bebas text-3xl text-liberty-red mb-5 text-center">
+              LOG YOUR PUSH-UPS
+            </h2>
+
+            {/* Quick Add Buttons */}
+            <div className="grid grid-cols-5 gap-2 mb-4">
+              {[10, 20, 25, 50, 100].map((num) => (
+                <button
+                  key={num}
+                  onClick={() => setPushupCount(num.toString())}
+                  className="min-h-12 bg-white/10 hover:bg-white/20 text-sm font-bold transition-colors"
+                >
+                  +{num}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex flex-col gap-3 items-center justify-center">
+              <div className="flex flex-col sm:flex-row gap-3 items-center w-full max-w-xl">
+                <input
+                  type="number"
+                  value={pushupCount}
+                  onChange={(e) => setPushupCount(e.target.value)}
+                  placeholder="0"
+                  min="1"
+                  max="1000"
+                  className="input text-center text-2xl font-bold flex-1"
+                />
+                <input
+                  type="date"
+                  value={logDate}
+                  onChange={(e) => setLogDate(e.target.value)}
+                  min="2026-07-01"
+                  max="2026-07-31"
+                  className="input text-center flex-1"
+                />
+              </div>
+              <button
+                onClick={logPushups}
+                disabled={logging || !pushupCount}
+                className="btn-gold px-8 py-3 disabled:opacity-50 w-full max-w-xl"
+              >
+                {logging ? 'Logging...' : 'Log push-ups'}
+              </button>
+            </div>
+
+            {/* Success Message */}
+            {showSuccess && (
+              <div className="mt-4 p-4 bg-green-500/20 border border-green-500/50 text-center text-green-300">
+                Push-ups logged. Keep going.
+              </div>
+            )}
+
+            {/* Error Message */}
+            {showError && (
+              <div className="mt-4 p-4 bg-red-500/20 border border-red-500/50 text-center text-red-300">
+                {showError}
+              </div>
+            )}
+
+            {/* Fun Fact */}
+            {currentFact && (
+              <div className="mt-4 p-4 bg-liberty-red/20 border border-liberty-red/50 text-center">
+                <div className="text-liberty-red font-semibold mb-1">Milestone reached.</div>
+                <div className="text-white/80">{currentFact}</div>
+                <button
+                  onClick={() => setCurrentFact(null)}
+                  className="mt-2 text-sm text-white/50 hover:text-white"
+                >
+                  Dismiss
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Main Stats Card */}
@@ -372,7 +472,7 @@ export default function DashboardPage() {
                 <span>{progress.toFixed(1)}%</span>
               </div>
               <div className="progress-bar">
-                <div 
+                <div
                   className="progress-fill"
                   style={{ width: `${Math.min(progress, 100)}%` }}
                 />
@@ -413,123 +513,87 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Pledge Widget */}
-          <div className="mb-8">
-            <PledgeWidget userId={user.id} totalPushups={stats?.total_pushups || 0} />
-          </div>
-
-          {/* Log Push-ups Card */}
-          <div className="card p-8 mb-8">
+          {/* Personal Progress Chart */}
+          <div className="card p-6 mb-8">
             <h2 className="font-bebas text-2xl text-liberty-red mb-4 text-center">
-              LOG YOUR PUSH-UPS
+              YOUR PROGRESS TO 1776
             </h2>
-            
-            {/* Quick Add Buttons */}
-            <div className="grid grid-cols-5 gap-2 mb-4">
-              {[10, 25, 50, 58, 100].map((num) => (
-                <button
-                  key={num}
-                  onClick={() => setPushupCount(num.toString())}
-                  className="py-2 bg-white/10 hover:bg-white/20 rounded-lg text-sm transition-colors"
-                >
-                  +{num}
-                </button>
-              ))}
+            <div className="h-[300px] sm:h-[350px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+                  <XAxis
+                    dataKey="day"
+                    stroke="#666"
+                    tick={{ fill: '#999', fontSize: 12 }}
+                    label={{ value: 'July', position: 'insideBottom', offset: -5, fill: '#666' }}
+                  />
+                  <YAxis
+                    stroke="#666"
+                    tick={{ fill: '#999', fontSize: 12 }}
+                    domain={[0, 1776]}
+                    ticks={[0, 444, 888, 1332, 1776]}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: '#1a1a1a',
+                      border: '1px solid #333',
+                      borderRadius: '8px',
+                    }}
+                    labelStyle={{ color: '#999' }}
+                    formatter={(value: number, name: string) => [
+                      value.toLocaleString(),
+                      name === 'you' ? 'Your Push-ups' : '58/day Pace'
+                    ]}
+                    labelFormatter={(day) => `July ${day}`}
+                  />
+                  <Legend
+                    formatter={(value) => value === 'you' ? 'Your Push-ups' : '58/day Pace'}
+                  />
+
+                  {/* Pace line */}
+                  <Line
+                    type="monotone"
+                    dataKey="pace"
+                    name="pace"
+                    stroke="#666"
+                    strokeDasharray="5 5"
+                    strokeWidth={2}
+                    dot={false}
+                  />
+
+                  {/* User's line */}
+                  <Line
+                    type="monotone"
+                    dataKey="you"
+                    name="you"
+                    stroke="#DC2626"
+                    strokeWidth={3}
+                    dot={false}
+                    activeDot={{ r: 5, fill: '#DC2626' }}
+                  />
+
+                  {/* 1776 goal line */}
+                  <ReferenceLine
+                    y={1776}
+                    stroke="#EBE7DC"
+                    strokeDasharray="3 3"
+                    label={{ value: '1776', fill: '#EBE7DC', fontSize: 12, position: 'right' }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
             </div>
-
-            <div className="flex flex-col gap-3 items-center justify-center">
-              <div className="flex gap-3 items-center w-full max-w-xs">
-                <input
-                  type="number"
-                  value={pushupCount}
-                  onChange={(e) => setPushupCount(e.target.value)}
-                  placeholder="0"
-                  min="1"
-                  max="1000"
-                  className="input text-center text-2xl font-bold flex-1"
-                />
-                <input
-                  type="date"
-                  value={logDate}
-                  onChange={(e) => setLogDate(e.target.value)}
-                  min="2026-07-01"
-                  max="2026-07-31"
-                  className="input text-center flex-1"
-                />
-              </div>
-              <button
-                onClick={logPushups}
-                disabled={logging || !pushupCount}
-                className="btn-gold px-8 py-3 disabled:opacity-50 w-full max-w-xs"
-              >
-                {logging ? 'Logging...' : 'Log push-ups'}
-              </button>
-            </div>
-
-            {/* Success Message */}
-            {showSuccess && (
-              <div className="mt-4 p-4 bg-green-500/20 border border-green-500/50 text-center text-green-300">
-                Push-ups logged. Keep going.
-              </div>
-            )}
-
-            {/* Error Message */}
-            {showError && (
-              <div className="mt-4 p-4 bg-red-500/20 border border-red-500/50 text-center text-red-300">
-                {showError}
-              </div>
-            )}
-
-            {/* Fun Fact */}
-            {currentFact && (
-              <div className="mt-4 p-4 bg-liberty-red/20 border border-liberty-red/50 text-center">
-                <div className="text-liberty-red font-semibold mb-1">Milestone reached.</div>
-                <div className="text-white/80">{currentFact}</div>
-                <button 
-                  onClick={() => setCurrentFact(null)}
-                  className="mt-2 text-sm text-white/50 hover:text-white"
-                >
-                  Dismiss
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* Pace Indicator */}
-          <div className="card p-6 text-center mb-8">
-            <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full ${
-              pace === 'ahead' ? 'bg-green-500/20 text-green-300' :
-              pace === 'behind' ? 'bg-yellow-500/20 text-yellow-300' :
-              pace === 'complete' ? 'bg-liberty-gold/20 text-liberty-gold' :
-              'bg-liberty-blue/20 text-blue-300'
-            }`}>
-              <span>
-                {pace === 'ahead' ? '🚀' : 
-                 pace === 'behind' ? '⚠️' : 
-                 pace === 'complete' ? '🏆' : '🇺🇸'}
-              </span>
-              <span className="font-semibold">
-                {pace === 'ahead' ? "You're ahead of pace!" :
-                 pace === 'behind' ? "You're a bit behind - let's catch up!" :
-                 pace === 'complete' ? "Challenge complete! You're a Founding Father! 🎆" :
-                 "Challenge starts July 1st!"}
-              </span>
-            </div>
-            <p className="text-sm text-white/50 mt-2">
-              {pace === 'before' 
-                ? "Get ready — 1,776 push-ups in 31 days"
-                : pace === 'complete'
-                ? "You did it! 1,776 push-ups in July 🇺🇸"
-                : `Target: ${dailyTarget} push-ups per day to hit 1,776 by July 31st`}
+            <p className="text-center text-white/40 text-sm mt-2">
+              Dashed gray line = 58 push-ups/day pace to hit 1776 by July 31.
             </p>
           </div>
 
           {/* Calendar */}
-          <div className="card p-6">
+          <div className="card p-6 mb-8">
             <h2 className="font-bebas text-3xl text-liberty-red text-center mb-4">
               JULY 2026
             </h2>
-            
+
             {/* Day headers */}
             <div className="grid grid-cols-7 gap-1 mb-2">
               {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
@@ -538,32 +602,32 @@ export default function DashboardPage() {
                 </div>
               ))}
             </div>
-            
+
             {/* Calendar grid */}
             <div className="grid grid-cols-7 gap-1">
               {(() => {
                 const { daysInMonth, startingDay, year, month } = getDaysInMonth(calendarMonth)
                 const days = []
-                
+
                 // Empty cells for days before the 1st
                 for (let i = 0; i < startingDay; i++) {
                   days.push(<div key={`empty-${i}`} className="aspect-square" />)
                 }
-                
+
                 // Days of the month (hardcoded to July 2026)
                 for (let day = 1; day <= daysInMonth; day++) {
                   const dateStr = `2026-07-${String(day).padStart(2, '0')}`
                   const count = dailyLogs[dateStr] || 0
                   const isToday = dateStr === new Date().toISOString().split('T')[0]
-                  
+
                   days.push(
-                    <div 
+                    <div
                       key={day}
                       onClick={() => setLogDate(dateStr)}
                       className={`aspect-square flex flex-col items-center justify-center cursor-pointer transition-all text-xs
-                        ${count > 0 
-                          ? count >= 58 
-                            ? 'bg-liberty-red/40 border border-liberty-red/60' 
+                        ${count > 0
+                          ? count >= dailyTarget
+                            ? 'bg-liberty-red/40 border border-liberty-red/60'
                             : 'bg-liberty-red/20 border border-liberty-red/30'
                           : 'bg-white/5 hover:bg-white/10'
                         }
@@ -580,11 +644,11 @@ export default function DashboardPage() {
                     </div>
                   )
                 }
-                
+
                 return days
               })()}
             </div>
-            
+
             {/* Legend */}
             <div className="flex items-center justify-center gap-4 mt-4 text-xs text-white/50">
               <div className="flex items-center gap-1">
@@ -593,7 +657,7 @@ export default function DashboardPage() {
               </div>
               <div className="flex items-center gap-1">
                 <div className="w-3 h-3 bg-liberty-red/40 border border-liberty-red/60"></div>
-                <span>58+ (on pace)</span>
+                <span>{dailyTarget}+ (on pace)</span>
               </div>
               <div className="flex items-center gap-1">
                 <div className="w-3 h-3 ring-2 ring-liberty-gold"></div>
@@ -612,79 +676,9 @@ export default function DashboardPage() {
             )}
           </div>
 
-          {/* Personal Progress Chart */}
-          <div className="card p-6 mt-8">
-            <h2 className="font-bebas text-2xl text-liberty-red mb-4 text-center">
-              YOUR PROGRESS TO 1776
-            </h2>
-            <div className="h-[300px] sm:h-[350px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-                  <XAxis 
-                    dataKey="day" 
-                    stroke="#666"
-                    tick={{ fill: '#999', fontSize: 12 }}
-                    label={{ value: 'July', position: 'insideBottom', offset: -5, fill: '#666' }}
-                  />
-                  <YAxis 
-                    stroke="#666"
-                    tick={{ fill: '#999', fontSize: 12 }}
-                    domain={[0, 1776]}
-                    ticks={[0, 444, 888, 1332, 1776]}
-                  />
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: '#1a1a1a', 
-                      border: '1px solid #333',
-                      borderRadius: '8px',
-                    }}
-                    labelStyle={{ color: '#999' }}
-                    formatter={(value: number, name: string) => [
-                      value.toLocaleString(),
-                      name === 'you' ? 'Your Push-ups' : '58/day Pace'
-                    ]}
-                    labelFormatter={(day) => `July ${day}`}
-                  />
-                  <Legend 
-                    formatter={(value) => value === 'you' ? 'Your Push-ups' : '58/day Pace'}
-                  />
-                  
-                  {/* Pace line (58/day) */}
-                  <Line
-                    type="monotone"
-                    dataKey="pace"
-                    name="pace"
-                    stroke="#666"
-                    strokeDasharray="5 5"
-                    strokeWidth={2}
-                    dot={false}
-                  />
-                  
-                  {/* User's line */}
-                  <Line
-                    type="monotone"
-                    dataKey="you"
-                    name="you"
-                    stroke="#DC2626"
-                    strokeWidth={3}
-                    dot={false}
-                    activeDot={{ r: 5, fill: '#DC2626' }}
-                  />
-
-                  {/* 1776 goal line */}
-                  <ReferenceLine 
-                    y={1776} 
-                    stroke="#FFD700" 
-                    strokeDasharray="3 3" 
-                    label={{ value: '🎆 1776', fill: '#FFD700', fontSize: 12, position: 'right' }} 
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-            <p className="text-center text-white/40 text-sm mt-2">
-              Dashed gray line = 58 push-ups/day pace to hit 1776 by July 31
-            </p>
+          {/* Pledge Widget */}
+          <div>
+            <PledgeWidget userId={user.id} totalPushups={stats?.total_pushups || 0} />
           </div>
 
         </div>
