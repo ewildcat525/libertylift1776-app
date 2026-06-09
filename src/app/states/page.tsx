@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { createClient, US_STATES } from '@/lib/supabase'
 import Navigation from '@/components/Navigation'
 
@@ -83,7 +84,12 @@ export default function StatesPage() {
             <div className="card overflow-hidden">
               <div className="divide-y divide-white/10">
                 {stateStats.map((state, index) => (
-                  <div key={state.state_code} className="flex items-center gap-4 p-4 hover:bg-white/5 transition-colors">
+                  <Link
+                    key={state.state_code}
+                    href={`/states/${state.state_code}`}
+                    className="flex items-center gap-4 p-4 hover:bg-white/5 transition-colors"
+                    aria-label={`View ${US_STATES[state.state_code] || state.state_code} state leaderboard`}
+                  >
                     <div className={`w-10 h-10 flex items-center justify-center font-bold text-lg ${
                       index === 0 ? 'bg-liberty-red text-white' :
                       index === 1 ? 'bg-white text-liberty-dark' :
@@ -108,7 +114,8 @@ export default function StatesPage() {
                         avg {state.avg_pushups}/person
                       </div>
                     </div>
-                  </div>
+                    <div className="text-white/30" aria-hidden="true">→</div>
+                  </Link>
                 ))}
               </div>
             </div>

@@ -205,6 +205,14 @@ export default function ContestDetailPage() {
     }
   }
 
+  const copyInviteLink = () => {
+    if (contest && typeof window !== 'undefined') {
+      navigator.clipboard.writeText(`${window.location.origin}/join/${encodeURIComponent(contest.invite_code)}`)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    }
+  }
+
   const sortedMembers = [...members].sort((a, b) => {
     if (filter === 'streak') return b.current_streak - a.current_streak
     if (filter === 'daily') return b.best_day - a.best_day
@@ -259,16 +267,25 @@ export default function ContestDetailPage() {
                 <span className="text-sm text-white/50">Invite code:</span>
                 <span className="font-mono text-liberty-gold font-bold">{contest.invite_code}</span>
                 <button onClick={copyInviteCode} className="text-white/50 hover:text-white transition-colors">
-                  {copied ? 'Copied' : 'Copy'}
+                  Copy code
+                </button>
+                <button onClick={copyInviteLink} className="text-white/50 hover:text-white transition-colors">
+                  {copied ? 'Copied' : 'Copy link'}
                 </button>
               </div>
               <div className="text-sm text-white/50">
                 {members.length} {members.length === 1 ? 'lifter' : 'lifters'}
               </div>
               {!isMember && (
-                <button onClick={joinContest} disabled={joining} className="btn-gold text-sm py-2 ml-auto">
-                  {joining ? 'Joining...' : 'Join contest'}
-                </button>
+                user ? (
+                  <button onClick={joinContest} disabled={joining} className="btn-gold text-sm py-2 ml-auto">
+                    {joining ? 'Joining...' : 'Join contest'}
+                  </button>
+                ) : (
+                  <Link href={`/join/${encodeURIComponent(contest.invite_code)}`} className="btn-gold text-sm py-2 ml-auto">
+                    Join contest
+                  </Link>
+                )
               )}
             </div>
           </div>

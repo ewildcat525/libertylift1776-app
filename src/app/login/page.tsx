@@ -1,19 +1,34 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase'
 
+function getSafeNext(next: string | null) {
+  if (!next || !next.startsWith('/') || next.startsWith('//')) {
+    return '/dashboard'
+  }
+
+  return next
+}
+
 export default function LoginPage() {
   const [email, setEmail] = useState('')
+  const [nextPath, setNextPath] = useState('/dashboard')
   const [loadingProvider, setLoadingProvider] = useState<'google' | 'email' | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [emailSent, setEmailSent] = useState(false)
   const supabase = createClient()
 
-  const redirectTo = typeof window === 'undefined'
-    ? undefined
-    : `${window.location.origin}/auth/callback?next=/dashboard`
+  const getRedirectTo = () => {
+    if (typeof window === 'undefined') return undefined
+    const safeNext = getSafeNext(new URLSearchParams(window.location.search).get('next'))
+    return `${window.location.origin}/auth/callback?next=${encodeURIComponent(safeNext)}`
+  }
+
+  useEffect(() => {
+    setNextPath(getSafeNext(new URLSearchParams(window.location.search).get('next')))
+  }, [])
 
   const handleGoogleLogin = async () => {
     setError(null)
@@ -23,7 +38,7 @@ export default function LoginPage() {
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo,
+        redirectTo: getRedirectTo(),
       },
     })
 
@@ -42,7 +57,7 @@ export default function LoginPage() {
     const { error: otpError } = await supabase.auth.signInWithOtp({
       email: email.trim().toLowerCase(),
       options: {
-        emailRedirectTo: redirectTo,
+        emailRedirectTo: getRedirectTo(),
         shouldCreateUser: false,
       },
     })
@@ -66,7 +81,7 @@ export default function LoginPage() {
         </Link>
 
         <div className="conversion-nav-actions">
-          <Link href="/signup" className="campaign-nav-cta">
+          <Link href={`/signup?next=${encodeURIComponent(nextPath)}`} className="campaign-nav-cta">
             Join
           </Link>
         </div>
@@ -135,7 +150,7 @@ export default function LoginPage() {
 
           <p className="auth-footnote">
             New here?{' '}
-            <Link href="/signup" className="text-liberty-gold hover:underline">
+            <Link href={`/signup?next=${encodeURIComponent(nextPath)}`} className="text-liberty-gold hover:underline">
               Join your state
             </Link>
           </p>
