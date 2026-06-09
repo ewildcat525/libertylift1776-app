@@ -405,9 +405,9 @@ body {
 }
 
 .state-join-callout {
-  border: 1px solid rgba(211, 35, 49, 0.44);
-  background: rgba(211, 35, 49, 0.14);
-  color: rgba(235, 231, 220, 0.86);
+  border: 1px solid rgba(173, 222, 158, 0.42);
+  background: rgba(126, 189, 120, 0.14);
+  color: rgba(227, 244, 220, 0.9);
 }
 
 .auth-google-button {

@@ -147,8 +147,8 @@ export default function SignupPage() {
           </div>
 
           {selectedState && (
-            <div className="state-join-callout">
-              You are joining Team {selectedState}. Every rep you log moves your state total.
+            <div className="state-join-callout" role="status">
+              Team {selectedState} selected. Every rep you log moves your state total.
             </div>
           )}
 
