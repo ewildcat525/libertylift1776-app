@@ -1,9 +1,11 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { createClient, US_STATES } from '@/lib/supabase'
 import { generateDisplayName, savePendingSignup } from '@/lib/onboarding'
+
+const STATE_OPTIONS = Object.entries(US_STATES)
 
 function getSafeNext(next: string | null) {
   if (!next || !next.startsWith('/') || next.startsWith('//')) {
@@ -11,6 +13,10 @@ function getSafeNext(next: string | null) {
   }
 
   return next
+}
+
+function normalizeDisplayName(displayName: string) {
+  return displayName.trim().replace(/\s+/g, ' ')
 }
 
 export default function SignupPage() {
@@ -21,9 +27,13 @@ export default function SignupPage() {
   const [loadingProvider, setLoadingProvider] = useState<'google' | 'email' | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [emailSent, setEmailSent] = useState(false)
+  const [isStateMenuOpen, setIsStateMenuOpen] = useState(false)
+  const [activeStateIndex, setActiveStateIndex] = useState(0)
+  const statePickerRef = useRef<HTMLDivElement>(null)
   const supabase = createClient()
 
   const selectedState = stateCode ? US_STATES[stateCode] : null
+  const selectedStateIndex = STATE_OPTIONS.findIndex(([code]) => code === stateCode)
 
   const getRedirectTo = () => {
     if (typeof window === 'undefined') return undefined
@@ -39,24 +49,119 @@ export default function SignupPage() {
     setDisplayName(generateDisplayName(stateCode))
   }, [stateCode])
 
-  const persistPendingSignup = () => {
+  useEffect(() => {
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!statePickerRef.current?.contains(event.target as Node)) {
+        setIsStateMenuOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handlePointerDown)
+    return () => document.removeEventListener('mousedown', handlePointerDown)
+  }, [])
+
+  const chooseState = (nextStateCode: string) => {
+    setStateCode(nextStateCode)
+    setError(null)
+    setEmailSent(false)
+    setIsStateMenuOpen(false)
+  }
+
+  const handleStatePickerKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (!isStateMenuOpen && ['ArrowDown', 'ArrowUp', 'Enter', ' '].includes(event.key)) {
+      event.preventDefault()
+      setActiveStateIndex(selectedStateIndex >= 0 ? selectedStateIndex : 0)
+      setIsStateMenuOpen(true)
+      return
+    }
+
+    if (!isStateMenuOpen) return
+
+    if (event.key === 'ArrowDown') {
+      event.preventDefault()
+      setActiveStateIndex((current) => (current + 1) % STATE_OPTIONS.length)
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault()
+      setActiveStateIndex((current) => (current - 1 + STATE_OPTIONS.length) % STATE_OPTIONS.length)
+    } else if (event.key === 'Home') {
+      event.preventDefault()
+      setActiveStateIndex(0)
+    } else if (event.key === 'End') {
+      event.preventDefault()
+      setActiveStateIndex(STATE_OPTIONS.length - 1)
+    } else if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault()
+      chooseState(STATE_OPTIONS[activeStateIndex][0])
+    } else if (event.key === 'Escape') {
+      event.preventDefault()
+      setIsStateMenuOpen(false)
+    }
+  }
+
+  const persistPendingSignup = (nextDisplayName: string) => {
     if (!stateCode) return
     savePendingSignup({
-      displayName,
+      displayName: nextDisplayName,
       stateCode,
     })
   }
 
-  const handleGoogleSignup = async () => {
+  const validateDisplayName = async () => {
+    const nextDisplayName = normalizeDisplayName(displayName)
+
     if (!stateCode) {
       setError('Choose your state first.')
-      return
+      return null
     }
 
+    if (nextDisplayName.length < 3) {
+      setError('Handle must be at least 3 characters.')
+      return null
+    }
+
+    if (nextDisplayName.length > 40) {
+      setError('Handle must be 40 characters or fewer.')
+      return null
+    }
+
+    if (!/^[A-Za-z0-9 _-]+$/.test(nextDisplayName)) {
+      setError('Use letters, numbers, spaces, hyphens, or underscores.')
+      return null
+    }
+
+    const { data: existingProfile, error: availabilityError } = await supabase
+      .from('profiles')
+      .select('id')
+      .ilike('display_name', nextDisplayName)
+      .limit(1)
+      .maybeSingle()
+
+    if (availabilityError) {
+      setError(availabilityError.message)
+      return null
+    }
+
+    if (existingProfile) {
+      setError('That handle is already taken.')
+      return null
+    }
+
+    setDisplayName(nextDisplayName)
+    return nextDisplayName
+  }
+
+  const handleGoogleSignup = async () => {
     setError(null)
     setEmailSent(false)
     setLoadingProvider('google')
-    persistPendingSignup()
+
+    const nextDisplayName = await validateDisplayName()
+    if (!nextDisplayName) {
+      setLoadingProvider(null)
+      return
+    }
+
+    persistPendingSignup(nextDisplayName)
 
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: 'google',
@@ -74,22 +179,24 @@ export default function SignupPage() {
   const handleEmailSignup = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!stateCode) {
-      setError('Choose your state first.')
-      return
-    }
-
     setError(null)
     setEmailSent(false)
     setLoadingProvider('email')
-    persistPendingSignup()
+
+    const nextDisplayName = await validateDisplayName()
+    if (!nextDisplayName) {
+      setLoadingProvider(null)
+      return
+    }
+
+    persistPendingSignup(nextDisplayName)
 
     const { error: otpError } = await supabase.auth.signInWithOtp({
       email: email.trim().toLowerCase(),
       options: {
         emailRedirectTo: getRedirectTo(),
         data: {
-          display_name: displayName,
+          display_name: nextDisplayName,
           state_code: stateCode,
         },
       },
@@ -130,7 +237,7 @@ export default function SignupPage() {
           </h1>
           <p>
             Pick your state, grab an autogenerated handle, and get your dashboard.
-            You can edit the handle later.
+            You can edit the handle now or later.
           </p>
         </div>
 
@@ -139,28 +246,76 @@ export default function SignupPage() {
           <label className="auth-label" htmlFor="state-code">
             Choose your state
           </label>
-          <select
-            id="state-code"
-            value={stateCode}
-            onChange={(event) => {
-              setStateCode(event.target.value)
-              setError(null)
-              setEmailSent(false)
-            }}
-            className="input bg-white/5"
+          <div
+            ref={statePickerRef}
+            className="state-picker"
+            onKeyDown={handleStatePickerKeyDown}
           >
-            <option value="">Select your state...</option>
-            {Object.entries(US_STATES).map(([code, name]) => (
-              <option key={code} value={code}>
-                {name}
-              </option>
-            ))}
-          </select>
+            <button
+              id="state-code"
+              type="button"
+              className="state-picker-trigger"
+              aria-haspopup="listbox"
+              aria-expanded={isStateMenuOpen}
+              aria-controls="state-code-list"
+              onClick={() => {
+                setActiveStateIndex(selectedStateIndex >= 0 ? selectedStateIndex : 0)
+                setIsStateMenuOpen((isOpen) => !isOpen)
+              }}
+            >
+              <span>{selectedState || 'Select your state...'}</span>
+              <span className="state-picker-chevron" aria-hidden="true">⌄</span>
+            </button>
+
+            {isStateMenuOpen && (
+              <div
+                id="state-code-list"
+                className="state-picker-list"
+                role="listbox"
+                aria-labelledby="state-code"
+                tabIndex={-1}
+              >
+                {STATE_OPTIONS.map(([code, name], index) => (
+                  <button
+                    key={code}
+                    id={`state-option-${code}`}
+                    type="button"
+                    role="option"
+                    aria-selected={code === stateCode}
+                    className={`state-picker-option${index === activeStateIndex ? ' is-active' : ''}`}
+                    onMouseEnter={() => setActiveStateIndex(index)}
+                    onClick={() => chooseState(code)}
+                  >
+                    <span>{name}</span>
+                    <span>{code}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
 
           <div className="generated-handle" aria-live="polite">
-            <span>Your public handle</span>
-            <strong>{displayName}</strong>
+            <label htmlFor="display-name">Your public handle</label>
+            <input
+              id="display-name"
+              type="text"
+              value={displayName}
+              onChange={(event) => {
+                setDisplayName(event.target.value)
+                setError(null)
+                setEmailSent(false)
+              }}
+              onBlur={() => setDisplayName((currentDisplayName) => normalizeDisplayName(currentDisplayName))}
+              minLength={3}
+              maxLength={40}
+              className="generated-handle-input"
+              aria-describedby="display-name-help"
+              disabled={loadingProvider !== null}
+            />
           </div>
+          <p id="display-name-help" className="auth-field-note">
+            Letters, numbers, spaces, hyphens, or underscores.
+          </p>
 
           {selectedState && (
             <div className="state-join-callout" role="status">

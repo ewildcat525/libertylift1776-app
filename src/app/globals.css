@@ -95,6 +95,91 @@ body {
          placeholder:text-white/40 focus:outline-none focus:border-liberty-red transition-colors;
 }
 
+.state-picker {
+  position: relative;
+  z-index: 20;
+}
+
+.state-picker-trigger {
+  width: 100%;
+  min-height: 3.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid rgba(235, 231, 220, 0.2);
+  background: rgba(235, 231, 220, 0.05);
+  color: white;
+  font-weight: 800;
+  text-align: left;
+  transition: border-color 160ms ease, background-color 160ms ease;
+}
+
+.state-picker-trigger:hover,
+.state-picker-trigger:focus-visible,
+.state-picker-trigger[aria-expanded='true'] {
+  border-color: var(--liberty-red);
+  background: rgba(235, 231, 220, 0.075);
+  outline: none;
+}
+
+.state-picker-chevron {
+  color: rgba(235, 231, 220, 0.78);
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+.state-picker-list {
+  position: absolute;
+  top: calc(100% + 0.35rem);
+  left: 0;
+  right: 0;
+  max-height: min(18rem, 44vh);
+  overflow-y: auto;
+  border: 1px solid rgba(211, 35, 49, 0.72);
+  background: #11110f;
+  box-shadow: 0 1rem 2rem rgba(0, 0, 0, 0.42);
+}
+
+.state-picker-option {
+  width: 100%;
+  min-height: 2.7rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.68rem 0.95rem;
+  border: 0;
+  border-bottom: 1px solid rgba(235, 231, 220, 0.08);
+  background: transparent;
+  color: rgba(235, 231, 220, 0.86);
+  font-weight: 800;
+  text-align: left;
+}
+
+.state-picker-option:last-child {
+  border-bottom: 0;
+}
+
+.state-picker-option span:last-child {
+  color: rgba(235, 231, 220, 0.42);
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+}
+
+.state-picker-option:hover,
+.state-picker-option.is-active {
+  background: rgba(211, 35, 49, 0.22);
+  color: white;
+}
+
+.state-picker-option[aria-selected='true'] {
+  background: rgba(211, 35, 49, 0.34);
+  color: white;
+}
+
 /* Progress bar */
 .progress-bar {
   @apply h-3 bg-white/10 rounded-none overflow-hidden;
@@ -381,18 +466,52 @@ body {
   background: rgba(235, 231, 220, 0.055);
 }
 
+.generated-handle label,
 .generated-handle span {
   color: rgba(235, 231, 220, 0.5);
   font-size: 0.64rem;
   font-weight: 900;
   letter-spacing: 0.13em;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .generated-handle strong {
   color: var(--campaign-paper);
   font-size: 0.92rem;
   font-weight: 800;
+}
+
+.generated-handle-input {
+  min-width: 0;
+  width: min(100%, 18rem);
+  border: 0;
+  background: transparent;
+  color: var(--campaign-paper);
+  font-size: 0.92rem;
+  font-weight: 800;
+  text-align: right;
+  outline: none;
+}
+
+.generated-handle-input:focus {
+  color: white;
+}
+
+.generated-handle:focus-within {
+  border-color: rgba(235, 231, 220, 0.42);
+  background: rgba(235, 231, 220, 0.085);
+}
+
+.generated-handle-input:disabled {
+  opacity: 0.64;
+}
+
+.auth-field-note {
+  margin-top: 0.4rem;
+  color: rgba(235, 231, 220, 0.46);
+  font-size: 0.72rem;
+  line-height: 1.35;
 }
 
 .state-join-callout,
@@ -1024,6 +1143,17 @@ body {
 
   .auth-title {
     font-size: clamp(4.1rem, 19vw, 6rem);
+  }
+
+  .generated-handle {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.55rem;
+  }
+
+  .generated-handle-input {
+    width: 100%;
+    text-align: left;
   }
 
   .campaign-hero {
