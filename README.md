@@ -83,7 +83,22 @@ http://localhost:3000/auth/confirm
 
 For production, add the same callback paths for your deployed domain.
 
-The branded magic-link HTML lives at `supabase/templates/magic-link.html`. Paste it into the Supabase Auth Magic Link email template, or configure it through your custom SMTP/template workflow. Supabase may require a paid plan or custom SMTP for template customization on newer free-tier projects.
+The branded magic-link email lives in:
+
+- `supabase/templates/magic-link.subject.txt`
+- `supabase/templates/magic-link.html`
+
+For hosted Supabase, update the live template in **Authentication > Email Templates > Magic Link**:
+
+- Subject: paste the contents of `supabase/templates/magic-link.subject.txt`
+- Body: paste the contents of `supabase/templates/magic-link.html`
+
+You can also update it through the Supabase Management API with:
+
+- `mailer_subjects_magic_link`
+- `mailer_templates_magic_link_content`
+
+Supabase template edits in this repo are not automatically deployed to hosted projects. Supabase may require a paid plan or custom SMTP for template customization on newer free-tier projects.
 
 ### Run Locally
 

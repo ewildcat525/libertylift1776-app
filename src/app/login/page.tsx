@@ -12,6 +12,14 @@ function getSafeNext(next: string | null) {
   return next
 }
 
+function getLoginErrorMessage(message: string) {
+  if (message.toLowerCase().includes('signups not allowed for otp')) {
+    return 'No account found for that email. Join first, then use sign in next time.'
+  }
+
+  return message
+}
+
 export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [nextPath, setNextPath] = useState('/dashboard')
@@ -63,7 +71,7 @@ export default function LoginPage() {
     })
 
     if (otpError) {
-      setError(otpError.message)
+      setError(getLoginErrorMessage(otpError.message))
       setLoadingProvider(null)
       return
     }
@@ -144,7 +152,12 @@ export default function LoginPage() {
 
           {error && (
             <div className="auth-error" role="alert">
-              {error}
+              {error}{' '}
+              {error.startsWith('No account found') && (
+                <Link href={`/signup?next=${encodeURIComponent(nextPath)}`} className="text-liberty-gold hover:underline">
+                  Join Liberty Lift.
+                </Link>
+              )}
             </div>
           )}
 
