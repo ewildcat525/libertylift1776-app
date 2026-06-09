@@ -381,18 +381,52 @@ body {
   background: rgba(235, 231, 220, 0.055);
 }
 
+.generated-handle label,
 .generated-handle span {
   color: rgba(235, 231, 220, 0.5);
   font-size: 0.64rem;
   font-weight: 900;
   letter-spacing: 0.13em;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .generated-handle strong {
   color: var(--campaign-paper);
   font-size: 0.92rem;
   font-weight: 800;
+}
+
+.generated-handle-input {
+  min-width: 0;
+  width: min(100%, 18rem);
+  border: 0;
+  background: transparent;
+  color: var(--campaign-paper);
+  font-size: 0.92rem;
+  font-weight: 800;
+  text-align: right;
+  outline: none;
+}
+
+.generated-handle-input:focus {
+  color: white;
+}
+
+.generated-handle:focus-within {
+  border-color: rgba(235, 231, 220, 0.42);
+  background: rgba(235, 231, 220, 0.085);
+}
+
+.generated-handle-input:disabled {
+  opacity: 0.64;
+}
+
+.auth-field-note {
+  margin-top: 0.4rem;
+  color: rgba(235, 231, 220, 0.46);
+  font-size: 0.72rem;
+  line-height: 1.35;
 }
 
 .state-join-callout,
@@ -1024,6 +1058,17 @@ body {
 
   .auth-title {
     font-size: clamp(4.1rem, 19vw, 6rem);
+  }
+
+  .generated-handle {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.55rem;
+  }
+
+  .generated-handle-input {
+    width: 100%;
+    text-align: left;
   }
 
   .campaign-hero {
