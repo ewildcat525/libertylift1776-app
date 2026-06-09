@@ -34,12 +34,20 @@ export default function DashboardPage() {
   const [logging, setLogging] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
   const [showError, setShowError] = useState<string | null>(null)
+  const [profileName, setProfileName] = useState('')
+  const [profileSaving, setProfileSaving] = useState(false)
+  const [profileMessage, setProfileMessage] = useState<string | null>(null)
+  const [profileError, setProfileError] = useState<string | null>(null)
   const [currentFact, setCurrentFact] = useState<string | null>(null)
   const [dailyLogs, setDailyLogs] = useState<Record<string, number>>({})
   const [calendarMonth] = useState(() => new Date(2026, 6, 1)) // July is month 6 (0-indexed)
   const [chartData, setChartData] = useState<{ day: number; pace: number; you: number }[]>([])
   const router = useRouter()
   const supabase = createClient()
+
+  useEffect(() => {
+    setProfileName(profile?.display_name || '')
+  }, [profile?.display_name])
 
   useEffect(() => {
     const loadData = async () => {
@@ -170,6 +178,55 @@ export default function DashboardPage() {
 
     loadData()
   }, [router])
+
+  const saveProfileName = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (!user || !profile) return
+
+    const nextName = profileName.trim().replace(/\s+/g, ' ')
+    if (nextName.length < 3) {
+      setProfileError('Handle must be at least 3 characters.')
+      setProfileMessage(null)
+      return
+    }
+
+    if (nextName.length > 40) {
+      setProfileError('Handle must be 40 characters or fewer.')
+      setProfileMessage(null)
+      return
+    }
+
+    if (nextName === profile.display_name) {
+      setProfileMessage('Your public handle is already up to date.')
+      setProfileError(null)
+      return
+    }
+
+    setProfileSaving(true)
+    setProfileError(null)
+    setProfileMessage(null)
+
+    const { data: updatedProfile, error } = await supabase
+      .from('profiles')
+      .update({ display_name: nextName })
+      .eq('id', user.id)
+      .select()
+      .single()
+
+    setProfileSaving(false)
+
+    if (error) {
+      setProfileError(error.message)
+      return
+    }
+
+    if (updatedProfile) {
+      setProfile(updatedProfile)
+      setProfileName(updatedProfile.display_name || '')
+      setProfileMessage('Public handle updated.')
+      setTimeout(() => setProfileMessage(null), 3000)
+    }
+  }
 
   const logPushups = async () => {
     const count = parseInt(pushupCount)
@@ -354,6 +411,57 @@ export default function DashboardPage() {
               Welcome back, <em>{profile?.display_name || 'Patriot'}</em>
             </h1>
             <p className="text-white/60 mt-3">Your journey to 1776.</p>
+          </div>
+
+          {/* Account Settings */}
+          <div className="card p-5 sm:p-6 mb-8">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <div className="app-eyebrow mb-2">Account</div>
+                <h2 className="font-bebas text-3xl text-white">Public handle</h2>
+                <p className="text-sm text-white/55 mt-1">
+                  This name appears on leaderboards, contests, and pledges.
+                </p>
+              </div>
+
+              <form onSubmit={saveProfileName} className="w-full sm:max-w-md">
+                <label htmlFor="profile-name" className="sr-only">
+                  Public handle
+                </label>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <input
+                    id="profile-name"
+                    type="text"
+                    value={profileName}
+                    onChange={(event) => {
+                      setProfileName(event.target.value)
+                      setProfileError(null)
+                      setProfileMessage(null)
+                    }}
+                    minLength={3}
+                    maxLength={40}
+                    className="input"
+                    placeholder="Your public handle"
+                    disabled={profileSaving}
+                  />
+                  <button
+                    type="submit"
+                    disabled={profileSaving || !profileName.trim()}
+                    className="btn-gold px-5 py-3 disabled:opacity-50"
+                  >
+                    {profileSaving ? 'Saving...' : 'Save'}
+                  </button>
+                </div>
+                {(profileMessage || profileError) && (
+                  <div
+                    role={profileError ? 'alert' : 'status'}
+                    className={`mt-3 text-sm ${profileError ? 'text-red-300' : 'text-green-300'}`}
+                  >
+                    {profileError || profileMessage}
+                  </div>
+                )}
+              </form>
+            </div>
           </div>
 
           {/* Pace Indicator */}
