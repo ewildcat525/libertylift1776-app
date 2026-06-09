@@ -99,6 +99,7 @@ alter table public.pushup_logs enable row level security;
 alter table public.user_stats enable row level security;
 alter table public.contests enable row level security;
 alter table public.contest_participants enable row level security;
+alter table public.achievements enable row level security;
 alter table public.user_achievements enable row level security;
 
 -- Policies: Users can read all profiles (for leaderboards)
@@ -137,6 +138,7 @@ create policy "Users can join contests" on public.contest_participants for inser
 create policy "Users can leave contests" on public.contest_participants for delete using (auth.uid() = user_id);
 
 -- Policies: Achievements
+create policy "Achievement definitions viewable by everyone" on public.achievements for select to anon, authenticated using (true);
 create policy "Achievements viewable by everyone" on public.user_achievements for select using (true);
 create policy "System can grant achievements" on public.user_achievements for insert with check (auth.uid() = user_id);
 
@@ -252,7 +254,9 @@ create index idx_contest_participants_contest on public.contest_participants(con
 create index idx_contests_invite_code on public.contests(invite_code);
 
 -- View for leaderboard
-create or replace view public.leaderboard as
+create or replace view public.leaderboard
+with (security_invoker = true)
+as
 select 
   p.id,
   p.display_name,
@@ -270,7 +274,9 @@ where s.total_pushups > 0
 order by s.total_pushups desc;
 
 -- View for state leaderboard
-create or replace view public.state_leaderboard as
+create or replace view public.state_leaderboard
+with (security_invoker = true)
+as
 select 
   state_code,
   count(*) as participants,
