@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient, UserStats, Profile, AMERICAN_FACTS, DAILY_PACE, isValidStateCode } from '@/lib/supabase'
 import { clearPendingSignup, generateDisplayName, readPendingSignup } from '@/lib/onboarding'
+import Countdown from '@/components/Countdown'
 import Navigation from '@/components/Navigation'
 import PledgeWidget from '@/components/PledgeWidget'
 import {
@@ -518,27 +519,27 @@ export default function DashboardPage() {
           </div>
 
           {/* Pace Indicator */}
-          <div className="card p-6 text-center mb-8">
-            <div className={`inline-flex items-center gap-2 px-4 py-2 border ${
-              pace === 'ahead' ? 'bg-green-500/20 text-green-300 border-green-500/40' :
-              pace === 'behind' ? 'bg-yellow-500/20 text-yellow-300 border-yellow-500/40' :
-              pace === 'complete' ? 'bg-liberty-red/20 text-liberty-red border-liberty-red/40' :
-              'bg-white/[0.04] text-white border-white/15'
-            }`}>
-              <span>
-                {pace === 'ahead' ? 'Ahead' :
-                 pace === 'behind' ? 'Behind' :
-                 pace === 'complete' ? 'Complete' : 'Get ready'}
-              </span>
+          {pace === 'before' ? (
+            <Countdown className="dashboard-countdown mb-8" hideWhenLive />
+          ) : (
+            <div className="card p-6 text-center mb-8">
+              <div className={`inline-flex items-center gap-2 px-4 py-2 border ${
+                pace === 'ahead' ? 'bg-green-500/20 text-green-300 border-green-500/40' :
+                pace === 'behind' ? 'bg-yellow-500/20 text-yellow-300 border-yellow-500/40' :
+                'bg-liberty-red/20 text-liberty-red border-liberty-red/40'
+              }`}>
+                <span>
+                  {pace === 'ahead' ? 'Ahead' :
+                   pace === 'behind' ? 'Behind' : 'Complete'}
+                </span>
+              </div>
+              <p className="text-sm text-white/60 mt-3">
+                {pace === 'complete'
+                  ? "You did it: 1776 push-ups in July."
+                  : `Target: ${dailyTarget} push-ups per day to hit 1776 by July 31.`}
+              </p>
             </div>
-            <p className="text-sm text-white/60 mt-3">
-              {pace === 'before'
-                ? "Starts July 1, 2026. America turns 250, and your board opens at 1776 push-ups in 31 days."
-                : pace === 'complete'
-                ? "You did it: 1776 push-ups in July."
-                : `Target: ${dailyTarget} push-ups per day to hit 1776 by July 31.`}
-            </p>
-          </div>
+          )}
 
           {/* Log Push-ups Card */}
           <div className="card p-8 mb-8">

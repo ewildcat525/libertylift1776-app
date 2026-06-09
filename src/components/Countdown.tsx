@@ -9,7 +9,13 @@ interface TimeLeft {
   seconds: number
 }
 
-export default function Countdown() {
+export default function Countdown({
+  className = '',
+  hideWhenLive = false,
+}: {
+  className?: string
+  hideWhenLive?: boolean
+}) {
   const [timeLeft, setTimeLeft] = useState<TimeLeft | null>(null)
   const [isLive, setIsLive] = useState(false)
 
@@ -40,9 +46,13 @@ export default function Countdown() {
     return () => clearInterval(timer)
   }, [])
 
+  if (isLive && hideWhenLive) {
+    return null
+  }
+
   if (isLive) {
     return (
-      <div className="campaign-countdown campaign-countdown-live">
+      <div className={`campaign-countdown campaign-countdown-live ${className}`.trim()}>
         <span>Challenge is live</span>
       </div>
     )
@@ -53,7 +63,7 @@ export default function Countdown() {
   }
 
   return (
-    <div className="campaign-countdown" aria-label="Challenge countdown">
+    <div className={`campaign-countdown ${className}`.trim()} aria-label="Challenge countdown">
       <div className="campaign-countdown-label">
         Starts July 1
       </div>
