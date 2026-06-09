@@ -83,7 +83,7 @@ export default function PledgeWidget({ userId, totalPushups }: PledgeWidgetProps
   } else {
     const short = Math.max(0, 1776 - totalPushups)
     pledgedAmount = (short * pledge.rate_cents) / 100
-    pledgeDescription = `$${rateDisplay} × ${short.toLocaleString()} short of 1,776`
+    pledgeDescription = `$${rateDisplay} × ${short.toLocaleString()} short of 1776`
   }
 
   // Project final amount
@@ -124,14 +124,14 @@ export default function PledgeWidget({ userId, totalPushups }: PledgeWidgetProps
 
         {pledge.pledge_type === 'per_completed' && (
           <div className="mt-4 p-3 rounded-lg bg-white/5 text-center">
-            <span className="text-white/50 text-sm">Complete all 1,776 → </span>
+            <span className="text-white/50 text-sm">Complete all 1776 → </span>
             <span className="font-bold text-liberty-gold">${projectedFinal.toFixed(2)}</span>
           </div>
         )}
 
         {pledge.pledge_type === 'per_short' && totalPushups >= 1776 && (
           <div className="mt-4 p-3 rounded-lg bg-green-500/20 text-center border border-green-500/30">
-            <span className="text-green-300">🎉 You hit 1,776! $0.00 owed — donate anyway?</span>
+            <span className="text-green-300">You hit 1776! $0.00 owed — donate anyway?</span>
           </div>
         )}
       </div>

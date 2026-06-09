@@ -35,14 +35,14 @@ interface DailyData {
 
 // Color palette for chart lines
 const CHART_COLORS = [
-  '#FFD700', // gold
-  '#EF4444', // red
-  '#3B82F6', // blue
-  '#10B981', // green
-  '#F59E0B', // amber
-  '#8B5CF6', // purple
-  '#EC4899', // pink
-  '#06B6D4', // cyan
+  '#D32331',
+  '#EBE7DC',
+  '#64748B',
+  '#B91C1C',
+  '#94A3B8',
+  '#7F1D1D',
+  '#CBD5E1',
+  '#991B1B',
 ]
 
 export default function ContestDetailPage() {
@@ -229,44 +229,45 @@ export default function ContestDetailPage() {
   return (
     <>
       <Navigation />
-      <div className="min-h-screen pt-20 pb-12 px-4">
-        <div className="max-w-4xl mx-auto">
+      <div className="min-h-screen pt-24 pb-12 px-4 app-surface">
+        <div className="max-w-5xl mx-auto">
           <Link href="/contests" className="inline-flex items-center gap-2 text-white/60 hover:text-white mb-6 transition-colors">
             ← Back to Contests
           </Link>
 
           {/* Contest Header */}
-          <div className="card p-6 mb-8">
-            <div className="flex items-start justify-between mb-4">
+          <div className="card p-6 sm:p-8 mb-8">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
               <div>
-                <h1 className="font-bebas text-4xl text-liberty-gold mb-2">
-                  🏆 {contest.name}
+                <div className="app-eyebrow mb-3">Private rivalry</div>
+                <h1 className="app-title text-5xl sm:text-7xl">
+                  {contest.name}
                 </h1>
                 {contest.description && (
-                  <p className="text-white/70 mb-4">{contest.description}</p>
+                  <p className="text-white/65 mt-3 max-w-2xl">{contest.description}</p>
                 )}
               </div>
-              <span className={`text-xs px-3 py-1 rounded-full ${
-                contest.is_public ? 'bg-green-500/20 text-green-300' : 'bg-white/10 text-white/50'
+              <span className={`text-xs px-3 py-2 border font-extrabold uppercase tracking-[0.12em] ${
+                contest.is_public ? 'bg-green-500/20 text-green-300 border-green-500/40' : 'bg-white/[0.04] text-white/60 border-white/15'
               }`}>
                 {contest.is_public ? 'Public' : 'Private'}
               </span>
             </div>
 
             <div className="flex flex-wrap items-center gap-4">
-              <div className="flex items-center gap-2 bg-white/5 px-4 py-2 rounded-lg">
-                <span className="text-sm text-white/50">Invite Code:</span>
+              <div className="flex items-center gap-2 bg-white/[0.04] border border-white/15 px-4 py-3">
+                <span className="text-sm text-white/50">Invite code:</span>
                 <span className="font-mono text-liberty-gold font-bold">{contest.invite_code}</span>
                 <button onClick={copyInviteCode} className="text-white/50 hover:text-white transition-colors">
-                  {copied ? '✓' : '📋'}
+                  {copied ? 'Copied' : 'Copy'}
                 </button>
               </div>
               <div className="text-sm text-white/50">
-                👥 {members.length} {members.length === 1 ? 'patriot' : 'patriots'}
+                {members.length} {members.length === 1 ? 'lifter' : 'lifters'}
               </div>
               {!isMember && (
                 <button onClick={joinContest} disabled={joining} className="btn-gold text-sm py-2 ml-auto">
-                  {joining ? 'Joining...' : '🦅 Join Contest'}
+                  {joining ? 'Joining...' : 'Join contest'}
                 </button>
               )}
             </div>
@@ -275,7 +276,7 @@ export default function ContestDetailPage() {
           {/* Progress Chart */}
           {members.length > 0 && (
             <div className="card p-6 mb-8">
-              <h2 className="font-bebas text-2xl text-liberty-gold mb-4">📈 Progress to 1776</h2>
+              <h2 className="font-bebas text-3xl text-liberty-red mb-4">Progress to 1776</h2>
               <div className="h-[300px] sm:h-[400px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
@@ -302,7 +303,7 @@ export default function ContestDetailPage() {
                     />
                     <Legend />
                     
-                    {/* Pace line (58/day) */}
+                    {/* Pace line */}
                     <Line
                       type="monotone"
                       dataKey="pace"
@@ -327,12 +328,12 @@ export default function ContestDetailPage() {
                     ))}
 
                     {/* 1776 goal line */}
-                    <ReferenceLine y={1776} stroke="#FFD700" strokeDasharray="3 3" label={{ value: '🎆 1776', fill: '#FFD700', fontSize: 12 }} />
+                    <ReferenceLine y={1776} stroke="#EBE7DC" strokeDasharray="3 3" label={{ value: '1776', fill: '#EBE7DC', fontSize: 12 }} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
               <p className="text-center text-white/40 text-sm mt-2">
-                Dashed line = 58 push-ups/day pace to reach 1776 by July 31
+                Dashed line = 58 push-ups/day pace to reach 1776 by July 31.
               </p>
             </div>
           )}
@@ -347,9 +348,9 @@ export default function ContestDetailPage() {
               <button
                 key={tab.key}
                 onClick={() => setFilter(tab.key as 'all' | 'streak' | 'daily')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                className={`px-4 py-2 text-sm font-medium transition-colors ${
                   filter === tab.key
-                    ? 'bg-liberty-gold text-liberty-dark'
+                    ? 'bg-liberty-red text-white'
                     : 'bg-white/10 text-white/70 hover:bg-white/20'
                 }`}
               >
@@ -361,8 +362,7 @@ export default function ContestDetailPage() {
           {/* Contest Leaderboard */}
           {members.length === 0 ? (
             <div className="card p-12 text-center">
-              <div className="text-5xl mb-4">🦅</div>
-              <h2 className="font-bebas text-2xl text-liberty-gold mb-2">No Patriots Yet!</h2>
+              <h2 className="font-bebas text-3xl text-liberty-red mb-2">No lifters yet.</h2>
               <p className="text-white/60">Be the first to join this contest.</p>
             </div>
           ) : (
@@ -375,12 +375,12 @@ export default function ContestDetailPage() {
                   }`}
                 >
                   <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg ${
-                    index === 0 ? 'bg-gradient-to-br from-yellow-400 to-yellow-600 text-liberty-dark' :
-                    index === 1 ? 'bg-gradient-to-br from-gray-300 to-gray-400 text-liberty-dark' :
-                    index === 2 ? 'bg-gradient-to-br from-orange-400 to-orange-600 text-liberty-dark' :
+                    index === 0 ? 'bg-liberty-red text-white' :
+                    index === 1 ? 'bg-white text-liberty-dark' :
+                    index === 2 ? 'bg-white/70 text-liberty-dark' :
                     'bg-white/10 text-white/70'
                   }`}>
-                    {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : index + 1}
+                    {String(index + 1).padStart(2, '0')}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="font-semibold text-white truncate flex items-center gap-2">
@@ -395,7 +395,7 @@ export default function ContestDetailPage() {
                     </div>
                     <div className="text-sm text-white/50">
                       {member.state_code ? US_STATES[member.state_code] : 'No state'}
-                      {member.current_streak > 0 && ` • 🔥 ${member.current_streak} day streak`}
+                      {member.current_streak > 0 && ` • ${member.current_streak} day streak`}
                     </div>
                   </div>
                   <div className="text-right">

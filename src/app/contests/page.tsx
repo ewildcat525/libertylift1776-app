@@ -113,33 +113,28 @@ export default function ContestsPage() {
     }
 
     const codeToUse = directCode ?? joinCode
+    const normalizedCode = codeToUse.trim().toUpperCase()
     setJoinError(null)
-    const { data: contest } = await supabase
-      .from('contests')
-      .select('*')
-      .eq('invite_code', codeToUse.toUpperCase())
-      .single()
+    if (!normalizedCode) {
+      setJoinError('Enter an invite code')
+      return
+    }
+
+    const { data: contest, error } = await supabase.rpc('join_contest_by_invite_code', {
+      p_invite_code: normalizedCode,
+    })
+
+    if (error) {
+      setJoinError(error.message.includes('Invalid invite code') ? 'Invalid invite code' : 'Failed to join contest')
+      return
+    }
 
     if (!contest) {
       setJoinError('Invalid invite code')
       return
     }
 
-    const { error } = await supabase.from('contest_participants').insert({
-      contest_id: contest.id,
-      user_id: user.id,
-    })
-
-    if (error) {
-      if (error.code === '23505') {
-        setJoinError('You already joined this contest')
-      } else {
-        setJoinError('Failed to join contest')
-      }
-      return
-    }
-
-    setMyContests([contest, ...myContests])
+    setMyContests(prev => prev.some(c => c.id === contest.id) ? prev : [contest, ...prev])
     setJoinCode('')
   }
 

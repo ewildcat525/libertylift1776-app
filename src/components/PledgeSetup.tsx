@@ -34,14 +34,14 @@ const PLEDGE_TYPES = [
     name: 'Per Push-up Completed',
     emoji: '🥕',
     description: 'Donate for every push-up you complete',
-    example: '1,776 push-ups × $0.10 = $177.60',
+    example: '1776 push-ups × $0.10 = $177.60',
     vibe: 'Reward your effort',
   },
   {
     id: 'per_short',
     name: 'Per Push-up Short',
     emoji: '🔥',
-    description: 'Donate for every push-up you fall short of 1,776',
+    description: 'Donate for every push-up you fall short of 1776',
     example: 'Fall 500 short × $0.10 = $50.00',
     vibe: 'Stakes to finish strong',
   },
@@ -319,7 +319,7 @@ export default function PledgeSetup({ userId, onComplete, existingPledge }: Pled
 
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div className="p-3 rounded-lg bg-white/5">
-                  <div className="text-white/50">If you complete 1,776</div>
+                  <div className="text-white/50">If you complete 1776</div>
                   <div className="font-bold text-liberty-gold text-xl">
                     ${pledgeType === 'per_completed' ? exampleCompleted : '0.00'}
                   </div>

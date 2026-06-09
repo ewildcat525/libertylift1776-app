@@ -1,6 +1,6 @@
 # Liberty Lift 1776
 
-Liberty Lift 1776 is a Next.js campaign app for a July 1-31, 2026 push-up challenge. Participants join a state, log progress toward 1,776 push-ups, climb personal and national leaderboards, create private contests, and optionally make honor-system charity pledges based on their performance.
+Liberty Lift 1776 is a Next.js campaign app for a July 1-31, 2026 push-up challenge. Participants join a state, log progress toward 1776 push-ups, climb personal and national leaderboards, create private contests, and optionally make honor-system charity pledges based on their performance.
 
 ## Features
 
@@ -62,6 +62,7 @@ For a fresh Supabase project, run `supabase-schema.sql` first in the Supabase SQ
 2. `supabase/migrations/20260221_add_pledges.sql`
 3. `supabase/migrations/20260314_email_subscribers.sql`
 4. `supabase/migrations/20260608_signup_profile_metadata.sql`
+5. `supabase/migrations/20260609014525_join_private_contest_by_invite_code.sql`
 
 The schema enables Row Level Security and creates the core tables, triggers, functions, and leaderboard view used by the app.
 
@@ -80,6 +81,8 @@ http://localhost:3000/auth/confirm
 ```
 
 For production, add the same callback paths for your deployed domain.
+
+The branded magic-link HTML lives at `supabase/templates/magic-link.html`. Paste it into the Supabase Auth Magic Link email template, or configure it through your custom SMTP/template workflow. Supabase may require a paid plan or custom SMTP for template customization on newer free-tier projects.
 
 ### Run Locally
 
@@ -149,7 +152,7 @@ supabase-schema.sql     Base database schema
 
 ## Challenge Rules
 
-The challenge is designed around completing 1,776 push-ups during July 2026. The dashboard accepts logs dated from July 1 through July 31, 2026 and uses a daily pace target of 58 push-ups per day.
+The challenge is designed around completing 1776 push-ups during July 2026. The dashboard accepts logs dated from July 1 through July 31, 2026 and uses a daily pace target of 58 push-ups per day.
 
 ## Deployment
 
