@@ -638,6 +638,11 @@ body {
   text-transform: uppercase;
 }
 
+.dashboard-countdown {
+  width: 100%;
+  margin-top: 0;
+}
+
 .campaign-actions {
   display: flex;
   flex-wrap: wrap;
