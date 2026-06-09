@@ -2,11 +2,14 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { track } from '@vercel/analytics'
 import { createClient, UserStats, Profile, AMERICAN_FACTS, DAILY_PACE, isValidStateCode } from '@/lib/supabase'
 import { clearPendingSignup, generateDisplayName, readPendingSignup } from '@/lib/onboarding'
+import { clearReferral } from '@/lib/referral'
 import Countdown from '@/components/Countdown'
 import Navigation from '@/components/Navigation'
 import PledgeWidget from '@/components/PledgeWidget'
+import ShareProgress from '@/components/ShareProgress'
 import {
   LineChart,
   Line,
@@ -44,6 +47,7 @@ export default function DashboardPage() {
   const [dailyLogs, setDailyLogs] = useState<Record<string, number>>({})
   const [calendarMonth] = useState(() => new Date(2026, 6, 1)) // July is month 6 (0-indexed)
   const [chartData, setChartData] = useState<{ day: number; pace: number; you: number }[]>([])
+  const [recruitCount, setRecruitCount] = useState(0)
   const router = useRouter()
   const supabase = createClient()
 
@@ -109,11 +113,45 @@ export default function DashboardPage() {
         }
       }
 
+      // Credit the recruiter once, on first dashboard load after signup.
+      if (profileData && !profileData.referred_by && pendingSignup?.referredBy) {
+        const { data: referrer } = await supabase
+          .from('profiles')
+          .select('id')
+          .ilike('display_name', pendingSignup.referredBy)
+          .neq('id', user.id)
+          .limit(1)
+          .maybeSingle()
+
+        if (referrer) {
+          const { data: referredProfile, error: referralError } = await supabase
+            .from('profiles')
+            .update({ referred_by: referrer.id })
+            .eq('id', user.id)
+            .select()
+            .single()
+          if (!referralError && referredProfile) {
+            profileData = referredProfile
+            track('referral_attributed')
+          } else if (referralError) {
+            console.error('Failed to record referral:', referralError)
+          }
+        }
+      }
+
       if (pendingSignup) {
         clearPendingSignup()
+        clearReferral()
       }
 
       setProfile(profileData)
+
+      // Recruits: people who signed up from this user's share links.
+      const { count: recruits } = await supabase
+        .from('profiles')
+        .select('id', { count: 'exact', head: true })
+        .eq('referred_by', user.id)
+      setRecruitCount(recruits || 0)
 
       // Load stats (create if missing - handles users created before trigger was added)
       let { data: statsData, error: statsError } = await supabase
@@ -313,9 +351,11 @@ export default function DashboardPage() {
         return updated
       })
 
+      track('pushups_logged', { count })
+
       setPushupCount('')
       setShowSuccess(true)
-      setTimeout(() => setShowSuccess(false), 3000)
+      setTimeout(() => setShowSuccess(false), 8000)
     }
 
     setLogging(false)
@@ -592,7 +632,16 @@ export default function DashboardPage() {
             {/* Success Message */}
             {showSuccess && (
               <div className="mt-4 p-4 bg-green-500/20 border border-green-500/50 text-center text-green-300">
-                Push-ups logged. Keep going.
+                <div className="mb-3">Push-ups logged. Keep going.</div>
+                {profile?.display_name && (
+                  <ShareProgress
+                    handle={profile.display_name}
+                    totalPushups={stats?.total_pushups || 0}
+                    currentStreak={stats?.current_streak || 0}
+                    stateCode={profile.state_code}
+                    context="log_success"
+                  />
+                )}
               </div>
             )}
 
@@ -608,6 +657,16 @@ export default function DashboardPage() {
               <div className="mt-4 p-4 bg-liberty-red/20 border border-liberty-red/50 text-center">
                 <div className="text-liberty-red font-semibold mb-1">Milestone reached.</div>
                 <div className="text-white/80">{currentFact}</div>
+                {profile?.display_name && (
+                  <ShareProgress
+                    handle={profile.display_name}
+                    totalPushups={stats?.total_pushups || 0}
+                    currentStreak={stats?.current_streak || 0}
+                    stateCode={profile.state_code}
+                    context="milestone"
+                    className="mt-3"
+                  />
+                )}
                 <button
                   onClick={() => setCurrentFact(null)}
                   className="mt-2 text-sm text-white/50 hover:text-white"
@@ -674,6 +733,30 @@ export default function DashboardPage() {
               </div>
             </div>
           </div>
+
+          {/* Recruit Card */}
+          {profile?.display_name && (
+            <div className="card p-8 mb-8 text-center">
+              <h2 className="font-bebas text-3xl text-liberty-red mb-2">
+                BRING YOUR PEOPLE
+              </h2>
+              <p className="text-white/60 mb-2">
+                Every rep counts twice — once for you, once for your state. Share
+                your board and recruit your crew.
+              </p>
+              <p className="text-white/50 text-sm mb-5">
+                Patriots recruited so far:{' '}
+                <span className="text-liberty-gold font-bold">{recruitCount}</span>
+              </p>
+              <ShareProgress
+                handle={profile.display_name}
+                totalPushups={stats?.total_pushups || 0}
+                currentStreak={stats?.current_streak || 0}
+                stateCode={profile.state_code}
+                context="dashboard"
+              />
+            </div>
+          )}
 
           {/* Personal Progress Chart */}
           <div className="card p-6 mb-8">

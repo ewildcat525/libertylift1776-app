@@ -3,9 +3,15 @@ import { Analytics } from '@vercel/analytics/next'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 import './globals.css'
 
+const siteUrl =
+  process.env.NEXT_PUBLIC_SITE_URL ||
+  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
+
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   title: 'Liberty Lift 1776 — The Push-Up Challenge',
   description: 'Complete 1776 push-ups in July. One nation. One month. One challenge.',
+  keywords: ['push-up challenge', '1776 push-ups', 'July fitness challenge', 'state fitness competition'],
   icons: {
     icon: '/favicon.svg',
     apple: '/favicon.svg',

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { track } from '@vercel/analytics'
 import { createClient } from '@/lib/supabase'
 
 export default function EmailCapture() {
@@ -34,6 +35,7 @@ export default function EmailCapture() {
           throw error
         }
       } else {
+        track('email_captured')
         setStatus('success')
       }
     } catch (err: any) {

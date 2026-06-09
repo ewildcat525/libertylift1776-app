@@ -392,7 +392,7 @@ body {
   min-height: 100svh;
   background:
     linear-gradient(90deg, rgba(7, 8, 8, 0.95) 0%, rgba(7, 8, 8, 0.86) 46%, rgba(7, 8, 8, 0.68) 100%),
-    url('/liberty-lift-hero-vintage.png') center / cover;
+    url('/liberty-lift-hero-vintage.webp') center / cover;
   color: var(--campaign-paper);
 }
 

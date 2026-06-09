@@ -122,11 +122,11 @@ export default function PledgePage() {
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-liberty-gold">4.</span>
-                At month's end, donate your pledged amount directly to the charity
+                At month&apos;s end, donate your pledged amount directly to the charity
               </li>
             </ul>
             <p className="mt-4 text-white/40 text-xs">
-              This is an honor-system pledge. We don't collect payment — you donate directly to your chosen charity at the end of the challenge.
+              This is an honor-system pledge. We don&apos;t collect payment — you donate directly to your chosen charity at the end of the challenge.
             </p>
           </div>
         </div>

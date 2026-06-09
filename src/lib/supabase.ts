@@ -35,6 +35,7 @@ export interface Profile {
   display_name: string | null
   state_code: string | null
   avatar_url: string | null
+  referred_by?: string | null
   created_at: string
 }
 

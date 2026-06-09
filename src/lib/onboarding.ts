@@ -3,6 +3,7 @@ export const PENDING_SIGNUP_KEY = 'libertylift.pendingSignup'
 export interface PendingSignup {
   displayName: string
   stateCode: string
+  referredBy?: string
 }
 
 const HANDLE_PREFIXES = [
@@ -37,6 +38,7 @@ export function readPendingSignup() {
     return {
       displayName: parsed.displayName,
       stateCode: parsed.stateCode,
+      referredBy: parsed.referredBy,
     }
   } catch {
     return null

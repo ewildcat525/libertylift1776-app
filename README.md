@@ -13,6 +13,12 @@ Liberty Lift 1776 is a Next.js campaign app for a July 1-31, 2026 push-up challe
 - Private and public contests with invite codes
 - Charity pledge setup for Wounded Warrior Project or Save the Children
 - Supabase-backed profiles, logs, stats, achievements, contests, pledges, and email subscribers
+- Public shareable profile pages (`/p/[handle]`) with dynamic Open Graph cards
+- Share buttons (native share sheet, X, copy link) after logging, at milestones, and on state boards
+- Referral tracking: `?ref=<handle>` links credit recruiters, shown as "patriots recruited" on the dashboard
+- Dynamic per-state Open Graph images and metadata for state boards and contest invites
+- Pre-launch email capture on the landing page with live "patriots enlisted" social proof
+- Sitemap, robots rules, PWA manifest, and Vercel Analytics funnel events
 
 ## Tech Stack
 
@@ -45,9 +51,12 @@ Create a `.env.local` file in the project root:
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
 ```
 
-You can find both values in your Supabase project under **Project Settings > API**.
+You can find the Supabase values in your Supabase project under **Project Settings > API**.
+Set `NEXT_PUBLIC_SITE_URL` to your production domain when deploying; it is used for
+canonical metadata, Open Graph URLs, and the sitemap.
 
 ### Set Up Supabase
 
@@ -64,6 +73,8 @@ For a fresh Supabase project, run `supabase-schema.sql` first in the Supabase SQ
 4. `supabase/migrations/20260608_signup_profile_metadata.sql`
 5. `supabase/migrations/20260609014525_join_private_contest_by_invite_code.sql`
 6. `supabase/migrations/20260609120000_allow_private_contest_members_to_read_contests.sql`
+7. `supabase/migrations/20260609130000_unique_profile_display_names.sql`
+8. `supabase/migrations/20260609180000_viral_growth_and_hardening.sql`
 
 The schema enables Row Level Security and creates the core tables, triggers, functions, and leaderboard view used by the app.
 
@@ -146,8 +157,11 @@ Runs the Next.js lint command.
 - `/states` - State competition view
 - `/contests` - Contest discovery, creation, and invite-code joining
 - `/contests/[id]` - Individual contest page
+- `/p/[handle]` - Public shareable profile page with dynamic OG card
+- `/join/[code]` - Contest invite landing page
 - `/pledge` - Charity pledge setup
 - `/pledge/leaderboard` - Pledge leaderboard
+- `/privacy`, `/terms` - Legal pages
 
 ## Project Structure
 

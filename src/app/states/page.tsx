@@ -124,7 +124,7 @@ export default function StatesPage() {
           {/* Call to Action */}
           <div className="mt-8 text-center">
             <p className="text-white/60 mb-4">
-              Rep your state! Set your state in your profile to contribute to your state's ranking.
+              Rep your state! Set your state in your profile to contribute to your state&apos;s ranking.
             </p>
           </div>
         </div>
