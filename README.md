@@ -63,6 +63,7 @@ For a fresh Supabase project, run `supabase-schema.sql` first in the Supabase SQ
 3. `supabase/migrations/20260314_email_subscribers.sql`
 4. `supabase/migrations/20260608_signup_profile_metadata.sql`
 5. `supabase/migrations/20260609014525_join_private_contest_by_invite_code.sql`
+6. `supabase/migrations/20260609120000_allow_private_contest_members_to_read_contests.sql`
 
 The schema enables Row Level Security and creates the core tables, triggers, functions, and leaderboard view used by the app.
 

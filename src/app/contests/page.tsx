@@ -136,6 +136,7 @@ export default function ContestsPage() {
 
     setMyContests(prev => prev.some(c => c.id === contest.id) ? prev : [contest, ...prev])
     setJoinCode('')
+    router.push(`/contests/${contest.id}`)
   }
 
   return (

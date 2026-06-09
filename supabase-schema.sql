@@ -118,7 +118,16 @@ create policy "Users can update own stats" on public.user_stats for update using
 create policy "Users can insert own stats" on public.user_stats for insert with check (auth.uid() = user_id);
 
 -- Policies: Contests
-create policy "Public contests viewable by all" on public.contests for select using (is_public = true or creator_id = auth.uid());
+create policy "Contests viewable by public, creator, or members" on public.contests for select using (
+  is_public = true
+  or creator_id = auth.uid()
+  or exists (
+    select 1
+    from public.contest_participants
+    where contest_participants.contest_id = contests.id
+      and contest_participants.user_id = auth.uid()
+  )
+);
 create policy "Users can create contests" on public.contests for insert with check (auth.uid() = creator_id);
 create policy "Creators can update own contests" on public.contests for update using (auth.uid() = creator_id);
 
