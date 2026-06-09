@@ -19,6 +19,21 @@ Liberty Lift 1776 is a Next.js campaign app for a July 1-31, 2026 push-up challe
 - Dynamic per-state Open Graph images and metadata for state boards and contest invites
 - Pre-launch email capture on the landing page with live "patriots enlisted" social proof
 - Sitemap, robots rules, PWA manifest, and Vercel Analytics funnel events
+- Daily reminder emails during July (launch blast + pace/streak nudges) via Vercel Cron and Resend
+- Top Recruiters leaderboard tab and Founding Patriot badges for pre-July signups
+- Spread-the-word page (`/spread-the-word`) with copy-paste captions and the #LibertyLift1776 hashtag
+- Landing page state board flips from preview data to live totals once reps are logged
+
+## Email Reminders
+
+A Vercel Cron job (`vercel.json`) hits `/api/cron/reminders` daily at 13:00 UTC. During
+July 2026 it sends a launch announcement to the pre-launch email list (July 1) and a
+personalized pace/streak reminder to participants who have not logged that day. Every
+email carries an HMAC-signed one-click unsubscribe link.
+
+Required environment variables: `SUPABASE_SERVICE_ROLE_KEY`, `RESEND_API_KEY`,
+`EMAIL_FROM`, and `CRON_SECRET` (see `.env.local.example`). The route is a no-op until
+they are configured, and outside the July 2026 window.
 
 ## Tech Stack
 
@@ -75,6 +90,7 @@ For a fresh Supabase project, run `supabase-schema.sql` first in the Supabase SQ
 6. `supabase/migrations/20260609120000_allow_private_contest_members_to_read_contests.sql`
 7. `supabase/migrations/20260609130000_unique_profile_display_names.sql`
 8. `supabase/migrations/20260609180000_viral_growth_and_hardening.sql`
+9. `supabase/migrations/20260610090000_email_privacy_and_retention.sql`
 
 The schema enables Row Level Security and creates the core tables, triggers, functions, and leaderboard view used by the app.
 

@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { track } from '@vercel/analytics'
-import { createClient } from '@/lib/supabase'
+import { createClient, US_STATES } from '@/lib/supabase'
 import { captureReferralFromUrl } from '@/lib/referral'
 import Countdown from '@/components/Countdown'
 import EmailCapture from '@/components/EmailCapture'
@@ -30,17 +30,26 @@ const challengeSteps = [
   },
 ]
 
-const stateRanks = [
+// Placeholder board shown until real reps start landing on July 1.
+const previewStateRanks = [
   { rank: '01', state: 'Virginia', total: '184,932', width: '100%' },
   { rank: '02', state: 'Texas', total: '172,410', width: '91%' },
   { rank: '03', state: 'California', total: '161,088', width: '84%' },
   { rank: '04', state: 'Pennsylvania', total: '142,776', width: '72%' },
 ]
 
+interface BoardRow {
+  rank: string
+  state: string
+  total: string
+  width: string
+}
+
 export default function Home() {
   const [user, setUser] = useState<User | null>(null)
   const [enlisted, setEnlisted] = useState<number | null>(null)
   const [showVideo, setShowVideo] = useState(false)
+  const [liveBoard, setLiveBoard] = useState<BoardRow[] | null>(null)
   const supabase = createClient()
 
   useEffect(() => {
@@ -56,11 +65,28 @@ export default function Home() {
       setUser(currentUser)
     })
 
+    supabase.rpc('participant_count').then(({ data: count }) => {
+      if (count && count >= SOCIAL_PROOF_THRESHOLD) setEnlisted(count)
+    })
+
+    // Once real reps exist, the preview board flips to live state totals.
     supabase
-      .from('profiles')
-      .select('id', { count: 'exact', head: true })
-      .then(({ count }) => {
-        if (count && count >= SOCIAL_PROOF_THRESHOLD) setEnlisted(count)
+      .from('state_leaderboard')
+      .select('state_code, total_pushups, state_rank')
+      .order('state_rank', { ascending: true })
+      .limit(4)
+      .then(({ data: states }) => {
+        if (!states || states.length === 0) return
+        const top = states[0].total_pushups
+        if (!top) return
+        setLiveBoard(
+          states.map((s) => ({
+            rank: String(s.state_rank).padStart(2, '0'),
+            state: US_STATES[s.state_code] || s.state_code,
+            total: s.total_pushups.toLocaleString(),
+            width: `${Math.max(Math.round((s.total_pushups / top) * 100), 4)}%`,
+          }))
+        )
       })
   }, [])
 
@@ -238,7 +264,7 @@ export default function Home() {
             <span>National board</span>
             <span>Push-ups logged</span>
           </div>
-          {stateRanks.map((state) => (
+          {(liveBoard || previewStateRanks).map((state) => (
             <div key={state.state} className="state-rank">
               <span className="state-rank-number">{state.rank}</span>
               <div className="state-rank-main">
@@ -252,7 +278,9 @@ export default function Home() {
               </div>
             </div>
           ))}
-          <p className="state-board-note">Preview totals shown for campaign concept.</p>
+          {!liveBoard && (
+            <p className="state-board-note">Preview totals shown for campaign concept.</p>
+          )}
         </div>
       </section>
 

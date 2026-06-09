@@ -133,19 +133,17 @@ export default function SignupPage() {
       return null
     }
 
-    const { data: existingProfile, error: availabilityError } = await supabase
-      .from('profiles')
-      .select('id')
-      .ilike('display_name', nextDisplayName)
-      .limit(1)
-      .maybeSingle()
+    const { data: isAvailable, error: availabilityError } = await supabase.rpc(
+      'is_handle_available',
+      { p_handle: nextDisplayName }
+    )
 
     if (availabilityError) {
       setError(availabilityError.message)
       return null
     }
 
-    if (existingProfile) {
+    if (isAvailable === false) {
       setError('That handle is already taken.')
       return null
     }

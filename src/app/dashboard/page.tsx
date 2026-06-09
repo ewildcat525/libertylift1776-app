@@ -115,13 +115,10 @@ export default function DashboardPage() {
 
       // Credit the recruiter once, on first dashboard load after signup.
       if (profileData && !profileData.referred_by && pendingSignup?.referredBy) {
-        const { data: referrer } = await supabase
-          .from('profiles')
-          .select('id')
-          .ilike('display_name', pendingSignup.referredBy)
-          .neq('id', user.id)
-          .limit(1)
-          .maybeSingle()
+        const { data: referrerId } = await supabase.rpc('resolve_handle', {
+          p_handle: pendingSignup.referredBy,
+        })
+        const referrer = referrerId && referrerId !== user.id ? { id: referrerId } : null
 
         if (referrer) {
           const { data: referredProfile, error: referralError } = await supabase
@@ -147,10 +144,7 @@ export default function DashboardPage() {
       setProfile(profileData)
 
       // Recruits: people who signed up from this user's share links.
-      const { count: recruits } = await supabase
-        .from('profiles')
-        .select('id', { count: 'exact', head: true })
-        .eq('referred_by', user.id)
+      const { data: recruits } = await supabase.rpc('get_recruit_count')
       setRecruitCount(recruits || 0)
 
       // Load stats (create if missing - handles users created before trigger was added)
@@ -255,13 +249,10 @@ export default function DashboardPage() {
     setProfileError(null)
     setProfileMessage(null)
 
-    const { data: existingProfile, error: availabilityError } = await supabase
-      .from('profiles')
-      .select('id')
-      .ilike('display_name', nextName)
-      .neq('id', user.id)
-      .limit(1)
-      .maybeSingle()
+    const { data: isAvailable, error: availabilityError } = await supabase.rpc(
+      'is_handle_available',
+      { p_handle: nextName }
+    )
 
     if (availabilityError) {
       setProfileSaving(false)
@@ -269,7 +260,7 @@ export default function DashboardPage() {
       return
     }
 
-    if (existingProfile) {
+    if (isAvailable === false) {
       setProfileSaving(false)
       setProfileError('That handle is already taken.')
       return
@@ -478,7 +469,14 @@ export default function DashboardPage() {
         <div className="max-w-4xl mx-auto">
           {/* Header */}
           <div className="mb-8">
-            <div className="app-eyebrow mb-3">Personal board</div>
+            <div className="flex flex-wrap items-center gap-3 mb-3">
+              <div className="app-eyebrow">Personal board</div>
+              {profile?.created_at && profile.created_at < '2026-07-01' && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 border border-liberty-gold/50 bg-liberty-gold/10 text-liberty-gold text-[10px] font-bold uppercase tracking-[0.15em]">
+                  ★ Founding Patriot
+                </span>
+              )}
+            </div>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
               <h1 className="app-title text-5xl sm:text-7xl">
                 Welcome back, <em>{profile?.display_name || 'Patriot'}</em>
@@ -755,6 +753,9 @@ export default function DashboardPage() {
                 stateCode={profile.state_code}
                 context="dashboard"
               />
+              <a href="/spread-the-word" className="inline-block mt-4 text-sm text-white/50 hover:text-white">
+                Need ammo? Grab ready-made captions →
+              </a>
             </div>
           )}
 

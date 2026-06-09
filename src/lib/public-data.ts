@@ -11,6 +11,13 @@ export interface PublicProfileStats {
   best_day: number
   days_logged: number
   global_rank: number
+  recruits?: number
+  created_at?: string
+}
+
+// Joined before the challenge started on July 1, 2026.
+export function isFoundingPatriot(createdAt: string | null | undefined) {
+  return Boolean(createdAt && createdAt < '2026-07-01')
 }
 
 export interface PublicStateStats {
@@ -63,26 +70,3 @@ export async function fetchStateStats(stateCode: string): Promise<PublicStateSta
   }
 }
 
-export async function fetchParticipantCount(): Promise<number | null> {
-  try {
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-    if (!url || !key) return null
-
-    const response = await fetch(`${url}/rest/v1/profiles?select=id&limit=1`, {
-      headers: {
-        apikey: key,
-        Authorization: `Bearer ${key}`,
-        Prefer: 'count=exact',
-        Range: '0-0',
-      },
-      next: { revalidate: 300 },
-    })
-    if (!response.ok) return null
-    const contentRange = response.headers.get('content-range')
-    const total = contentRange?.split('/')[1]
-    return total && total !== '*' ? parseInt(total, 10) : null
-  } catch {
-    return null
-  }
-}

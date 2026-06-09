@@ -68,6 +68,8 @@ export interface LeaderboardEntry {
   best_day: number
   days_logged: number
   global_rank: number
+  recruits?: number
+  created_at?: string
 }
 
 export interface Contest {

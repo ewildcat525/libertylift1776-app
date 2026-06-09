@@ -7,7 +7,7 @@ import Navigation from '@/components/Navigation'
 export default function LeaderboardPage() {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([])
   const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState<'all' | 'streak' | 'daily'>('all')
+  const [filter, setFilter] = useState<'all' | 'streak' | 'daily' | 'recruits'>('all')
 
   useEffect(() => {
     const loadLeaderboard = async () => {
@@ -35,6 +35,7 @@ export default function LeaderboardPage() {
   const sortedLeaderboard = [...leaderboard].sort((a, b) => {
     if (filter === 'streak') return b.current_streak - a.current_streak
     if (filter === 'daily') return b.best_day - a.best_day
+    if (filter === 'recruits') return (b.recruits || 0) - (a.recruits || 0)
     return b.total_pushups - a.total_pushups
   })
 
@@ -56,10 +57,11 @@ export default function LeaderboardPage() {
               { key: 'all', label: 'Total Push-ups' },
               { key: 'streak', label: 'Best Streak' },
               { key: 'daily', label: 'Best Day' },
+              { key: 'recruits', label: 'Top Recruiters' },
             ].map((tab) => (
               <button
                 key={tab.key}
-                onClick={() => setFilter(tab.key as 'all' | 'streak' | 'daily')}
+                onClick={() => setFilter(tab.key as 'all' | 'streak' | 'daily' | 'recruits')}
                 className={`px-4 py-2 text-xs font-extrabold uppercase tracking-[0.1em] transition-colors border ${
                   filter === tab.key
                     ? 'bg-liberty-red border-liberty-red text-white'
@@ -104,10 +106,13 @@ export default function LeaderboardPage() {
                     <div className="font-bebas text-2xl text-white">
                       {filter === 'streak' ? entry.current_streak :
                        filter === 'daily' ? entry.best_day :
+                       filter === 'recruits' ? (entry.recruits || 0) :
                        entry.total_pushups.toLocaleString()}
                     </div>
                     <div className="text-xs text-white/50">
-                      {filter === 'streak' ? 'days' : filter === 'daily' ? 'in one day' : 'push-ups'}
+                      {filter === 'streak' ? 'days' :
+                       filter === 'daily' ? 'in one day' :
+                       filter === 'recruits' ? 'recruited' : 'push-ups'}
                     </div>
                   </div>
                 </div>

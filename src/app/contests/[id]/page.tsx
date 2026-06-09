@@ -89,7 +89,7 @@ export default function ContestDetailPage() {
         const userIds = participants.map(p => p.user_id)
         
         const { data: profiles } = await supabase
-          .from('profiles')
+          .from('public_profiles')
           .select('id, display_name, state_code')
           .in('id', userIds)
 
