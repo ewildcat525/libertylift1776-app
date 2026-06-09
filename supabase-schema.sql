@@ -15,6 +15,11 @@ create table public.profiles (
   updated_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
+create unique index profiles_display_name_unique
+on public.profiles (lower(display_name))
+where display_name is not null
+  and btrim(display_name) <> '';
+
 -- Daily push-up logs
 create table public.pushup_logs (
   id uuid default uuid_generate_v4() primary key,

@@ -34,6 +34,7 @@ export default function DashboardPage() {
   const [logging, setLogging] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
   const [showError, setShowError] = useState<string | null>(null)
+  const [editingProfile, setEditingProfile] = useState(false)
   const [profileName, setProfileName] = useState('')
   const [profileSaving, setProfileSaving] = useState(false)
   const [profileMessage, setProfileMessage] = useState<string | null>(null)
@@ -184,6 +185,8 @@ export default function DashboardPage() {
     if (!user || !profile) return
 
     const nextName = profileName.trim().replace(/\s+/g, ' ')
+    const currentName = profile.display_name || ''
+
     if (nextName.length < 3) {
       setProfileError('Handle must be at least 3 characters.')
       setProfileMessage(null)
@@ -196,8 +199,15 @@ export default function DashboardPage() {
       return
     }
 
-    if (nextName === profile.display_name) {
-      setProfileMessage('Your public handle is already up to date.')
+    if (!/^[A-Za-z0-9 _-]+$/.test(nextName)) {
+      setProfileError('Use letters, numbers, spaces, hyphens, or underscores.')
+      setProfileMessage(null)
+      return
+    }
+
+    if (nextName.toLowerCase() === currentName.toLowerCase()) {
+      setProfileName(currentName)
+      setEditingProfile(false)
       setProfileError(null)
       return
     }
@@ -205,6 +215,26 @@ export default function DashboardPage() {
     setProfileSaving(true)
     setProfileError(null)
     setProfileMessage(null)
+
+    const { data: existingProfile, error: availabilityError } = await supabase
+      .from('profiles')
+      .select('id')
+      .ilike('display_name', nextName)
+      .neq('id', user.id)
+      .limit(1)
+      .maybeSingle()
+
+    if (availabilityError) {
+      setProfileSaving(false)
+      setProfileError(availabilityError.message)
+      return
+    }
+
+    if (existingProfile) {
+      setProfileSaving(false)
+      setProfileError('That handle is already taken.')
+      return
+    }
 
     const { data: updatedProfile, error } = await supabase
       .from('profiles')
@@ -216,13 +246,14 @@ export default function DashboardPage() {
     setProfileSaving(false)
 
     if (error) {
-      setProfileError(error.message)
+      setProfileError(error.code === '23505' ? 'That handle is already taken.' : error.message)
       return
     }
 
     if (updatedProfile) {
       setProfile(updatedProfile)
       setProfileName(updatedProfile.display_name || '')
+      setEditingProfile(false)
       setProfileMessage('Public handle updated.')
       setTimeout(() => setProfileMessage(null), 3000)
     }
@@ -407,28 +438,37 @@ export default function DashboardPage() {
           {/* Header */}
           <div className="mb-8">
             <div className="app-eyebrow mb-3">Personal board</div>
-            <h1 className="app-title text-5xl sm:text-7xl">
-              Welcome back, <em>{profile?.display_name || 'Patriot'}</em>
-            </h1>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
+              <h1 className="app-title text-5xl sm:text-7xl">
+                Welcome back, <em>{profile?.display_name || 'Patriot'}</em>
+              </h1>
+              {!editingProfile && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingProfile(true)
+                    setProfileName(profile?.display_name || '')
+                    setProfileError(null)
+                    setProfileMessage(null)
+                  }}
+                  className="mt-1 inline-flex h-10 w-10 items-center justify-center border border-white/20 bg-white/[0.04] text-white/60 transition-colors hover:border-liberty-red/60 hover:text-white"
+                  aria-label="Edit public handle"
+                  title="Edit public handle"
+                >
+                  <svg aria-hidden="true" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M12 20h9" />
+                    <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
+                  </svg>
+                </button>
+              )}
+            </div>
             <p className="text-white/60 mt-3">Your journey to 1776.</p>
-          </div>
-
-          {/* Account Settings */}
-          <div className="card p-5 sm:p-6 mb-8">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-              <div>
-                <div className="app-eyebrow mb-2">Account</div>
-                <h2 className="font-bebas text-3xl text-white">Public handle</h2>
-                <p className="text-sm text-white/55 mt-1">
-                  This name appears on leaderboards, contests, and pledges.
-                </p>
-              </div>
-
-              <form onSubmit={saveProfileName} className="w-full sm:max-w-md">
+            {editingProfile && (
+              <form onSubmit={saveProfileName} className="mt-5 max-w-xl">
                 <label htmlFor="profile-name" className="sr-only">
                   Public handle
                 </label>
-                <div className="flex flex-col sm:flex-row gap-3">
+                <div className="flex flex-col sm:flex-row gap-2">
                   <input
                     id="profile-name"
                     type="text"
@@ -451,17 +491,30 @@ export default function DashboardPage() {
                   >
                     {profileSaving ? 'Saving...' : 'Save'}
                   </button>
-                </div>
-                {(profileMessage || profileError) && (
-                  <div
-                    role={profileError ? 'alert' : 'status'}
-                    className={`mt-3 text-sm ${profileError ? 'text-red-300' : 'text-green-300'}`}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingProfile(false)
+                      setProfileName(profile?.display_name || '')
+                      setProfileError(null)
+                      setProfileMessage(null)
+                    }}
+                    disabled={profileSaving}
+                    className="btn-secondary px-5 py-3 disabled:opacity-50"
                   >
-                    {profileError || profileMessage}
-                  </div>
-                )}
+                    Cancel
+                  </button>
+                </div>
               </form>
-            </div>
+            )}
+            {(profileMessage || profileError) && (
+              <div
+                role={profileError ? 'alert' : 'status'}
+                className={`mt-3 text-sm ${profileError ? 'text-red-300' : 'text-green-300'}`}
+              >
+                {profileError || profileMessage}
+              </div>
+            )}
           </div>
 
           {/* Pace Indicator */}
