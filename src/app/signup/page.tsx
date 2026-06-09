@@ -5,19 +5,35 @@ import Link from 'next/link'
 import { createClient, US_STATES } from '@/lib/supabase'
 import { generateDisplayName, savePendingSignup } from '@/lib/onboarding'
 
+function getSafeNext(next: string | null) {
+  if (!next || !next.startsWith('/') || next.startsWith('//')) {
+    return '/dashboard'
+  }
+
+  return next
+}
+
 export default function SignupPage() {
   const [email, setEmail] = useState('')
   const [stateCode, setStateCode] = useState('')
   const [displayName, setDisplayName] = useState('LibertyLifter1776')
+  const [nextPath, setNextPath] = useState('/dashboard')
   const [loadingProvider, setLoadingProvider] = useState<'google' | 'email' | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [emailSent, setEmailSent] = useState(false)
   const supabase = createClient()
 
   const selectedState = stateCode ? US_STATES[stateCode] : null
-  const redirectTo = typeof window === 'undefined'
-    ? undefined
-    : `${window.location.origin}/auth/callback?next=/dashboard`
+
+  const getRedirectTo = () => {
+    if (typeof window === 'undefined') return undefined
+    const safeNext = getSafeNext(new URLSearchParams(window.location.search).get('next'))
+    return `${window.location.origin}/auth/callback?next=${encodeURIComponent(safeNext)}`
+  }
+
+  useEffect(() => {
+    setNextPath(getSafeNext(new URLSearchParams(window.location.search).get('next')))
+  }, [])
 
   useEffect(() => {
     setDisplayName(generateDisplayName(stateCode))
@@ -45,7 +61,7 @@ export default function SignupPage() {
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo,
+        redirectTo: getRedirectTo(),
       },
     })
 
@@ -71,7 +87,7 @@ export default function SignupPage() {
     const { error: otpError } = await supabase.auth.signInWithOtp({
       email: email.trim().toLowerCase(),
       options: {
-        emailRedirectTo: redirectTo,
+        emailRedirectTo: getRedirectTo(),
         data: {
           display_name: displayName,
           state_code: stateCode,
@@ -98,7 +114,7 @@ export default function SignupPage() {
         </Link>
 
         <div className="conversion-nav-actions">
-          <Link href="/login" className="conversion-signin">
+          <Link href={`/login?next=${encodeURIComponent(nextPath)}`} className="conversion-signin">
             Sign in
           </Link>
         </div>
@@ -208,7 +224,7 @@ export default function SignupPage() {
 
           <p className="auth-footnote">
             No password required. Already joined?{' '}
-            <Link href="/login" className="text-liberty-gold hover:underline">
+            <Link href={`/login?next=${encodeURIComponent(nextPath)}`} className="text-liberty-gold hover:underline">
               Sign in
             </Link>
           </p>
