@@ -2,8 +2,10 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
+import { track } from '@vercel/analytics'
 import { createClient, US_STATES } from '@/lib/supabase'
 import { generateDisplayName, savePendingSignup } from '@/lib/onboarding'
+import { captureReferralFromUrl, readReferral } from '@/lib/referral'
 
 const STATE_OPTIONS = Object.entries(US_STATES)
 
@@ -43,6 +45,7 @@ export default function SignupPage() {
 
   useEffect(() => {
     setNextPath(getSafeNext(new URLSearchParams(window.location.search).get('next')))
+    captureReferralFromUrl()
   }, [])
 
   useEffect(() => {
@@ -103,6 +106,7 @@ export default function SignupPage() {
     savePendingSignup({
       displayName: nextDisplayName,
       stateCode,
+      referredBy: readReferral() || undefined,
     })
   }
 
@@ -129,19 +133,17 @@ export default function SignupPage() {
       return null
     }
 
-    const { data: existingProfile, error: availabilityError } = await supabase
-      .from('profiles')
-      .select('id')
-      .ilike('display_name', nextDisplayName)
-      .limit(1)
-      .maybeSingle()
+    const { data: isAvailable, error: availabilityError } = await supabase.rpc(
+      'is_handle_available',
+      { p_handle: nextDisplayName }
+    )
 
     if (availabilityError) {
       setError(availabilityError.message)
       return null
     }
 
-    if (existingProfile) {
+    if (isAvailable === false) {
       setError('That handle is already taken.')
       return null
     }
@@ -162,6 +164,7 @@ export default function SignupPage() {
     }
 
     persistPendingSignup(nextDisplayName)
+    track('signup_submitted', { method: 'google', referred: readReferral() ? 'yes' : 'no' })
 
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: 'google',
@@ -190,6 +193,7 @@ export default function SignupPage() {
     }
 
     persistPendingSignup(nextDisplayName)
+    track('signup_submitted', { method: 'email', referred: readReferral() ? 'yes' : 'no' })
 
     const { error: otpError } = await supabase.auth.signInWithOtp({
       email: email.trim().toLowerCase(),

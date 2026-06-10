@@ -3,8 +3,14 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import type { User } from '@supabase/supabase-js'
-import { createClient } from '@/lib/supabase'
+import { track } from '@vercel/analytics'
+import { createClient, US_STATES } from '@/lib/supabase'
+import { captureReferralFromUrl } from '@/lib/referral'
 import Countdown from '@/components/Countdown'
+import EmailCapture from '@/components/EmailCapture'
+
+// Hide the live counter until there is enough signal to be social proof.
+const SOCIAL_PROOF_THRESHOLD = 100
 
 const challengeSteps = [
   {
@@ -24,25 +30,69 @@ const challengeSteps = [
   },
 ]
 
-const stateRanks = [
+// Placeholder board shown until real reps start landing on July 1.
+const previewStateRanks = [
   { rank: '01', state: 'Virginia', total: '184,932', width: '100%' },
   { rank: '02', state: 'Texas', total: '172,410', width: '91%' },
   { rank: '03', state: 'California', total: '161,088', width: '84%' },
   { rank: '04', state: 'Pennsylvania', total: '142,776', width: '72%' },
 ]
 
+interface BoardRow {
+  rank: string
+  state: string
+  total: string
+  width: string
+}
+
 export default function Home() {
   const [user, setUser] = useState<User | null>(null)
+  const [enlisted, setEnlisted] = useState<number | null>(null)
+  const [showVideo, setShowVideo] = useState(false)
+  const [liveBoard, setLiveBoard] = useState<BoardRow[] | null>(null)
   const supabase = createClient()
 
   useEffect(() => {
+    // Defer the 1.7MB hero video until after first paint; the poster carries the hero.
+    const timer = setTimeout(() => setShowVideo(true), 300)
+    return () => clearTimeout(timer)
+  }, [])
+
+  useEffect(() => {
+    captureReferralFromUrl()
+
     supabase.auth.getUser().then(({ data: { user: currentUser } }) => {
       setUser(currentUser)
     })
+
+    supabase.rpc('participant_count').then(({ data: count }) => {
+      if (count && count >= SOCIAL_PROOF_THRESHOLD) setEnlisted(count)
+    })
+
+    // Once real reps exist, the preview board flips to live state totals.
+    supabase
+      .from('state_leaderboard')
+      .select('state_code, total_pushups, state_rank')
+      .order('state_rank', { ascending: true })
+      .limit(4)
+      .then(({ data: states }) => {
+        if (!states || states.length === 0) return
+        const top = states[0].total_pushups
+        if (!top) return
+        setLiveBoard(
+          states.map((s) => ({
+            rank: String(s.state_rank).padStart(2, '0'),
+            state: US_STATES[s.state_code] || s.state_code,
+            total: s.total_pushups.toLocaleString(),
+            width: `${Math.max(Math.round((s.total_pushups / top) * 100), 4)}%`,
+          }))
+        )
+      })
   }, [])
 
   const primaryHref = user ? '/dashboard' : '/signup'
   const primaryLabel = user ? 'Open dashboard' : 'Join the challenge'
+  const trackCta = (location: string) => track('cta_clicked', { location })
 
   return (
     <main className="campaign-page">
@@ -69,17 +119,27 @@ export default function Home() {
       </header>
 
       <section className="campaign-hero">
-        <video
-          className="campaign-hero-video"
-          autoPlay
-          muted
-          loop
-          playsInline
-          poster="/liberty-lift-hero-vintage.png"
-          aria-hidden="true"
-        >
-          <source src="/liberty-lift-pushup-loop.mp4" type="video/mp4" />
-        </video>
+        {showVideo ? (
+          <video
+            className="campaign-hero-video"
+            autoPlay
+            muted
+            loop
+            playsInline
+            poster="/liberty-lift-hero-vintage.webp"
+            aria-hidden="true"
+          >
+            <source src="/liberty-lift-pushup-loop.mp4" type="video/mp4" />
+          </video>
+        ) : (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            className="campaign-hero-video"
+            src="/liberty-lift-hero-vintage.webp"
+            alt=""
+            aria-hidden="true"
+          />
+        )}
         <div className="campaign-hero-wash" aria-hidden="true" />
         <div className="film-grain" aria-hidden="true" />
 
@@ -104,7 +164,11 @@ export default function Home() {
           <Countdown />
 
           <div className="campaign-actions">
-            <Link href={primaryHref} className="campaign-button campaign-button-primary">
+            <Link
+              href={primaryHref}
+              className="campaign-button campaign-button-primary"
+              onClick={() => trackCta('hero')}
+            >
               {primaryLabel}
               <span aria-hidden="true">→</span>
             </Link>
@@ -125,6 +189,12 @@ export default function Home() {
             <span className="campaign-stat-value">31</span>
             <span className="campaign-stat-label">days in July</span>
           </div>
+          {enlisted !== null && (
+            <div>
+              <span className="campaign-stat-value">{enlisted.toLocaleString()}</span>
+              <span className="campaign-stat-label">patriots enlisted</span>
+            </div>
+          )}
           <div className="campaign-scroll-cue">
             <span>Scroll to enter</span>
             <span aria-hidden="true">↓</span>
@@ -194,7 +264,7 @@ export default function Home() {
             <span>National board</span>
             <span>Push-ups logged</span>
           </div>
-          {stateRanks.map((state) => (
+          {(liveBoard || previewStateRanks).map((state) => (
             <div key={state.state} className="state-rank">
               <span className="state-rank-number">{state.rank}</span>
               <div className="state-rank-main">
@@ -208,19 +278,36 @@ export default function Home() {
               </div>
             </div>
           ))}
-          <p className="state-board-note">Preview totals shown for campaign concept.</p>
+          {!liveBoard && (
+            <p className="state-board-note">Preview totals shown for campaign concept.</p>
+          )}
         </div>
       </section>
+
+      {!user && (
+        <section className="campaign-section" aria-label="Get notified at launch">
+          <div className="campaign-section-label">Before July 1</div>
+          <EmailCapture />
+        </section>
+      )}
 
       <section className="campaign-final">
         <div className="campaign-final-rule" />
         <span className="campaign-final-eyebrow">July 1-31, 2026</span>
         <h2>Will your state answer?</h2>
         <p>1776 push-ups. Thirty-one days. No spectators.</p>
-        <Link href={primaryHref} className="campaign-button campaign-button-primary">
+        <Link
+          href={primaryHref}
+          className="campaign-button campaign-button-primary"
+          onClick={() => trackCta('final')}
+        >
           {primaryLabel} <span aria-hidden="true">→</span>
         </Link>
         <div className="campaign-final-mark">LIBERTY LIFT / 1776</div>
+        <div className="mt-8 flex justify-center gap-6 text-xs text-white/40">
+          <Link href="/privacy" className="hover:text-white/70">Privacy</Link>
+          <Link href="/terms" className="hover:text-white/70">Terms</Link>
+        </div>
       </section>
     </main>
   )

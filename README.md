@@ -13,6 +13,27 @@ Liberty Lift 1776 is a Next.js campaign app for a July 1-31, 2026 push-up challe
 - Private and public contests with invite codes
 - Charity pledge setup for Wounded Warrior Project or Save the Children
 - Supabase-backed profiles, logs, stats, achievements, contests, pledges, and email subscribers
+- Public shareable profile pages (`/p/[handle]`) with dynamic Open Graph cards
+- Share buttons (native share sheet, X, copy link) after logging, at milestones, and on state boards
+- Referral tracking: `?ref=<handle>` links credit recruiters, shown as "patriots recruited" on the dashboard
+- Dynamic per-state Open Graph images and metadata for state boards and contest invites
+- Pre-launch email capture on the landing page with live "patriots enlisted" social proof
+- Sitemap, robots rules, PWA manifest, and Vercel Analytics funnel events
+- Daily reminder emails during July (launch blast + pace/streak nudges) via Vercel Cron and Resend
+- Top Recruiters leaderboard tab and Founding Patriot badges for pre-July signups
+- Spread-the-word page (`/spread-the-word`) with copy-paste captions and the #LibertyLift1776 hashtag
+- Landing page state board flips from preview data to live totals once reps are logged
+
+## Email Reminders
+
+A Vercel Cron job (`vercel.json`) hits `/api/cron/reminders` daily at 13:00 UTC. During
+July 2026 it sends a launch announcement to the pre-launch email list (July 1) and a
+personalized pace/streak reminder to participants who have not logged that day. Every
+email carries an HMAC-signed one-click unsubscribe link.
+
+Required environment variables: `SUPABASE_SERVICE_ROLE_KEY`, `RESEND_API_KEY`,
+`EMAIL_FROM`, and `CRON_SECRET` (see `.env.local.example`). The route is a no-op until
+they are configured, and outside the July 2026 window.
 
 ## Tech Stack
 
@@ -45,9 +66,12 @@ Create a `.env.local` file in the project root:
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
 ```
 
-You can find both values in your Supabase project under **Project Settings > API**.
+You can find the Supabase values in your Supabase project under **Project Settings > API**.
+Set `NEXT_PUBLIC_SITE_URL` to your production domain when deploying; it is used for
+canonical metadata, Open Graph URLs, and the sitemap.
 
 ### Set Up Supabase
 
@@ -64,6 +88,10 @@ For a fresh Supabase project, run `supabase-schema.sql` first in the Supabase SQ
 4. `supabase/migrations/20260608_signup_profile_metadata.sql`
 5. `supabase/migrations/20260609014525_join_private_contest_by_invite_code.sql`
 6. `supabase/migrations/20260609120000_allow_private_contest_members_to_read_contests.sql`
+7. `supabase/migrations/20260609130000_unique_profile_display_names.sql`
+8. `supabase/migrations/20260609180000_viral_growth_and_hardening.sql`
+9. `supabase/migrations/20260610090000_email_privacy_and_retention.sql`
+10. `supabase/migrations/20260610150000_fix_daily_cap_update_bypass.sql`
 
 The schema enables Row Level Security and creates the core tables, triggers, functions, and leaderboard view used by the app.
 
@@ -146,8 +174,11 @@ Runs the Next.js lint command.
 - `/states` - State competition view
 - `/contests` - Contest discovery, creation, and invite-code joining
 - `/contests/[id]` - Individual contest page
+- `/p/[handle]` - Public shareable profile page with dynamic OG card
+- `/join/[code]` - Contest invite landing page
 - `/pledge` - Charity pledge setup
 - `/pledge/leaderboard` - Pledge leaderboard
+- `/privacy`, `/terms` - Legal pages
 
 ## Project Structure
 

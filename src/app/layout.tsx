@@ -1,25 +1,27 @@
 import type { Metadata } from 'next'
 import { Analytics } from '@vercel/analytics/next'
 import { SpeedInsights } from '@vercel/speed-insights/next'
+import { siteUrl } from '@/lib/site'
 import './globals.css'
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://libertylift1776.com'),
+  metadataBase: new URL(siteUrl),
   title: 'Liberty Lift 1776 — The Push-Up Challenge',
   description: 'Complete 1776 push-ups in July. One nation. One month. One challenge.',
+  keywords: ['push-up challenge', '1776 push-ups', 'July fitness challenge', 'state fitness competition'],
   icons: {
     icon: '/favicon.svg',
     apple: '/favicon.svg',
   },
   openGraph: {
     type: 'website',
-    url: 'https://libertylift1776.com',
+    url: '/',
     siteName: 'Liberty Lift 1776',
     title: 'Liberty Lift 1776',
     description: 'Complete 1776 push-ups in July. Are you ready to earn your freedom?',
     images: [
       {
-        url: 'https://libertylift1776.com/og-image.png',
+        url: '/og-image.png',
         width: 1200,
         height: 630,
         alt: 'Liberty Lift 1776 - Complete 1776 push-ups in July',
@@ -30,7 +32,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Liberty Lift 1776',
     description: 'Complete 1776 push-ups in July. Are you ready to earn your freedom?',
-    images: ['https://libertylift1776.com/og-image.png'],
+    images: ['/og-image.png'],
   },
 }
 

@@ -357,7 +357,7 @@ export default function PledgeSetup({ userId, onComplete, existingPledge }: Pled
           </div>
 
           <p className="text-center text-white/40 text-sm">
-            This is an honor-system pledge. At the end of July, we'll show you your total and link to donate directly.
+            This is an honor-system pledge. At the end of July, we&apos;ll show you your total and link to donate directly.
           </p>
         </div>
       )}
