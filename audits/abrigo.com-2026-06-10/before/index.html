@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Abrigo: Software for Lending, Financial Crime, Risk &amp; Analytics</title>
+<style>
+  /* Recreation of abrigo.com homepage (current state) for design-audit purposes.
+     Deliberately mirrors the live site's patterns: carousel hero, dense nav,
+     mixed button styles, 14px body text, orange-on-white accents. */
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:"Segoe UI", Helvetica, Arial, sans-serif; color:#333; font-size:14px; line-height:1.45; }
+  a { text-decoration:none; }
+  img { max-width:100%; }
+
+  /* ---- top utility bar ---- */
+  .utility { background:#14233c; color:#cbd2de; font-size:11.5px; display:flex; justify-content:flex-end; gap:18px; padding:6px 32px; }
+  .utility a { color:#cbd2de; }
+
+  /* ---- header ---- */
+  header { background:#fff; display:flex; align-items:center; padding:10px 32px; gap:22px; border-bottom:1px solid #e6e6e6; flex-wrap:wrap; }
+  .logo { font-size:26px; font-weight:800; color:#14233c; letter-spacing:-.5px; }
+  .logo span { color:#f05a28; }
+  nav { display:flex; gap:16px; flex-wrap:wrap; margin-left:8px; }
+  nav a { color:#39424e; font-size:13.5px; font-weight:600; padding:6px 2px; }
+  nav a:after { content:" ▾"; font-size:9px; color:#9aa3ad; }
+  nav a.nodrop:after { content:""; }
+  .head-right { margin-left:auto; display:flex; align-items:center; gap:14px; }
+  .search { color:#6b7480; font-size:15px; }
+  .login { color:#f05a28; font-weight:700; font-size:13px; }
+  .btn-cta { background:#f05a28; color:#fff; font-weight:700; font-size:13px; padding:9px 16px; border-radius:3px; }
+
+  /* ---- promo strip ---- */
+  .promo { background:#f05a28; color:#fff; text-align:center; font-size:12.5px; padding:8px 16px; }
+  .promo b { text-transform:uppercase; letter-spacing:.04em; }
+  .promo a { color:#fff; text-decoration:underline; font-weight:700; }
+
+  /* ---- hero carousel ---- */
+  .hero { background:linear-gradient(115deg,#14233c 0%,#1d3557 55%,#27496d 100%); color:#fff; position:relative; overflow:hidden; }
+  .hero-inner { max-width:1180px; margin:0 auto; padding:54px 32px 70px; display:flex; gap:24px; align-items:center; }
+  .hero-copy { flex:1.2; }
+  .hero-eyebrow { font-size:11px; letter-spacing:.18em; text-transform:uppercase; color:#f0a285; font-weight:700; margin-bottom:10px; }
+  .hero h1 { font-size:34px; line-height:1.22; font-weight:700; margin-bottom:14px; }
+  .hero p { font-size:14.5px; color:#c9d2e0; max-width:560px; margin-bottom:22px; }
+  .hero-ctas { display:flex; gap:12px; flex-wrap:wrap; }
+  .hero-ctas .btn-cta { font-size:13.5px; }
+  .btn-ghost { border:1.5px solid #fff; color:#fff; font-weight:700; font-size:13.5px; padding:9px 16px; border-radius:3px; }
+  .btn-link { color:#f0a285; font-weight:700; font-size:13.5px; padding:9px 4px; }
+  .hero-art { flex:1; min-height:260px; border-radius:6px; background:
+      radial-gradient(circle at 70% 30%, rgba(240,90,40,.55), transparent 55%),
+      radial-gradient(circle at 25% 75%, rgba(255,255,255,.18), transparent 50%),
+      linear-gradient(160deg,#27496d,#1d3557);
+      display:flex; align-items:center; justify-content:center; }
+  .hero-art .play { width:64px; height:64px; border-radius:50%; background:rgba(255,255,255,.9); display:flex; align-items:center; justify-content:center; }
+  .hero-art .play:before { content:""; border-style:solid; border-width:11px 0 11px 18px; border-color:transparent transparent transparent #f05a28; margin-left:5px; }
+  .dots { position:absolute; bottom:16px; left:50%; transform:translateX(-50%); display:flex; gap:8px; }
+  .dots i { width:9px; height:9px; border-radius:50%; background:rgba(255,255,255,.35); }
+  .dots i.on { background:#f05a28; }
+  .hero .arrow { position:absolute; top:50%; transform:translateY(-50%); font-size:30px; color:rgba(255,255,255,.5); }
+  .arrow.l { left:14px; } .arrow.r { right:14px; }
+
+  /* ---- intro ---- */
+  .intro { text-align:center; padding:44px 24px 8px; }
+  .intro h2 { font-size:26px; color:#14233c; font-weight:700; margin-bottom:10px; }
+  .intro p { max-width:760px; margin:0 auto; color:#5a6472; font-size:13.5px; }
+
+  /* ---- product cards (uneven, mixed CTAs) ---- */
+  .cards { max-width:1180px; margin:0 auto; padding:28px 24px 40px; display:flex; gap:16px; flex-wrap:wrap; align-items:flex-start; }
+  .card { background:#fff; border:1px solid #e4e6ea; border-radius:4px; padding:20px 16px; flex:1 1 200px; box-shadow:0 1px 3px rgba(0,0,0,.08); }
+  .card .ic { width:38px; height:38px; border-radius:4px; background:#fdeae2; color:#f05a28; display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:800; margin-bottom:10px; }
+  .card h3 { font-size:15.5px; color:#14233c; margin-bottom:6px; }
+  .card p { font-size:12.5px; color:#6a7380; margin-bottom:12px; }
+  .card .a1 { color:#f05a28; font-weight:700; font-size:12.5px; }
+  .card .a2 { display:inline-block; background:#14233c; color:#fff; font-size:12px; font-weight:700; padding:7px 12px; border-radius:14px; }
+  .card .a3 { color:#1d6fb8; font-weight:700; font-size:12px; text-transform:uppercase; letter-spacing:.05em; }
+
+  /* ---- stats band (orange, low contrast) ---- */
+  .stats { background:#f05a28; color:#fff; padding:34px 24px; display:flex; justify-content:center; gap:64px; flex-wrap:wrap; text-align:center; }
+  .stats b { display:block; font-size:30px; font-weight:800; }
+  .stats span { font-size:12px; color:#ffd9c9; }
+
+  /* ---- testimonial ---- */
+  .quote { max-width:880px; margin:0 auto; padding:48px 24px; text-align:center; }
+  .quote blockquote { font-size:17px; color:#39424e; font-style:italic; margin-bottom:12px; }
+  .quote cite { font-size:12.5px; color:#8a93a0; font-style:normal; }
+
+  /* ---- logos ---- */
+  .logos { background:#f4f5f7; padding:30px 24px; text-align:center; }
+  .logos h4 { font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:#8a93a0; margin-bottom:18px; }
+  .logos .row { display:flex; justify-content:center; gap:36px; flex-wrap:wrap; }
+  .logos .lg { font-weight:800; color:#aeb6c0; font-size:16px; letter-spacing:.02em; }
+
+  /* ---- resources ---- */
+  .res { max-width:1180px; margin:0 auto; padding:44px 24px; }
+  .res h2 { font-size:24px; color:#14233c; text-align:center; margin-bottom:24px; }
+  .res .grid { display:flex; gap:16px; flex-wrap:wrap; }
+  .res .item { flex:1 1 240px; border:1px solid #e4e6ea; border-radius:4px; overflow:hidden; }
+  .res .thumb { height:120px; background:linear-gradient(135deg,#27496d,#f05a28); }
+  .res .body { padding:14px; }
+  .res .tag { font-size:10.5px; text-transform:uppercase; letter-spacing:.08em; color:#f05a28; font-weight:800; }
+  .res h3 { font-size:14.5px; color:#14233c; margin:6px 0 8px; }
+  .res a.more { color:#f05a28; font-size:12.5px; font-weight:700; }
+
+  /* ---- newsletter ---- */
+  .news { background:#14233c; color:#fff; text-align:center; padding:38px 24px; }
+  .news h2 { font-size:21px; margin-bottom:8px; }
+  .news p { font-size:13px; color:#aeb9ca; margin-bottom:16px; }
+  .news form { display:inline-flex; gap:8px; flex-wrap:wrap; justify-content:center; }
+  .news input { padding:10px 14px; border-radius:3px; border:none; width:280px; font-size:13px; }
+  .news button { background:#f05a28; border:none; color:#fff; font-weight:700; padding:10px 18px; border-radius:3px; font-size:13px; }
+
+  /* ---- footer (heavy) ---- */
+  footer { background:#0e1a2e; color:#9aa6b6; padding:44px 32px 22px; font-size:12px; }
+  .fcols { max-width:1180px; margin:0 auto; display:flex; gap:32px; flex-wrap:wrap; }
+  .fcol { flex:1 1 150px; }
+  .fcol h5 { color:#fff; font-size:12.5px; margin-bottom:12px; text-transform:uppercase; letter-spacing:.08em; }
+  .fcol a { display:block; color:#9aa6b6; margin-bottom:8px; font-size:12px; }
+  .fbot { max-width:1180px; margin:28px auto 0; border-top:1px solid #243650; padding-top:16px; display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; font-size:11px; color:#6e7b8d; }
+
+  @media (max-width: 760px) {
+    header { padding:10px 16px; gap:10px; }
+    nav { gap:10px; }
+    .hero-inner { flex-direction:column; padding:36px 20px 56px; }
+    .hero h1 { font-size:26px; }
+    .stats { gap:28px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="utility">
+  <a href="#">Customer Support</a><a href="#">Community</a><a href="#">Careers</a><a href="#">Contact Us</a>
+</div>
+
+<header>
+  <div class="logo">abrigo<span>.</span></div>
+  <nav>
+    <a href="#">Software</a>
+    <a href="#">Solutions</a>
+    <a href="#">Consulting</a>
+    <a href="#">Resources</a>
+    <a href="#">Community</a>
+    <a href="#" class="nodrop">Company</a>
+  </nav>
+  <div class="head-right">
+    <span class="search">&#9906;</span>
+    <a class="login" href="#">Login</a>
+    <a class="btn-cta" href="#">Talk to a specialist</a>
+  </div>
+</header>
+
+<div class="promo"><b>ThinkBIG 2026</b> &nbsp;|&nbsp; Registration is now open for our annual conference — <a href="#">save your seat</a></div>
+
+<section class="hero">
+  <span class="arrow l">&#8249;</span><span class="arrow r">&#8250;</span>
+  <div class="hero-inner">
+    <div class="hero-copy">
+      <div class="hero-eyebrow">Now with Abrigo AI</div>
+      <h1>Discover how Abrigo is using AI to empower smarter decisions in lending, CECL, AML, and more</h1>
+      <p>From AML to fraud detection and lending, we help financial institutions manage risk and drive growth with software and services built for community banking.</p>
+      <div class="hero-ctas">
+        <a class="btn-cta" href="#">Learn more</a>
+        <a class="btn-ghost" href="#">Watch the video</a>
+        <a class="btn-link" href="#">See what's new &rsaquo;</a>
+      </div>
+    </div>
+    <div class="hero-art"><div class="play"></div></div>
+  </div>
+  <div class="dots"><i class="on"></i><i></i><i></i><i></i></div>
+</section>
+
+<section class="intro">
+  <h2>Software for lending, financial crime, risk &amp; analytics</h2>
+  <p>Banker's Toolbox, Sageworks, MST, and Farin are now Abrigo. Our integrated suite helps banks and credit unions stay compliant, make better lending decisions, and fight financial crime — all from a single platform.</p>
+</section>
+
+<section class="cards">
+  <div class="card">
+    <div class="ic">A</div>
+    <h3>Anti-Money Laundering</h3>
+    <p>BSA/AML compliance software trusted by compliance officers nationwide.</p>
+    <a class="a1" href="#">Learn More &rsaquo;</a>
+  </div>
+  <div class="card">
+    <div class="ic">F</div>
+    <h3>Fraud Detection</h3>
+    <p>Stop check fraud, wire fraud, and ACH fraud before losses occur with real-time detection and configurable scenarios.</p>
+    <a class="a2" href="#">Explore</a>
+  </div>
+  <div class="card">
+    <div class="ic">L</div>
+    <h3>Lending &amp; Credit Risk</h3>
+    <p>Loan origination and portfolio risk for commercial, consumer, and ag lending.</p>
+    <a class="a3" href="#">Read More</a>
+  </div>
+  <div class="card">
+    <div class="ic">C</div>
+    <h3>CECL</h3>
+    <p>Defensible allowance calculations with CECL methodologies and advisory support built in.</p>
+    <a class="a1" href="#">Learn More &rsaquo;</a>
+  </div>
+  <div class="card">
+    <div class="ic">$</div>
+    <h3>Asset/Liability Management</h3>
+    <p>ALM and portfolio risk solutions from Farin, now part of Abrigo.</p>
+    <a class="a2" href="#">Explore</a>
+  </div>
+</section>
+
+<section class="stats">
+  <div><b>2,400+</b><span>financial institutions</span></div>
+  <div><b>$4T+</b><span>in assets supported</span></div>
+  <div><b>20+ yrs</b><span>serving community banking</span></div>
+  <div><b>97%</b><span>customer retention</span></div>
+</section>
+
+<section class="quote">
+  <blockquote>“Abrigo's software and support team helped us cut our BSA case review time nearly in half while strengthening our exam readiness.”</blockquote>
+  <cite>— BSA Officer, community bank, $900M in assets</cite>
+</section>
+
+<section class="logos">
+  <h4>Trusted by leading institutions</h4>
+  <div class="row">
+    <span class="lg">FIRST NATIONAL</span><span class="lg">HERITAGE BANK</span><span class="lg">UNION CU</span><span class="lg">PRAIRIE STATE</span><span class="lg">COASTAL TRUST</span>
+  </div>
+</section>
+
+<section class="res">
+  <h2>Latest insights &amp; resources</h2>
+  <div class="grid">
+    <div class="item">
+      <div class="thumb"></div>
+      <div class="body">
+        <span class="tag">Whitepaper</span>
+        <h3>Market guide for commercial loan origination solutions</h3>
+        <a class="more" href="#">Download &rsaquo;</a>
+      </div>
+    </div>
+    <div class="item">
+      <div class="thumb"></div>
+      <div class="body">
+        <span class="tag">Webinar</span>
+        <h3>AI in AML: separating signal from noise in transaction monitoring</h3>
+        <a class="more" href="#">Register &rsaquo;</a>
+      </div>
+    </div>
+    <div class="item">
+      <div class="thumb"></div>
+      <div class="body">
+        <span class="tag">Blog</span>
+        <h3>Five CECL questions examiners are asking in 2026</h3>
+        <a class="more" href="#">Read &rsaquo;</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="news">
+  <h2>Stay up to date</h2>
+  <p>Get the latest banking industry insights delivered to your inbox.</p>
+  <form><input placeholder="Work email address"><button>Subscribe</button></form>
+</section>
+
+<footer>
+  <div class="fcols">
+    <div class="fcol"><h5>Software</h5><a href="#">Anti-Money Laundering</a><a href="#">Fraud Detection</a><a href="#">Lending &amp; Credit Risk</a><a href="#">CECL</a><a href="#">ALM</a><a href="#">Abrigo Connect</a></div>
+    <div class="fcol"><h5>Solutions</h5><a href="#">Banks</a><a href="#">Credit Unions</a><a href="#">Examiners</a><a href="#">Partners</a><a href="#">Developers</a></div>
+    <div class="fcol"><h5>Consulting</h5><a href="#">Advisory Services</a><a href="#">CECL Advisory</a><a href="#">BSA/AML Services</a><a href="#">Implementation</a></div>
+    <div class="fcol"><h5>Resources</h5><a href="#">Blog</a><a href="#">Whitepapers</a><a href="#">Webinars</a><a href="#">Podcasts</a><a href="#">Checklists</a><a href="#">News</a></div>
+    <div class="fcol"><h5>Company</h5><a href="#">About Us</a><a href="#">Leadership</a><a href="#">Careers</a><a href="#">ThinkBIG Conference</a><a href="#">Press</a><a href="#">Contact</a></div>
+    <div class="fcol"><h5>Support</h5><a href="#">Customer Support</a><a href="#">Community</a><a href="#">Login</a><a href="#">Training</a><a href="#">Status</a></div>
+  </div>
+  <div class="fbot">
+    <span>© 2026 Abrigo. All rights reserved.</span>
+    <span>Privacy Policy &nbsp;·&nbsp; Terms of Use &nbsp;·&nbsp; Security &nbsp;·&nbsp; Sitemap</span>
+  </div>
+</footer>
+
+</body>
+</html>

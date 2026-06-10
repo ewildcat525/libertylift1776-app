@@ -1,0 +1,41 @@
+name: Design Audit
+
+# Manually triggered visual design audit. Captures live screenshots of the
+# target site and uploads them as artifacts; the full audit (findings, after
+# mockup, comparisons) is driven by the /design-audit skill in Claude Code,
+# which uses the same tools/design-audit scripts.
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: "URL to audit (e.g. https://www.abrigo.com)"
+        required: true
+        type: string
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Playwright
+        run: |
+          npm i -g playwright@1.56.1
+          playwright install --with-deps chromium
+
+      - name: Capture before screenshots
+        run: |
+          DOMAIN=$(echo "${{ inputs.url }}" | sed -E 's#https?://(www\.)?##; s#/.*##')
+          OUTDIR="audits/$DOMAIN-$(date +%F)/before"
+          bash tools/design-audit/capture.sh "${{ inputs.url }}" "$OUTDIR" before
+          echo "OUTDIR=$OUTDIR" >> "$GITHUB_ENV"
+
+      - name: Upload screenshots
+        uses: actions/upload-artifact@v4
+        with:
+          name: design-audit-before
+          path: ${{ env.OUTDIR }}

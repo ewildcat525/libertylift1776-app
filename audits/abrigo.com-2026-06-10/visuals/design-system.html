@@ -1,0 +1,119 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><style>
+  * { margin:0; box-sizing:border-box; }
+  body { background:#0f1117; font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; padding:32px; color:#e8eaf0; }
+  h1 { font-size:24px; margin-bottom:20px; letter-spacing:-.01em; }
+  .cols { display:flex; gap:28px; }
+  .col { flex:1; background:#fff; border-radius:12px; padding:28px; color:#0f1b2d; }
+  .chip { display:inline-block; font-size:13px; font-weight:800; letter-spacing:.12em; padding:6px 14px; border-radius:999px; color:#fff; margin-bottom:20px; }
+  .c-before { background:#dc2626; } .c-after { background:#16a34a; }
+  h2 { font-size:13px; text-transform:uppercase; letter-spacing:.1em; color:#7a879c; margin:26px 0 12px; }
+  h2:first-of-type { margin-top:0; }
+
+  .swatches { display:flex; gap:10px; flex-wrap:wrap; }
+  .sw { width:118px; }
+  .sw i { display:block; height:54px; border-radius:8px; border:1px solid #e3e8f0; }
+  .sw b { font-size:11px; display:block; margin-top:6px; }
+  .sw span { font-size:10.5px; color:#7a879c; }
+  .fail { color:#b91c1c; font-weight:700; } .pass { color:#15803d; font-weight:700; }
+
+  .type p { margin-bottom:8px; line-height:1.2; }
+  .lbl { font-size:10.5px; color:#7a879c; display:block; margin-bottom:2px; }
+
+  .btns { display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
+  .b { font-weight:700; display:inline-block; }
+
+  .sp { display:flex; gap:6px; align-items:flex-end; }
+  .sp i { background:#f26822; display:block; width:26px; border-radius:3px 3px 0 0; }
+  .sp span { font-size:10px; color:#7a879c; display:block; text-align:center; margin-top:4px; }
+  .note { font-size:12px; color:#42526b; background:#f6f8fb; border-radius:8px; padding:10px 14px; margin-top:14px; }
+</style></head><body>
+
+<h1>Abrigo.com — design tokens: before vs after</h1>
+<div class="cols">
+
+  <div class="col">
+    <span class="chip c-before">BEFORE</span>
+
+    <h2>Color &amp; contrast</h2>
+    <div class="swatches">
+      <div class="sw"><i style="background:#f05a28"></i><b>#F05A28 orange</b><span>on white 3.0:1 <span class="fail">FAILS AA</span> at 12–13px</span></div>
+      <div class="sw"><i style="background:#14233c"></i><b>#14233C navy</b><span>headings</span></div>
+      <div class="sw"><i style="background:#1d6fb8"></i><b>#1D6FB8 blue</b><span>off-brand 3rd accent</span></div>
+      <div class="sw"><i style="background:#ffd9c9"></i><b>#FFD9C9 on orange</b><span>1.7:1 <span class="fail">FAILS AA</span> (stats band)</span></div>
+    </div>
+
+    <h2>Type scale — body 14px, ad-hoc sizes</h2>
+    <div class="type">
+      <p style="font-size:34px;font-weight:700;color:#14233c"><span class="lbl">H1 · 34px</span>Hero headline</p>
+      <p style="font-size:26px;font-weight:700;color:#14233c"><span class="lbl">H2 · 26px</span>Section heading</p>
+      <p style="font-size:15.5px;font-weight:700;color:#14233c"><span class="lbl">H3 · 15.5px</span>Card heading</p>
+      <p style="font-size:12.5px;color:#6a7380"><span class="lbl">Body · 12.5–14px</span>Card and body copy renders at 12.5–14px — below the 16px readability floor.</p>
+    </div>
+
+    <h2>Buttons — 5 competing variants</h2>
+    <div class="btns">
+      <span class="b" style="background:#f05a28;color:#fff;padding:9px 16px;border-radius:3px;font-size:13px">Talk to a specialist</span>
+      <span class="b" style="border:1.5px solid #14233c;color:#14233c;padding:8px 15px;border-radius:3px;font-size:13px">Watch the video</span>
+      <span class="b" style="background:#14233c;color:#fff;padding:7px 12px;border-radius:14px;font-size:12px">Explore</span>
+      <span class="b" style="color:#1d6fb8;font-size:12px;text-transform:uppercase;letter-spacing:.05em">Read More</span>
+      <span class="b" style="color:#f05a28;font-size:12.5px">Learn More ›</span>
+    </div>
+    <div class="note">3 fill styles, 2 radii (3px / 14px), 3 link colors, mixed casing — no system.</div>
+
+    <h2>Spacing — ad hoc</h2>
+    <div class="sp">
+      <div><i style="height:6px"></i><span>6</span></div>
+      <div><i style="height:10px"></i><span>10</span></div>
+      <div><i style="height:14px"></i><span>14</span></div>
+      <div><i style="height:22px"></i><span>22</span></div>
+      <div><i style="height:28px"></i><span>28</span></div>
+      <div><i style="height:34px"></i><span>34</span></div>
+      <div><i style="height:44px"></i><span>44</span></div>
+      <div><i style="height:54px"></i><span>54</span></div>
+    </div>
+    <div class="note">Section padding values: 6, 10, 14, 22, 28, 34, 44, 54… no shared rhythm.</div>
+  </div>
+
+  <div class="col">
+    <span class="chip c-after">AFTER</span>
+
+    <h2>Color &amp; contrast</h2>
+    <div class="swatches">
+      <div class="sw"><i style="background:#F26822"></i><b>#F26822 orange-500</b><span>graphics &amp; large accents only</span></div>
+      <div class="sw"><i style="background:#D9530E"></i><b>#D9530E orange-600</b><span>button fill, white text 4.6:1 <span class="pass">AA</span></span></div>
+      <div class="sw"><i style="background:#B5430A"></i><b>#B5430A orange-700</b><span>links on white 6.0:1 <span class="pass">AA</span></span></div>
+      <div class="sw"><i style="background:#0B1B33"></i><b>#0B1B33 navy-900</b><span>headings &amp; dark bands</span></div>
+    </div>
+
+    <h2>Type scale — 16px base, 1.25 modular</h2>
+    <div class="type">
+      <p style="font-size:52px;font-weight:800;color:#0b1b33;letter-spacing:-.02em"><span class="lbl">H1 · 52px</span>Hero headline</p>
+      <p style="font-size:39px;font-weight:700;color:#0b1b33"><span class="lbl">H2 · 39px</span>Section heading</p>
+      <p style="font-size:25px;font-weight:700;color:#0b1b33"><span class="lbl">H3 · 25px</span>Card heading</p>
+      <p style="font-size:16px;color:#42526b"><span class="lbl">Body · 16px</span>All body copy at 16px / 1.6 line height — comfortable reading size.</p>
+    </div>
+
+    <h2>Buttons — 2 variants + 1 link</h2>
+    <div class="btns">
+      <span class="b" style="background:#D9530E;color:#fff;padding:14px 28px;border-radius:10px;font-size:16px">Talk to a specialist</span>
+      <span class="b" style="border:2px solid #102744;color:#102744;padding:12px 26px;border-radius:10px;font-size:16px">Explore the platform</span>
+      <span class="b" style="color:#B5430A;font-size:16px">Learn more →</span>
+    </div>
+    <div class="note">One primary, one secondary, one text link. One radius (10px), one casing, AA contrast everywhere.</div>
+
+    <h2>Spacing — 8pt scale</h2>
+    <div class="sp">
+      <div><i style="height:8px"></i><span>8</span></div>
+      <div><i style="height:16px"></i><span>16</span></div>
+      <div><i style="height:24px"></i><span>24</span></div>
+      <div><i style="height:32px"></i><span>32</span></div>
+      <div><i style="height:48px"></i><span>48</span></div>
+      <div><i style="height:64px"></i><span>64</span></div>
+      <div><i style="height:96px"></i><span>96</span></div>
+    </div>
+    <div class="note">Every margin/padding drawn from 8 · 16 · 24 · 32 · 48 · 64 · 96 — consistent vertical rhythm.</div>
+  </div>
+
+</div>
+</body></html>
