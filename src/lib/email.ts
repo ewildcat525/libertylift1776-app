@@ -136,22 +136,20 @@ export function buildReminderEmail({
   }
 }
 
-// Resend batch endpoint accepts up to 100 messages per call.
+// Resend batch endpoint accepts up to 100 messages per call. Each message
+// carries a caller-supplied key (profile/subscriber id); only keys from
+// chunks Resend accepted are returned, so failed sends get retried on the
+// next run instead of being marked as delivered.
 export async function sendEmailBatch(
-  messages: { to: string; subject: string; html: string }[]
+  messages: { key: string; to: string; subject: string; html: string }[]
 ) {
   const apiKey = process.env.RESEND_API_KEY
   const from = process.env.EMAIL_FROM
-  if (!apiKey || !from || messages.length === 0) return { sent: 0 }
+  const sentKeys: string[] = []
+  if (!apiKey || !from || messages.length === 0) return { sentKeys }
 
-  let sent = 0
   for (let i = 0; i < messages.length; i += 100) {
-    const chunk = messages.slice(i, i + 100).map((m) => ({
-      from,
-      to: [m.to],
-      subject: m.subject,
-      html: m.html,
-    }))
+    const chunk = messages.slice(i, i + 100)
 
     const response = await fetch('https://api.resend.com/emails/batch', {
       method: 'POST',
@@ -159,15 +157,17 @@ export async function sendEmailBatch(
         Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(chunk),
+      body: JSON.stringify(
+        chunk.map((m) => ({ from, to: [m.to], subject: m.subject, html: m.html }))
+      ),
     })
 
     if (response.ok) {
-      sent += chunk.length
+      sentKeys.push(...chunk.map((m) => m.key))
     } else {
       console.error('Resend batch failed:', response.status, await response.text())
     }
   }
 
-  return { sent }
+  return { sentKeys }
 }

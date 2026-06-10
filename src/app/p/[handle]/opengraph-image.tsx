@@ -1,5 +1,5 @@
 import { ImageResponse } from 'next/og'
-import { fetchProfileStatsByHandle } from '@/lib/public-data'
+import { fetchProfileStatsByHandle, fetchPublicProfileByHandle } from '@/lib/public-data'
 import { US_STATES } from '@/lib/supabase'
 
 export const runtime = 'edge'
@@ -16,11 +16,13 @@ export default async function Image({ params }: { params: { handle: string } }) 
   }
 
   const stats = await fetchProfileStatsByHandle(handle)
-  const name = (stats?.display_name || handle).slice(0, 26)
+  const fallback = stats ? null : await fetchPublicProfileByHandle(handle)
+  const name = (stats?.display_name || fallback?.display_name || handle).slice(0, 26)
   const total = stats?.total_pushups ?? 0
   const streak = stats?.current_streak ?? 0
   const rank = stats?.global_rank
-  const stateName = stats?.state_code ? US_STATES[stats.state_code] : null
+  const stateCode = stats?.state_code || fallback?.state_code || null
+  const stateName = stateCode ? US_STATES[stateCode] : null
   const progress = Math.min(total / 1776, 1)
 
   return new ImageResponse(

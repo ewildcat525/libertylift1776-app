@@ -91,6 +91,7 @@ For a fresh Supabase project, run `supabase-schema.sql` first in the Supabase SQ
 7. `supabase/migrations/20260609130000_unique_profile_display_names.sql`
 8. `supabase/migrations/20260609180000_viral_growth_and_hardening.sql`
 9. `supabase/migrations/20260610090000_email_privacy_and_retention.sql`
+10. `supabase/migrations/20260610150000_fix_daily_cap_update_bypass.sql`
 
 The schema enables Row Level Security and creates the core tables, triggers, functions, and leaderboard view used by the app.
 

@@ -57,6 +57,29 @@ export async function fetchProfileStatsByHandle(handle: string): Promise<PublicP
   }
 }
 
+export interface PublicProfile {
+  id: string
+  display_name: string | null
+  state_code: string | null
+  created_at: string | null
+}
+
+// Fallback lookup for users with no reps yet: the leaderboard view filters
+// total_pushups > 0, but their share links must still resolve (and carry
+// referral credit), so read the public_profiles view directly.
+export async function fetchPublicProfileByHandle(handle: string): Promise<PublicProfile | null> {
+  try {
+    const response = await restRequest(
+      `public_profiles?display_name=ilike.${encodeURIComponent(escapeIlike(handle))}&limit=1`
+    )
+    if (!response?.ok) return null
+    const rows = (await response.json()) as PublicProfile[]
+    return rows[0] ?? null
+  } catch {
+    return null
+  }
+}
+
 export async function fetchStateStats(stateCode: string): Promise<PublicStateStats | null> {
   try {
     const response = await restRequest(

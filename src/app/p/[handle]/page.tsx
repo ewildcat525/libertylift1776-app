@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { fetchProfileStatsByHandle, isFoundingPatriot } from '@/lib/public-data'
+import { fetchProfileStatsByHandle, fetchPublicProfileByHandle, isFoundingPatriot } from '@/lib/public-data'
 import { US_STATES } from '@/lib/supabase'
 
 export const revalidate = 60
@@ -20,20 +20,20 @@ function decodeHandle(handle: string) {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const handle = decodeHandle(params.handle)
   const stats = await fetchProfileStatsByHandle(handle)
+  const fallback = stats ? null : await fetchPublicProfileByHandle(handle)
 
-  if (!stats) {
+  if (!stats && !fallback) {
     return {
       title: 'Liberty Lift 1776 — The Push-Up Challenge',
       description: 'Complete 1776 push-ups in July. One nation. One month. One challenge.',
     }
   }
 
-  const name = stats.display_name || 'A patriot'
+  const name = stats?.display_name || fallback?.display_name || 'A patriot'
   const title = `${name} — Liberty Lift 1776`
-  const description =
-    stats.total_pushups > 0
-      ? `${name} has logged ${stats.total_pushups.toLocaleString()} of 1,776 push-ups (#${stats.global_rank} nationally). Think you can keep up?`
-      : `${name} joined the 1776 push-up challenge. Think you can keep up?`
+  const description = stats
+    ? `${name} has logged ${stats.total_pushups.toLocaleString()} of 1,776 push-ups (#${stats.global_rank} nationally). Think you can keep up?`
+    : `${name} joined the 1776 push-up challenge. Think you can keep up?`
 
   return {
     title,
@@ -46,12 +46,15 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export default async function PublicProfilePage({ params }: PageProps) {
   const handle = decodeHandle(params.handle)
   const stats = await fetchProfileStatsByHandle(handle)
+  const fallback = stats ? null : await fetchPublicProfileByHandle(handle)
 
-  const name = stats?.display_name || handle
-  const stateName = stats?.state_code ? US_STATES[stats.state_code] : null
+  const knownName = stats?.display_name || fallback?.display_name || null
+  const name = knownName || handle
+  const stateCode = stats?.state_code || fallback?.state_code || null
+  const stateName = stateCode ? US_STATES[stateCode] : null
   const total = stats?.total_pushups ?? 0
   const progress = Math.min((total / 1776) * 100, 100)
-  const refQuery = stats?.display_name ? `?ref=${encodeURIComponent(stats.display_name)}` : ''
+  const refQuery = knownName ? `?ref=${encodeURIComponent(knownName)}` : ''
 
   return (
     <main className="auth-page">
@@ -117,6 +120,22 @@ export default async function PublicProfilePage({ params }: PageProps) {
               </h2>
               <p className="text-white/60 mb-6">
                 1,776 push-ups in July. Every rep counts for you and your state.
+              </p>
+            </>
+          ) : fallback ? (
+            <>
+              <div className="app-eyebrow justify-center mb-3">
+                {stateName ? `Team ${stateName}` : 'The push-up challenge'}
+              </div>
+              <h1 className="app-title text-5xl sm:text-6xl mb-2">{name}</h1>
+              {isFoundingPatriot(fallback.created_at) && (
+                <div className="inline-flex items-center gap-2 px-3 py-1 mb-2 border border-liberty-gold/50 bg-liberty-gold/10 text-liberty-gold text-xs font-bold uppercase tracking-[0.15em]">
+                  ★ Founding Patriot
+                </div>
+              )}
+              <p className="text-white/60 mb-8">
+                Enlisted for the 1776 push-up challenge. First reps land July 1 —
+                will you be on the board with them?
               </p>
             </>
           ) : (

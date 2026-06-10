@@ -16,6 +16,15 @@ function todayInChallengeTz() {
   return new Intl.DateTimeFormat('en-CA', { timeZone: CHALLENGE_TZ }).format(new Date())
 }
 
+// July 2026 is EDT (UTC-4) for the entire challenge window, so the
+// challenge-timezone day [00:00, 24:00) maps to fixed -04:00 offsets.
+function challengeDayBounds(today: string) {
+  const nextDay = new Date(Date.parse(`${today}T12:00:00Z`) + 24 * 60 * 60 * 1000)
+    .toISOString()
+    .split('T')[0]
+  return { dayStart: `${today}T00:00:00-04:00`, dayEnd: `${nextDay}T00:00:00-04:00` }
+}
+
 export async function GET(request: NextRequest) {
   const secret = process.env.CRON_SECRET
   if (!secret || request.headers.get('authorization') !== `Bearer ${secret}`) {
@@ -44,15 +53,17 @@ export async function GET(request: NextRequest) {
       .limit(MAX_REMINDERS_PER_RUN)
 
     if (subscribers && subscribers.length > 0) {
-      const { sent } = await sendEmailBatch(
-        subscribers.map((s) => ({ to: s.email, ...buildLaunchEmail(s.id) }))
+      const { sentKeys } = await sendEmailBatch(
+        subscribers.map((s) => ({ key: s.id, to: s.email, ...buildLaunchEmail(s.id) }))
       )
-      result.launchEmails = sent
+      result.launchEmails = sentKeys.length
 
-      await supabase
-        .from('email_subscribers')
-        .update({ notified_at: new Date().toISOString() })
-        .in('id', subscribers.map((s) => s.id))
+      if (sentKeys.length > 0) {
+        await supabase
+          .from('email_subscribers')
+          .update({ notified_at: new Date().toISOString() })
+          .in('id', sentKeys)
+      }
     }
   }
 
@@ -75,13 +86,15 @@ export async function GET(request: NextRequest) {
     })
 
     const ids = eligible.map((p) => p.id)
+    const { dayStart, dayEnd } = challengeDayBounds(today)
 
     const [{ data: stats }, { data: todayLogs }] = await Promise.all([
       supabase.from('user_stats').select('user_id, total_pushups, current_streak').in('user_id', ids),
       supabase
         .from('pushup_logs')
         .select('user_id')
-        .gte('logged_at', `${today}T00:00:00`)
+        .gte('logged_at', dayStart)
+        .lt('logged_at', dayEnd)
         .in('user_id', ids),
     ])
 
@@ -93,8 +106,8 @@ export async function GET(request: NextRequest) {
       .map((p) => {
         const s = statsByUser.get(p.id)
         return {
+          key: p.id,
           to: p.email as string,
-          profileId: p.id,
           ...buildReminderEmail({
             profileId: p.id,
             displayName: p.display_name,
@@ -106,13 +119,15 @@ export async function GET(request: NextRequest) {
       })
 
     if (messages.length > 0) {
-      const { sent } = await sendEmailBatch(messages)
-      result.reminders = sent
+      const { sentKeys } = await sendEmailBatch(messages)
+      result.reminders = sentKeys.length
 
-      await supabase
-        .from('profiles')
-        .update({ last_reminder_at: new Date().toISOString() })
-        .in('id', messages.map((m) => m.profileId))
+      if (sentKeys.length > 0) {
+        await supabase
+          .from('profiles')
+          .update({ last_reminder_at: new Date().toISOString() })
+          .in('id', sentKeys)
+      }
     }
   }
 
