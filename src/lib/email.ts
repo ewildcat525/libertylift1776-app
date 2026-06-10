@@ -1,9 +1,6 @@
 // Server-only email helpers for the reminder cron and unsubscribe flow.
 import { createHmac, timingSafeEqual } from 'node:crypto'
-
-const siteUrl =
-  process.env.NEXT_PUBLIC_SITE_URL ||
-  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
+import { siteUrl } from '@/lib/site'
 
 export function getSiteUrl() {
   return siteUrl

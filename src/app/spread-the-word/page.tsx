@@ -2,14 +2,13 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import CopyBlock from '@/components/CopyBlock'
 import Navigation from '@/components/Navigation'
+import { siteUrl } from '@/lib/site'
 
 export const metadata: Metadata = {
   title: 'Spread the Word — Liberty Lift 1776',
   description:
     'Ready-made captions, the hashtag, and share links to recruit your state for the 1776 push-up challenge.',
 }
-
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://libertylift1776.com'
 
 const captions = [
   {

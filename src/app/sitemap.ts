@@ -1,9 +1,6 @@
 import type { MetadataRoute } from 'next'
 import { US_STATES } from '@/lib/supabase'
-
-const siteUrl =
-  process.env.NEXT_PUBLIC_SITE_URL ||
-  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
+import { siteUrl } from '@/lib/site'
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const staticRoutes: MetadataRoute.Sitemap = [
