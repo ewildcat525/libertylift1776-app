@@ -1,0 +1,118 @@
+name: Design Audit
+
+on:
+  workflow_dispatch:
+  schedule:
+    # First Monday-ish of each month, 14:00 UTC
+    - cron: '0 14 1 * *'
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  design-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install chromium --with-deps
+
+      - name: Capture BEFORE screenshots
+        run: node scripts/design-audit/capture.mjs --out .design-audit/before
+
+      - name: Run design audit (Claude)
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: |
+            Run a design audit of this repository.
+
+            1. Read scripts/design-audit/AUDIT_GUIDE.md and follow it exactly —
+               it defines the audit scope and the rules for what you may change.
+            2. Look at the current-state screenshots in .design-audit/before/.
+            3. Apply safe, token/CSS-level fixes directly to the working tree.
+            4. Write a terse findings report to .design-audit/REPORT.md.
+            Do not commit, push, or open a PR — later workflow steps do that.
+          claude_args: '--allowedTools "Read,Glob,Grep,Edit,Write,Bash(npm run lint),Bash(npx next build)"'
+
+      - name: Capture AFTER screenshots
+        run: node scripts/design-audit/capture.mjs --out .design-audit/after
+
+      - name: Compose before/after visuals
+        run: |
+          node scripts/design-audit/compose.mjs \
+            --before .design-audit/before \
+            --after  .design-audit/after \
+            --out    .design-audit/compare
+
+      - name: Upload audit artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: design-audit-${{ github.run_number }}
+          path: .design-audit/
+
+      - name: Push audit branch and open PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          BRANCH="design-audit/run-${{ github.run_number }}"
+
+          # Nothing changed -> nothing to propose.
+          if git diff --quiet -- . ':!.design-audit'; then
+            echo "Audit proposed no changes; skipping PR."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+
+          # Keep the visual evidence with the proposal so the PR body can embed it.
+          DOCS_DIR="docs/design-audit/run-${{ github.run_number }}"
+          mkdir -p "$DOCS_DIR"
+          cp .design-audit/compare/*.png "$DOCS_DIR"/
+          cp .design-audit/REPORT.md "$DOCS_DIR"/ 2>/dev/null || true
+
+          git add -A -- . ':!.design-audit'
+          git commit -m "Design audit: proposed fixes (run ${{ github.run_number }})"
+          git push -u origin "$BRANCH"
+
+          BODY=$(mktemp)
+          {
+            echo "Automated design audit. Before/after visuals first, details in the report."
+            echo
+            RAW="https://raw.githubusercontent.com/${{ github.repository }}/$BRANCH/$DOCS_DIR"
+            for f in "$DOCS_DIR"/*.png; do
+              name=$(basename "$f")
+              echo "### ${name%-before-after.png}"
+              echo "![${name}]($RAW/$name)"
+              echo
+            done
+            if [ -f "$DOCS_DIR/REPORT.md" ]; then
+              echo "<details><summary>Findings report</summary>"
+              echo
+              cat "$DOCS_DIR/REPORT.md"
+              echo
+              echo "</details>"
+            fi
+          } > "$BODY"
+
+          gh pr create \
+            --title "Design audit: run ${{ github.run_number }}" \
+            --body-file "$BODY" \
+            --base "${{ github.event.repository.default_branch }}" \
+            --head "$BRANCH"
