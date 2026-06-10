@@ -28,6 +28,12 @@ body {
   font-family: 'Bebas Neue', sans-serif;
 }
 
+/* Keyboard focus indicator (hover-only affordances are invisible to keyboard users) */
+:focus-visible {
+  outline: 2px solid var(--campaign-red);
+  outline-offset: 2px;
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
@@ -66,7 +72,7 @@ body {
 /* Button styles */
 .btn-primary {
   @apply inline-flex items-center justify-center px-6 py-3 bg-liberty-red text-white font-extrabold uppercase tracking-[0.1em] rounded-none
-         transition-colors duration-200 hover:bg-red-500;
+         transition-colors duration-200 hover:bg-liberty-red-bright;
 }
 
 .btn-secondary {
@@ -76,7 +82,7 @@ body {
 
 .btn-gold {
   @apply inline-flex items-center justify-center px-6 py-3 bg-liberty-red text-white font-extrabold uppercase tracking-[0.1em] rounded-none
-         transition-colors duration-200 hover:bg-red-500;
+         transition-colors duration-200 hover:bg-liberty-red-bright;
 }
 
 /* Card styles */
@@ -284,8 +290,8 @@ body {
 }
 
 .conversion-signin {
-  color: rgba(235, 231, 220, 0.68);
-  font-size: 0.68rem;
+  color: rgba(235, 231, 220, 0.78);
+  font-size: 0.7rem;
   font-weight: 800;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -509,7 +515,7 @@ body {
 
 .auth-field-note {
   margin-top: 0.4rem;
-  color: rgba(235, 231, 220, 0.46);
+  color: rgba(235, 231, 220, 0.64);
   font-size: 0.72rem;
   line-height: 1.35;
 }
@@ -604,7 +610,7 @@ body {
 
 .auth-footnote {
   margin-top: 1.2rem;
-  color: rgba(235, 231, 220, 0.52);
+  color: rgba(235, 231, 220, 0.68);
   font-size: 0.82rem;
   text-align: center;
 }
@@ -750,7 +756,7 @@ body {
 
 .campaign-countdown-unit-label {
   margin-top: 0.2rem;
-  color: rgba(235, 231, 220, 0.54);
+  color: rgba(235, 231, 220, 0.7);
   font-size: 0.6rem;
   font-weight: 800;
   letter-spacing: 0.11em;
@@ -840,8 +846,8 @@ body {
 
 .campaign-stat-label,
 .campaign-scroll-cue {
-  color: rgba(235, 231, 220, 0.58);
-  font-size: 0.63rem;
+  color: rgba(235, 231, 220, 0.74);
+  font-size: 0.68rem;
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -914,7 +920,7 @@ body {
 .state-race-copy p {
   max-width: 35rem;
   margin: 2rem 0 0;
-  color: rgba(235, 231, 220, 0.62);
+  color: rgba(235, 231, 220, 0.76);
   font-size: clamp(1rem, 1.5vw, 1.18rem);
   line-height: 1.7;
 }
@@ -963,7 +969,7 @@ body {
 
 .challenge-step p {
   margin: 0;
-  color: rgba(235, 231, 220, 0.56);
+  color: rgba(235, 231, 220, 0.72);
   line-height: 1.65;
 }
 
@@ -990,7 +996,7 @@ body {
 }
 
 .state-race-copy p {
-  color: rgba(16, 16, 15, 0.62);
+  color: rgba(16, 16, 15, 0.74);
 }
 
 .state-board-header,
@@ -1052,7 +1058,7 @@ body {
 
 .state-board-note {
   margin-top: 1rem;
-  color: rgba(16, 16, 15, 0.48);
+  color: rgba(16, 16, 15, 0.66);
   font-size: 0.64rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -1077,7 +1083,7 @@ body {
 
 .campaign-final-eyebrow {
   margin-bottom: 2rem;
-  color: rgba(235, 231, 220, 0.55);
+  color: rgba(235, 231, 220, 0.72);
   font-size: 0.65rem;
   font-weight: 800;
   letter-spacing: 0.16em;
