@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
+import { CHARITY_DONATE_URLS } from '@/lib/charities'
 import Navigation from '@/components/Navigation'
 import PledgeSetup from '@/components/PledgeSetup'
 
@@ -122,7 +123,18 @@ export default function PledgePage() {
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-liberty-gold">4.</span>
-                At month&apos;s end, donate your pledged amount directly to the charity
+                <span>
+                  At month&apos;s end, donate your pledged amount directly to the charity — WWP
+                  pledges go through our{' '}
+                  <a
+                    href={CHARITY_DONATE_URLS.wounded_warrior}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-liberty-gold hover:underline"
+                  >
+                    official WWP fundraiser page
+                  </a>
+                </span>
               </li>
             </ul>
             <p className="mt-4 text-white/40 text-xs">

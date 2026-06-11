@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createClient, Pledge } from '@/lib/supabase'
+import { CHARITY_DONATE_URLS } from '@/lib/charities'
 
 interface PledgeSetupProps {
   userId: string
@@ -16,7 +17,7 @@ const CHARITIES = [
     description: 'Supporting veterans who incurred physical or mental injuries',
     logo: '🎖️',
     color: 'from-amber-600 to-amber-800',
-    url: 'https://www.woundedwarriorproject.org/',
+    url: CHARITY_DONATE_URLS.wounded_warrior,
   },
   {
     id: 'save_the_children',
@@ -24,7 +25,7 @@ const CHARITIES = [
     description: 'Helping children in need around the world',
     logo: '🌍',
     color: 'from-red-500 to-red-700',
-    url: 'https://www.savethechildren.org/',
+    url: CHARITY_DONATE_URLS.save_the_children,
   },
 ]
 
