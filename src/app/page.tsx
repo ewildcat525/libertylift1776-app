@@ -284,6 +284,25 @@ export default function Home() {
         </div>
       </section>
 
+      <section className="campaign-section campaign-manifesto" aria-label="Optional charity pledge">
+        <div className="campaign-section-label">Optional pledge</div>
+        <div className="campaign-manifesto-copy">
+          <h2>
+            Every rep can
+            <br />
+            <em>give back.</em>
+          </h2>
+          <p>
+            Make an optional, honor-system pledge — say, 5¢ per push-up — to
+            Wounded Warrior Project or Save the Children. At the end of July you
+            donate directly to the charity. We never collect or process a dime.
+          </p>
+          <Link href={primaryHref} className="campaign-text-link" onClick={() => trackCta('pledge')}>
+            Join, then set your pledge <span aria-hidden="true">→</span>
+          </Link>
+        </div>
+      </section>
+
       {!user && (
         <section className="campaign-section" aria-label="Get notified at launch">
           <div className="campaign-section-label">Before July 1</div>
