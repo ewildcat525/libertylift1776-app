@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createClient, Pledge } from '@/lib/supabase'
+import { CHARITY_DONATE_URLS } from '@/lib/charities'
 import Link from 'next/link'
 
 interface PledgeWidgetProps {
@@ -134,6 +135,17 @@ export default function PledgeWidget({ userId, totalPushups }: PledgeWidgetProps
             <span className="text-green-300">You hit 1776! $0.00 owed — donate anyway?</span>
           </div>
         )}
+
+        <a
+          href={CHARITY_DONATE_URLS[pledge.charity]}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-4 block text-center text-sm text-liberty-gold hover:underline"
+        >
+          {pledge.charity === 'wounded_warrior'
+            ? 'Donate via our official WWP fundraiser page →'
+            : `Donate to ${charityInfo.name} →`}
+        </a>
       </div>
     </div>
   )
