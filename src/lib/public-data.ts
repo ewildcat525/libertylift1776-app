@@ -16,7 +16,7 @@ export interface PublicProfileStats {
 }
 
 // Joined before the challenge started on July 1, 2026.
-export function isFoundingPatriot(createdAt: string | null | undefined) {
+export function isFoundingFather(createdAt: string | null | undefined) {
   return Boolean(createdAt && createdAt < '2026-07-01')
 }
 

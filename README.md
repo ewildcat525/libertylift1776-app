@@ -20,7 +20,7 @@ Liberty Lift 1776 is a Next.js campaign app for a July 1-31, 2026 push-up challe
 - Pre-launch email capture on the landing page with live "patriots enlisted" social proof
 - Sitemap, robots rules, PWA manifest, and Vercel Analytics funnel events
 - Daily reminder emails during July (launch blast + pace/streak nudges) via Vercel Cron and Resend
-- Top Recruiters leaderboard tab and Founding Patriot badges for pre-July signups
+- Top Recruiters leaderboard tab and Founding Father badges for pre-July signups
 - Spread-the-word page (`/spread-the-word`) with copy-paste captions and the #LibertyLift1776 hashtag
 - Landing page state board flips from preview data to live totals once reps are logged
 
