@@ -752,6 +752,7 @@ export default function DashboardPage() {
                 currentStreak={stats?.current_streak || 0}
                 stateCode={profile.state_code}
                 context="dashboard"
+                showInviteLink
               />
               <a href="/spread-the-word" className="inline-block mt-4 text-sm text-white/50 hover:text-white">
                 Need ammo? Grab ready-made captions →

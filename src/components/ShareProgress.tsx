@@ -12,6 +12,8 @@ interface ShareProgressProps {
   // Where the share UI is rendered, for analytics (e.g. 'dashboard', 'log_success', 'milestone')
   context: string
   className?: string
+  // Show the bare invite URL with its own copy button (for bios, DMs, etc.)
+  showInviteLink?: boolean
 }
 
 function buildShareText(totalPushups: number, currentStreak: number, stateCode?: string | null) {
@@ -35,8 +37,10 @@ export default function ShareProgress({
   stateCode,
   context,
   className = '',
+  showInviteLink = false,
 }: ShareProgressProps) {
   const [copied, setCopied] = useState(false)
+  const [linkCopied, setLinkCopied] = useState(false)
 
   const shareUrl =
     typeof window !== 'undefined'
@@ -71,22 +75,51 @@ export default function ShareProgress({
     }
   }
 
+  const copyBareLink = async () => {
+    track('share_clicked', { channel: 'invite_link', context })
+    try {
+      await navigator.clipboard.writeText(shareUrl)
+      setLinkCopied(true)
+      setTimeout(() => setLinkCopied(false), 2500)
+    } catch {
+      // Clipboard unavailable; leave the button label unchanged.
+    }
+  }
+
   return (
-    <div className={`flex flex-wrap items-center justify-center gap-2 ${className}`}>
-      {canNativeShare && (
-        <button onClick={nativeShare} className="btn-gold px-5 py-2 text-sm">
-          Share your progress
+    <div className={className}>
+      <div className="flex flex-wrap items-center justify-center gap-2">
+        {canNativeShare && (
+          <button onClick={nativeShare} className="btn-gold px-5 py-2 text-sm">
+            Share your progress
+          </button>
+        )}
+        <button
+          onClick={shareOnX}
+          className={canNativeShare ? 'btn-secondary px-5 py-2 text-sm' : 'btn-gold px-5 py-2 text-sm'}
+        >
+          Post on X
         </button>
+        <button onClick={copyLink} className="btn-secondary px-5 py-2 text-sm">
+          {copied ? 'Copied!' : 'Copy link'}
+        </button>
+      </div>
+
+      {showInviteLink && shareUrl && (
+        <div className="mt-4 mx-auto max-w-xl">
+          <div className="text-[10px] text-white/40 uppercase tracking-[0.15em] mb-1.5 text-left">
+            Your invite link
+          </div>
+          <div className="flex items-stretch gap-2">
+            <div className="flex-1 min-w-0 px-3 py-2 bg-white/[0.04] border border-white/15 font-mono text-xs text-white/70 truncate text-left leading-6">
+              {shareUrl}
+            </div>
+            <button onClick={copyBareLink} className="btn-secondary px-4 py-2 text-xs shrink-0">
+              {linkCopied ? 'Copied!' : 'Copy'}
+            </button>
+          </div>
+        </div>
       )}
-      <button
-        onClick={shareOnX}
-        className={canNativeShare ? 'btn-secondary px-5 py-2 text-sm' : 'btn-gold px-5 py-2 text-sm'}
-      >
-        Post on X
-      </button>
-      <button onClick={copyLink} className="btn-secondary px-5 py-2 text-sm">
-        {copied ? 'Copied!' : 'Copy link'}
-      </button>
     </div>
   )
 }
