@@ -8,7 +8,12 @@ import { clearPendingSignup, generateDisplayName, readPendingSignup } from '@/li
 
 type JoinState = 'loading' | 'needs-auth' | 'joining' | 'joined' | 'error'
 
-export default function JoinClient() {
+interface JoinClientProps {
+  contestName: string | null
+  participantCount: number
+}
+
+export default function JoinClient({ contestName, participantCount }: JoinClientProps) {
   const params = useParams()
   const router = useRouter()
   const inviteCode = String(params.code || '').trim().toUpperCase()
@@ -104,15 +109,21 @@ export default function JoinClient() {
       <section className="auth-shell auth-shell-center">
         <div className="auth-card">
           <div className="text-center mb-7">
-            <div className="app-eyebrow justify-center mb-3">Contest invite</div>
-            <h1 className="app-title text-5xl">Join the board</h1>
+            <div className="app-eyebrow justify-center mb-3">
+              {contestName ? 'You are invited to' : 'Contest invite'}
+            </div>
+            <h1 className="app-title text-5xl">{contestName || 'Join the board'}</h1>
+            {contestName && participantCount > 0 && (
+              <p className="text-liberty-gold text-xs font-bold uppercase tracking-[0.15em] mt-3">
+                {participantCount} {participantCount === 1 ? 'patriot' : 'patriots'} already on the board
+              </p>
+            )}
             <p className="text-white/60 mt-3">{message}</p>
           </div>
 
-          <div className="generated-handle mb-6" aria-live="polite">
-            <span>Invite code</span>
-            <strong>{inviteCode || 'Missing'}</strong>
-          </div>
+          <p className="text-center text-xs text-white/40 uppercase tracking-[0.15em] mb-6" aria-live="polite">
+            Invite code: <span className="font-mono text-white/70">{inviteCode || 'Missing'}</span>
+          </p>
 
           {state === 'needs-auth' && (
             <div className="flex flex-col gap-3">

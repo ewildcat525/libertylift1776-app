@@ -80,6 +80,26 @@ export async function fetchPublicProfileByHandle(handle: string): Promise<Public
   }
 }
 
+export interface ContestInvitePreview {
+  name: string
+  participant_count: number
+}
+
+// Resolve an invite code to the contest name for the invite landing page and
+// its link previews. Anonymous-safe: the code itself is the secret.
+export async function fetchContestInvitePreview(code: string): Promise<ContestInvitePreview | null> {
+  try {
+    const response = await restRequest(
+      `rpc/get_contest_invite_preview?p_invite_code=${encodeURIComponent(code)}`
+    )
+    if (!response?.ok) return null
+    const rows = (await response.json()) as ContestInvitePreview[]
+    return rows[0] ?? null
+  } catch {
+    return null
+  }
+}
+
 export async function fetchStateStats(stateCode: string): Promise<PublicStateStats | null> {
   try {
     const response = await restRequest(
