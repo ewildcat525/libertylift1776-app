@@ -7,7 +7,6 @@ import { track } from '@vercel/analytics'
 import { createClient, US_STATES } from '@/lib/supabase'
 import { captureReferralFromUrl } from '@/lib/referral'
 import Countdown from '@/components/Countdown'
-import EmailCapture from '@/components/EmailCapture'
 
 // Hide the live counter until there is enough signal to be social proof.
 const SOCIAL_PROOF_THRESHOLD = 100
@@ -302,13 +301,6 @@ export default function Home() {
           </Link>
         </div>
       </section>
-
-      {!user && (
-        <section className="campaign-section" aria-label="Get notified at launch">
-          <div className="campaign-section-label">Before July 1</div>
-          <EmailCapture />
-        </section>
-      )}
 
       <section className="campaign-final">
         <div className="campaign-final-rule" />
