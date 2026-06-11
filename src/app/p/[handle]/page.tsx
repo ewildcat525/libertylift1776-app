@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { fetchProfileStatsByHandle, fetchPublicProfileByHandle, isFoundingPatriot } from '@/lib/public-data'
+import { fetchProfileStatsByHandle, fetchPublicProfileByHandle, isFoundingFather } from '@/lib/public-data'
 import { US_STATES } from '@/lib/supabase'
 
 export const revalidate = 60
@@ -78,9 +78,9 @@ export default async function PublicProfilePage({ params }: PageProps) {
                 {stateName ? `Team ${stateName}` : 'The push-up challenge'}
               </div>
               <h1 className="app-title text-5xl sm:text-6xl mb-2">{name}</h1>
-              {isFoundingPatriot(stats.created_at) && (
+              {isFoundingFather(stats.created_at) && (
                 <div className="inline-flex items-center gap-2 px-3 py-1 mb-2 border border-liberty-gold/50 bg-liberty-gold/10 text-liberty-gold text-xs font-bold uppercase tracking-[0.15em]">
-                  ★ Founding Patriot
+                  ★ Founding Father
                 </div>
               )}
               <p className="text-white/60 mb-8">
@@ -128,9 +128,9 @@ export default async function PublicProfilePage({ params }: PageProps) {
                 {stateName ? `Team ${stateName}` : 'The push-up challenge'}
               </div>
               <h1 className="app-title text-5xl sm:text-6xl mb-2">{name}</h1>
-              {isFoundingPatriot(fallback.created_at) && (
+              {isFoundingFather(fallback.created_at) && (
                 <div className="inline-flex items-center gap-2 px-3 py-1 mb-2 border border-liberty-gold/50 bg-liberty-gold/10 text-liberty-gold text-xs font-bold uppercase tracking-[0.15em]">
-                  ★ Founding Patriot
+                  ★ Founding Father
                 </div>
               )}
               <p className="text-white/60 mb-8">

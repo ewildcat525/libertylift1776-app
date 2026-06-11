@@ -473,7 +473,7 @@ export default function DashboardPage() {
               <div className="app-eyebrow">Personal board</div>
               {profile?.created_at && profile.created_at < '2026-07-01' && (
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 border border-liberty-gold/50 bg-liberty-gold/10 text-liberty-gold text-[10px] font-bold uppercase tracking-[0.15em]">
-                  ★ Founding Patriot
+                  ★ Founding Father
                 </span>
               )}
             </div>
