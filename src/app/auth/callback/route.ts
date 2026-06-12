@@ -56,6 +56,8 @@ export async function GET(request: Request) {
     }
   }
 
-  // Return to login on error
-  return NextResponse.redirect(`${origin}/login?error=auth`)
+  // Return to login on error, keeping Supabase's error code (e.g. otp_expired)
+  // so the login page can explain what went wrong
+  const errorCode = searchParams.get('error_code')
+  return NextResponse.redirect(`${origin}/login?error=${encodeURIComponent(errorCode || 'auth')}`)
 }

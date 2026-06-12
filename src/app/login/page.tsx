@@ -35,7 +35,15 @@ export default function LoginPage() {
   }
 
   useEffect(() => {
-    setNextPath(getSafeNext(new URLSearchParams(window.location.search).get('next')))
+    const params = new URLSearchParams(window.location.search)
+    setNextPath(getSafeNext(params.get('next')))
+
+    const errorParam = params.get('error')
+    if (errorParam === 'otp_expired') {
+      setError('That sign-in link expired or was already used. Enter your email below and we will send you a fresh one.')
+    } else if (errorParam) {
+      setError('We could not sign you in with that link. Enter your email below to get a new one.')
+    }
   }, [])
 
   const handleGoogleLogin = async () => {
