@@ -31,7 +31,15 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   return {
     title,
     description,
-    openGraph: { title, description },
+    // Page-level openGraph replaces the layout's, so restate the site-wide
+    // fields — some unfurlers (e.g. Teams) want og:url/og:type present.
+    openGraph: {
+      title,
+      description,
+      url: `/join/${encodeURIComponent(decodeCode(params.code))}`,
+      type: 'website',
+      siteName: 'Liberty Lift 1776',
+    },
     twitter: { card: 'summary_large_image', title, description },
   }
 }
