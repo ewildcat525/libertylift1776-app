@@ -59,11 +59,8 @@ export default function PledgeWidget({ userId, totalPushups }: PledgeWidgetProps
             </div>
           </div>
           <div className="mt-4 flex items-center gap-3">
-            <div className="flex -space-x-2">
-              <span className="w-8 h-8 rounded-full bg-amber-600 flex items-center justify-center text-sm">🎖️</span>
-              <span className="w-8 h-8 rounded-full bg-red-600 flex items-center justify-center text-sm">🌍</span>
-            </div>
-            <span className="text-white/50 text-sm">Wounded Warrior • Save the Children</span>
+            <span className="w-8 h-8 rounded-full bg-amber-600 flex items-center justify-center text-sm">🎖️</span>
+            <span className="text-white/50 text-sm">Donate per push-up to Wounded Warrior Project</span>
           </div>
         </div>
       </Link>
