@@ -92,7 +92,7 @@ export default function PledgePage() {
               {existingPledge ? 'Update Your Pledge' : 'Make a Pledge'}
             </h1>
             <p className="text-white/60 max-w-md mt-3">
-              Turn your push-ups into real impact. Make an honor-system pledge to donate to charity based on your July performance.
+              Turn your push-ups into real impact. Pledge a fixed amount per push-up to Wounded Warrior Project, and donate based on your July total.
             </p>
           </div>
 
@@ -111,21 +111,16 @@ export default function PledgePage() {
             <ul className="space-y-2 text-white/60 text-sm">
               <li className="flex items-start gap-2">
                 <span className="text-liberty-gold">1.</span>
-                Choose a charity and pledge type
+                Set your donation rate per push-up
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-liberty-gold">2.</span>
-                Set your per-push-up rate
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-liberty-gold">3.</span>
                 Complete push-ups throughout July
               </li>
               <li className="flex items-start gap-2">
-                <span className="text-liberty-gold">4.</span>
+                <span className="text-liberty-gold">3.</span>
                 <span>
-                  At month&apos;s end, donate your pledged amount directly to the charity — WWP
-                  pledges go through our{' '}
+                  At month&apos;s end, donate your pledged amount to Wounded Warrior Project through our{' '}
                   <a
                     href={CHARITY_DONATE_URLS.wounded_warrior}
                     target="_blank"
@@ -138,7 +133,7 @@ export default function PledgePage() {
               </li>
             </ul>
             <p className="mt-4 text-white/40 text-xs">
-              This is an honor-system pledge. We don&apos;t collect payment — you donate directly to your chosen charity at the end of the challenge.
+              This is an honor-system pledge. We don&apos;t collect payment — you donate directly to Wounded Warrior Project at the end of the challenge.
             </p>
           </div>
         </div>

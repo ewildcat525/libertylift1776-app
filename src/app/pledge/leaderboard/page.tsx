@@ -40,7 +40,6 @@ const US_STATES: Record<string, string> = {
 export default function PledgeLeaderboardPage() {
   const [entries, setEntries] = useState<PledgeLeaderEntry[]>([])
   const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState<'all' | 'wounded_warrior' | 'save_the_children'>('all')
   const [totalPledged, setTotalPledged] = useState(0)
   const supabase = createClient()
 
@@ -70,11 +69,7 @@ export default function PledgeLeaderboardPage() {
     loadLeaderboard()
   }, [])
 
-  const filteredEntries = filter === 'all' 
-    ? entries 
-    : entries.filter(e => e.charity === filter)
-
-  const filteredTotal = filteredEntries.reduce((sum, e) => sum + e.pledged_amount, 0)
+  const filteredEntries = entries
 
   return (
     <>
@@ -90,41 +85,14 @@ export default function PledgeLeaderboardPage() {
 
           {/* Total Pledged Banner */}
           <div className="card p-8 mb-8 text-center">
-            <div className="text-white/60 mb-2">Top {LEADERBOARD_LIMIT} pledged total</div>
+            <div className="text-white/60 mb-2">Top {LEADERBOARD_LIMIT} pledged to Wounded Warrior Project</div>
             <div className="font-bebas text-7xl text-liberty-red mb-2">
               ${totalPledged.toFixed(2)}
             </div>
-            <div className="flex justify-center gap-8 text-sm text-white/50">
-              <div className="flex items-center gap-2">
-                <span>🎖️</span>
-                <span>${entries.filter(e => e.charity === 'wounded_warrior').reduce((s, e) => s + e.pledged_amount, 0).toFixed(2)} to WWP</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span>🌍</span>
-                <span>${entries.filter(e => e.charity === 'save_the_children').reduce((s, e) => s + e.pledged_amount, 0).toFixed(2)} to STC</span>
-              </div>
+            <div className="flex justify-center items-center gap-2 text-sm text-white/50">
+              <span>🎖️</span>
+              <span>Honor-system pledges, 5¢–$1 per push-up completed</span>
             </div>
-          </div>
-
-          {/* Filter Tabs */}
-          <div className="flex justify-center gap-2 mb-8">
-            {[
-              { key: 'all', label: 'All Pledges' },
-              { key: 'wounded_warrior', label: 'Wounded Warrior' },
-              { key: 'save_the_children', label: 'Save the Children' },
-            ].map((tab) => (
-              <button
-                key={tab.key}
-                onClick={() => setFilter(tab.key as any)}
-                className={`px-4 py-2 text-xs font-extrabold uppercase tracking-[0.1em] transition-colors border ${
-                  filter === tab.key
-                    ? 'bg-liberty-red border-liberty-red text-white'
-                    : 'bg-transparent border-white/20 text-white/70 hover:bg-white hover:text-liberty-dark'
-                }`}
-              >
-                <span>{tab.label}</span>
-              </button>
-            ))}
           </div>
 
           {/* Leaderboard */}

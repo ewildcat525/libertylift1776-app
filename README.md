@@ -11,7 +11,7 @@ Liberty Lift 1776 is a Next.js campaign app for a July 1-31, 2026 push-up challe
 - Personal stats, calendar tracking, cumulative progress chart, and milestone messages
 - Global leaderboard with total, streak, and best-day rankings
 - Private and public contests with invite codes
-- Charity pledge setup for Wounded Warrior Project or Save the Children
+- Charity pledge setup: donate a fixed rate per push-up completed to Wounded Warrior Project
 - Supabase-backed profiles, logs, stats, achievements, contests, pledges, and email subscribers
 - Public shareable profile pages (`/p/[handle]`) with dynamic Open Graph cards
 - Share buttons (native share sheet, X, copy link) after logging, at milestones, and on state boards
@@ -92,6 +92,7 @@ For a fresh Supabase project, run `supabase-schema.sql` first in the Supabase SQ
 8. `supabase/migrations/20260609180000_viral_growth_and_hardening.sql`
 9. `supabase/migrations/20260610090000_email_privacy_and_retention.sql`
 10. `supabase/migrations/20260610150000_fix_daily_cap_update_bypass.sql`
+11. `supabase/migrations/20260615100000_single_charity_single_pledge_type.sql`
 
 The schema enables Row Level Security and creates the core tables, triggers, functions, and leaderboard view used by the app.
 

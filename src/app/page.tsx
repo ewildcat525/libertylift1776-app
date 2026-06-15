@@ -292,9 +292,10 @@ export default function Home() {
             <em>give back.</em>
           </h2>
           <p>
-            Make an optional, honor-system pledge — say, 5¢ per push-up — to
-            Wounded Warrior Project or Save the Children. At the end of July you
-            donate directly to the charity. We never collect or process a dime.
+            Make an optional, honor-system pledge to Wounded Warrior Project —
+            a fixed amount per push-up you complete. At 5¢ a rep, finishing all
+            1,776 is $88.80. At the end of July you donate directly. We never
+            collect or process a dime.
           </p>
           <Link href={primaryHref} className="campaign-text-link" onClick={() => trackCta('pledge')}>
             Join, then set your pledge <span aria-hidden="true">→</span>
