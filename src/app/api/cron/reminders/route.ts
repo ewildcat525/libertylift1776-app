@@ -102,7 +102,7 @@ export async function GET(request: NextRequest) {
       const ids = eligible.map((p) => p.id)
       const { dayStart, dayEnd } = challengeDayBounds(today)
 
-      const [{ data: stats }, { data: todayLogs }] = await Promise.all([
+      const [{ data: stats }, { data: todayLogs }, { data: pledges }] = await Promise.all([
         supabase.from('user_stats').select('user_id, total_pushups, current_streak').in('user_id', ids),
         supabase
           .from('pushup_logs')
@@ -110,10 +110,12 @@ export async function GET(request: NextRequest) {
           .gte('logged_at', dayStart)
           .lt('logged_at', dayEnd)
           .in('user_id', ids),
+        supabase.from('pledges').select('user_id').eq('is_active', true).in('user_id', ids),
       ])
 
       const loggedToday = new Set((todayLogs || []).map((l) => l.user_id))
       const statsByUser = new Map((stats || []).map((s) => [s.user_id, s]))
+      const pledgedUsers = new Set((pledges || []).map((p) => p.user_id))
 
       const messages = eligible
         .filter((p) => !loggedToday.has(p.id))
@@ -128,6 +130,7 @@ export async function GET(request: NextRequest) {
               totalPushups: s?.total_pushups || 0,
               currentStreak: s?.current_streak || 0,
               dayOfJuly,
+              hasPledge: pledgedUsers.has(p.id),
             }),
           }
         })

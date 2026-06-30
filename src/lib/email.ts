@@ -88,6 +88,13 @@ interface ReminderArgs {
   totalPushups: number
   currentStreak: number
   dayOfJuly: number
+  hasPledge: boolean
+}
+
+// Secondary nudge shown only to participants who haven't set up a pledge yet.
+function pledgeNudge(hasPledge: boolean) {
+  if (hasPledge) return ''
+  return `<br/><br/><span style="color:#9A9AA5;font-size:13px;">Make your reps count for more — pledge a few cents per push-up to the Wounded Warrior Project, donated at month's end. <a href="${siteUrl}/pledge" style="color:#C9A227;">Set up a pledge →</a></span>`
 }
 
 export function buildReminderEmail({
@@ -96,10 +103,12 @@ export function buildReminderEmail({
   totalPushups,
   currentStreak,
   dayOfJuly,
+  hasPledge,
 }: ReminderArgs) {
   const name = displayName || 'Patriot'
   const expected = Math.round((dayOfJuly / 31) * 1776)
   const remaining = Math.max(0, 1776 - totalPushups)
+  const nudge = pledgeNudge(hasPledge)
 
   if (totalPushups >= 1776) {
     return {
@@ -107,7 +116,7 @@ export function buildReminderEmail({
       html: emailShell({
         heading: `Liberty achieved, ${name}.`,
         body: `All 1,776 push-ups are in the books. Your state thanks you.
-          <br/><br/>One last mission: share your board and bring in reinforcements before July 31.`,
+          <br/><br/>One last mission: share your board and bring in reinforcements before July 31.${nudge}`,
         ctaLabel: 'Share your victory',
         ctaUrl: `${siteUrl}/dashboard`,
         unsubscribe: unsubscribeUrl('profile', profileId),
@@ -129,7 +138,7 @@ export function buildReminderEmail({
       heading: behind ? `Your state needs you, ${name}.` : `Ahead of pace, ${name}.`,
       body: `You've logged <strong style="color:#FFD700;">${totalPushups.toLocaleString()}</strong> of 1,776.
         Pace target for day ${dayOfJuly} is ${expected.toLocaleString()}.
-        <br/><br/>${streakLine}`,
+        <br/><br/>${streakLine}${nudge}`,
       ctaLabel: 'Log today’s push-ups',
       ctaUrl: `${siteUrl}/dashboard`,
       unsubscribe: unsubscribeUrl('profile', profileId),
