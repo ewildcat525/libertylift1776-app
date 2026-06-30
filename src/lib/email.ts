@@ -69,13 +69,14 @@ function emailShell({ heading, body, ctaLabel, ctaUrl, unsubscribe }: EmailShell
 
 export function buildLaunchEmail(subscriberId: string) {
   return {
-    subject: 'It begins today: 1,776 push-ups. 31 days. 🇺🇸',
+    subject: 'It begins today — log in and start your 1,776. 🇺🇸',
     html: emailShell({
-      heading: 'The challenge is live.',
-      body: `July 1 is here. 1,776 push-ups between now and July 31 — that's 58 a day.
-        <br/><br/>Claim your handle, join your state, and get your first reps on the board today.`,
-      ctaLabel: 'Join the challenge',
-      ctaUrl: `${siteUrl}/signup`,
+      heading: 'Day 1. Everyone starts at zero.',
+      body: `July 1 is here and the challenge is live. Every counter is back to zero —
+        any reps logged before today have been cleared, so it's a clean slate for all 50 states.
+        <br/><br/>Log in and put your first push-ups on the board. 1,776 by July 31 — that's 58 a day.`,
+      ctaLabel: 'Log in and start logging',
+      ctaUrl: `${siteUrl}/login`,
       unsubscribe: unsubscribeUrl('subscriber', subscriberId),
     }),
   }
