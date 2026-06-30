@@ -67,7 +67,7 @@ function emailShell({ heading, body, ctaLabel, ctaUrl, unsubscribe }: EmailShell
 </html>`
 }
 
-export function buildLaunchEmail(subscriberId: string) {
+export function buildLaunchEmail(profileId: string) {
   return {
     subject: 'It begins today — log in and start your 1,776. 🇺🇸',
     html: emailShell({
@@ -77,7 +77,7 @@ export function buildLaunchEmail(subscriberId: string) {
         <br/><br/>Log in and put your first push-ups on the board. 1,776 by July 31 — that's 58 a day.`,
       ctaLabel: 'Log in and start logging',
       ctaUrl: `${siteUrl}/login`,
-      unsubscribe: unsubscribeUrl('subscriber', subscriberId),
+      unsubscribe: unsubscribeUrl('profile', profileId),
     }),
   }
 }

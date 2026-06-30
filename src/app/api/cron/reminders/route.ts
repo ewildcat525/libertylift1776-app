@@ -54,24 +54,26 @@ export async function GET(request: NextRequest) {
   const dayOfJuly = parseInt(today.split('-')[2], 10)
   const result: Record<string, number> = { launchEmails: 0, reminders: 0 }
 
-  // --- Launch-day blast to the pre-launch email list ---
+  // --- Launch-day blast to registered participants ---
   if (today === '2026-07-01') {
-    const { data: subscribers } = await supabase
-      .from('email_subscribers')
+    const { data: recipients } = await supabase
+      .from('profiles')
       .select('id, email')
-      .is('notified_at', null)
+      .eq('email_opt_out', false)
+      .not('email', 'is', null)
+      .is('launch_emailed_at', null)
       .limit(MAX_REMINDERS_PER_RUN)
 
-    if (subscribers && subscribers.length > 0) {
+    if (recipients && recipients.length > 0) {
       const { sentKeys } = await sendEmailBatch(
-        subscribers.map((s) => ({ key: s.id, to: s.email, ...buildLaunchEmail(s.id) }))
+        recipients.map((p) => ({ key: p.id, to: p.email as string, ...buildLaunchEmail(p.id) }))
       )
       result.launchEmails = sentKeys.length
 
       if (sentKeys.length > 0) {
         await supabase
-          .from('email_subscribers')
-          .update({ notified_at: new Date().toISOString() })
+          .from('profiles')
+          .update({ launch_emailed_at: new Date().toISOString() })
           .in('id', sentKeys)
       }
     }
