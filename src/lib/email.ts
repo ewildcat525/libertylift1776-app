@@ -43,22 +43,22 @@ function emailShell({ heading, body, ctaLabel, ctaUrl, unsubscribe }: EmailShell
 <body style="margin:0;padding:0;background-color:#0A0A0F;font-family:Arial,Helvetica,sans-serif;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#0A0A0F;padding:32px 16px;">
     <tr><td align="center">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background-color:#11111A;border:1px solid rgba(255,255,255,0.12);">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background-color:#181824;border:1px solid rgba(255,255,255,0.18);">
         <tr><td style="border-top:4px solid #B22234;padding:32px 32px 8px;text-align:center;">
-          <div style="color:rgba(255,255,255,0.6);font-size:12px;letter-spacing:4px;">LIBERTY LIFT / 1776</div>
+          <div style="color:#C9A227;font-size:12px;letter-spacing:4px;font-weight:bold;">LIBERTY LIFT / 1776</div>
         </td></tr>
         <tr><td style="padding:16px 32px 0;text-align:center;">
           <h1 style="color:#FFFFFF;font-size:28px;margin:0 0 16px;">${heading}</h1>
         </td></tr>
-        <tr><td style="padding:0 32px;text-align:center;color:rgba(255,255,255,0.75);font-size:15px;line-height:1.6;">
+        <tr><td style="padding:0 32px;text-align:center;color:#E6E6EC;font-size:15px;line-height:1.6;">
           ${body}
         </td></tr>
         <tr><td style="padding:28px 32px 36px;text-align:center;">
           <a href="${ctaUrl}" style="display:inline-block;background:linear-gradient(180deg,#FFD700,#B8860B);color:#0A0A0F;font-weight:bold;text-decoration:none;padding:14px 36px;font-size:15px;">${ctaLabel}</a>
         </td></tr>
-        <tr><td style="padding:0 32px 28px;text-align:center;color:rgba(255,255,255,0.35);font-size:11px;line-height:1.6;">
+        <tr><td style="padding:0 32px 28px;text-align:center;color:#9A9AA5;font-size:11px;line-height:1.6;">
           1,776 push-ups. 31 days. No spectators.<br/>
-          <a href="${unsubscribe}" style="color:rgba(255,255,255,0.35);">Unsubscribe from these emails</a>
+          <a href="${unsubscribe}" style="color:#9A9AA5;">Unsubscribe from these emails</a>
         </td></tr>
       </table>
     </td></tr>
@@ -67,16 +67,17 @@ function emailShell({ heading, body, ctaLabel, ctaUrl, unsubscribe }: EmailShell
 </html>`
 }
 
-export function buildLaunchEmail(subscriberId: string) {
+export function buildLaunchEmail(profileId: string) {
   return {
-    subject: 'It begins today: 1,776 push-ups. 31 days. 🇺🇸',
+    subject: 'It begins today — log in and start your 1,776. 🇺🇸',
     html: emailShell({
-      heading: 'The challenge is live.',
-      body: `July 1 is here. 1,776 push-ups between now and July 31 — that's 58 a day.
-        <br/><br/>Claim your handle, join your state, and get your first reps on the board today.`,
-      ctaLabel: 'Join the challenge',
-      ctaUrl: `${siteUrl}/signup`,
-      unsubscribe: unsubscribeUrl('subscriber', subscriberId),
+      heading: 'Day 1. Everyone starts at zero.',
+      body: `July 1 is here and the challenge is live. Every counter is back to zero —
+        any reps logged before today have been cleared, so it's a clean slate for all 50 states.
+        <br/><br/>Log in and put your first push-ups on the board. 1,776 by July 31 — that's 58 a day.`,
+      ctaLabel: 'Log in and start logging',
+      ctaUrl: `${siteUrl}/login`,
+      unsubscribe: unsubscribeUrl('profile', profileId),
     }),
   }
 }
