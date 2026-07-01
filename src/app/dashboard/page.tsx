@@ -437,8 +437,7 @@ export default function DashboardPage() {
   const julyEnd = new Date(2026, 6, 31, 23, 59, 59)
 
   // Determine challenge phase and pace
-  let pace: 'before' | 'ahead' | 'behind' | 'complete'
-  let expectedProgress = 0
+  let pace: 'before' | 'ahead' | 'ontrack' | 'behind' | 'complete'
 
   if (today < julyStart) {
     pace = 'before'
@@ -447,8 +446,20 @@ export default function DashboardPage() {
   } else {
     // During July - calculate based on day of month
     const dayOfJuly = today.getDate()
-    expectedProgress = (dayOfJuly / daysInJuly) * 1776
-    pace = stats && stats.total_pushups >= expectedProgress ? 'ahead' : 'behind'
+    const total = stats?.total_pushups ?? 0
+    // The current day is still in progress, so its target isn't owed yet.
+    // You're only "behind" if you've fallen short of the days that have
+    // already fully elapsed. Once you've met that, you're "on track" until
+    // you clear today's cumulative target, at which point you're "ahead".
+    const requiredByYesterday = ((dayOfJuly - 1) / daysInJuly) * 1776
+    const targetByToday = (dayOfJuly / daysInJuly) * 1776
+    if (total >= targetByToday) {
+      pace = 'ahead'
+    } else if (total < requiredByYesterday) {
+      pace = 'behind'
+    } else {
+      pace = 'ontrack'
+    }
   }
 
   if (!user) {
@@ -563,11 +574,13 @@ export default function DashboardPage() {
             <div className="card p-6 text-center mb-8">
               <div className={`inline-flex items-center gap-2 px-4 py-2 border ${
                 pace === 'ahead' ? 'bg-green-500/20 text-green-300 border-green-500/40' :
+                pace === 'ontrack' ? 'bg-blue-500/20 text-blue-300 border-blue-500/40' :
                 pace === 'behind' ? 'bg-yellow-500/20 text-yellow-300 border-yellow-500/40' :
                 'bg-liberty-red/20 text-liberty-red border-liberty-red/40'
               }`}>
                 <span>
                   {pace === 'ahead' ? 'Ahead' :
+                   pace === 'ontrack' ? 'On Track' :
                    pace === 'behind' ? 'Behind' : 'Complete'}
                 </span>
               </div>
