@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { track } from '@vercel/analytics'
 import { createClient, UserStats, Profile, AMERICAN_FACTS, DAILY_PACE, isValidStateCode } from '@/lib/supabase'
 import { clearPendingSignup, generateDisplayName, readPendingSignup } from '@/lib/onboarding'
+import { localDateString } from '@/lib/dates'
 import { clearReferral } from '@/lib/referral'
 import Countdown from '@/components/Countdown'
 import Navigation from '@/components/Navigation'
@@ -33,7 +34,7 @@ export default function DashboardPage() {
     const julyEnd = new Date(2026, 6, 31, 23, 59, 59)
     if (now < julyStart) return '2026-07-01'
     if (now > julyEnd) return '2026-07-31'
-    return now.toISOString().split('T')[0]
+    return localDateString(now)
   })
   const [logging, setLogging] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
@@ -178,7 +179,7 @@ export default function DashboardPage() {
       if (logsData) {
         const grouped: Record<string, number> = {}
         logsData.forEach(log => {
-          const date = new Date(log.logged_at).toISOString().split('T')[0]
+          const date = localDateString(new Date(log.logged_at))
           grouped[date] = (grouped[date] || 0) + log.count
         })
         setDailyLogs(grouped)
@@ -878,7 +879,7 @@ export default function DashboardPage() {
                 for (let day = 1; day <= daysInMonth; day++) {
                   const dateStr = `2026-07-${String(day).padStart(2, '0')}`
                   const count = dailyLogs[dateStr] || 0
-                  const isToday = dateStr === new Date().toISOString().split('T')[0]
+                  const isToday = dateStr === localDateString()
 
                   days.push(
                     <div

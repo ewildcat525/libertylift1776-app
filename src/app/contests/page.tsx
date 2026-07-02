@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient, Contest } from '@/lib/supabase'
+import { localDateString } from '@/lib/dates'
 import Navigation from '@/components/Navigation'
 
 export default function ContestsPage() {
@@ -82,7 +83,7 @@ export default function ContestsPage() {
         creator_id: user.id,
         invite_code: inviteCode,
         is_public: isPublic,
-        start_date: new Date().toISOString().split('T')[0],
+        start_date: localDateString(),
         end_date: '2026-07-31',
       })
       .select()
