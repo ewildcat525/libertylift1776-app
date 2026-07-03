@@ -8,6 +8,7 @@ import { clearPendingSignup, generateDisplayName, readPendingSignup } from '@/li
 import { localDateString } from '@/lib/dates'
 import { clearReferral } from '@/lib/referral'
 import Countdown from '@/components/Countdown'
+import Fireworks from '@/components/Fireworks'
 import Navigation from '@/components/Navigation'
 import PledgeWidget from '@/components/PledgeWidget'
 import ShareProgress from '@/components/ShareProgress'
@@ -38,6 +39,7 @@ export default function DashboardPage() {
   })
   const [logging, setLogging] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
+  const [showFireworks, setShowFireworks] = useState(false)
   const [showError, setShowError] = useState<string | null>(null)
   const [editingProfile, setEditingProfile] = useState(false)
   const [profileName, setProfileName] = useState('')
@@ -345,6 +347,12 @@ export default function DashboardPage() {
 
       track('pushups_logged', { count })
 
+      // Independence Day easter egg: reps logged for July 4th get fireworks.
+      if (logDate === '2026-07-04') {
+        setShowFireworks(true)
+        track('july_4th_fireworks')
+      }
+
       setPushupCount('')
       setShowSuccess(true)
       setTimeout(() => setShowSuccess(false), 8000)
@@ -477,6 +485,7 @@ export default function DashboardPage() {
   return (
     <>
       <Navigation />
+      {showFireworks && <Fireworks onDone={() => setShowFireworks(false)} />}
       <div className="min-h-screen pt-24 pb-12 px-4 app-surface">
         <div className="max-w-4xl mx-auto">
           {/* Header */}

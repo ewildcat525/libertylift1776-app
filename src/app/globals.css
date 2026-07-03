@@ -243,6 +243,32 @@ body {
   100% { transform: translateY(-100px) rotate(720deg); opacity: 0; }
 }
 
+/* July 4th fireworks banner */
+@keyframes fireworksBanner {
+  0% { opacity: 0; transform: scale(0.6); }
+  8% { opacity: 1; transform: scale(1.05); }
+  12% { transform: scale(1); }
+  80% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.08); }
+}
+
+.fireworks-banner {
+  animation: fireworksBanner 6.5s ease-out forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fireworks-banner {
+    animation: fireworksBannerFade 4s ease-out forwards;
+  }
+}
+
+@keyframes fireworksBannerFade {
+  0% { opacity: 0; }
+  15% { opacity: 1; }
+  85% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
 /* Landing campaign */
 .campaign-page {
   --campaign-red: #d32331;
