@@ -7,6 +7,7 @@ import { createClient, UserStats, Profile, AMERICAN_FACTS, DAILY_PACE, isValidSt
 import { clearPendingSignup, generateDisplayName, readPendingSignup } from '@/lib/onboarding'
 import { localDateString } from '@/lib/dates'
 import { clearReferral } from '@/lib/referral'
+import BadgeCase from '@/components/BadgeCase'
 import Countdown from '@/components/Countdown'
 import Fireworks from '@/components/Fireworks'
 import Navigation from '@/components/Navigation'
@@ -771,6 +772,9 @@ export default function DashboardPage() {
               </div>
             </div>
           </div>
+
+          {/* Badge Case */}
+          <BadgeCase userId={user.id} stats={stats} />
 
           {/* Recruit Card */}
           {profile?.display_name && (

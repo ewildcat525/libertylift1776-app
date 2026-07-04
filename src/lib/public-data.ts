@@ -81,6 +81,32 @@ export async function fetchPublicProfileByHandle(handle: string): Promise<Public
   }
 }
 
+export interface EarnedBadge {
+  achievement_id: string
+  earned_at: string
+  achievements: {
+    name: string
+    description: string
+    icon: string
+  } | null
+}
+
+// Badges this user has earned, oldest first so the row reads like a timeline.
+// user_achievements and achievements are world-readable by RLS policy.
+export async function fetchEarnedBadges(userId: string): Promise<EarnedBadge[]> {
+  try {
+    const response = await restRequest(
+      `user_achievements?user_id=eq.${encodeURIComponent(userId)}` +
+        `&select=achievement_id,earned_at,achievements(name,description,icon)` +
+        `&order=earned_at.asc`
+    )
+    if (!response?.ok) return []
+    return (await response.json()) as EarnedBadge[]
+  } catch {
+    return []
+  }
+}
+
 export interface ContestInvitePreview {
   name: string
   participant_count: number

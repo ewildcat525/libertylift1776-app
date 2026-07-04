@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { fetchProfileStatsByHandle, fetchPublicProfileByHandle, isDeclarationSigner } from '@/lib/public-data'
+import { fetchEarnedBadges, fetchProfileStatsByHandle, fetchPublicProfileByHandle, isDeclarationSigner } from '@/lib/public-data'
 import { US_STATES } from '@/lib/supabase'
 
 export const revalidate = 60
@@ -55,6 +55,7 @@ export default async function PublicProfilePage({ params }: PageProps) {
   const handle = decodeHandle(params.handle)
   const stats = await fetchProfileStatsByHandle(handle)
   const fallback = stats ? null : await fetchPublicProfileByHandle(handle)
+  const badges = stats ? await fetchEarnedBadges(stats.id) : []
 
   const knownName = stats?.display_name || fallback?.display_name || null
   const name = knownName || handle
@@ -126,6 +127,26 @@ export default async function PublicProfilePage({ params }: PageProps) {
                   <div className="text-xs text-white/50 uppercase">Days logged</div>
                 </div>
               </div>
+
+              {badges.length > 0 && (
+                <div className="mb-10">
+                  <div className="text-xs text-white/40 uppercase tracking-[0.25em] mb-3">
+                    Badge case
+                  </div>
+                  <div className="flex flex-wrap justify-center gap-2">
+                    {badges.map(badge => (
+                      <span
+                        key={badge.achievement_id}
+                        title={badge.achievements?.description}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-liberty-gold/40 bg-liberty-gold/10 text-liberty-gold text-xs font-bold uppercase tracking-wider"
+                      >
+                        <span aria-hidden="true">{badge.achievements?.icon}</span>
+                        {badge.achievements?.name ?? badge.achievement_id}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <h2 className="font-bebas text-3xl text-liberty-red mb-3">
                 Think you can keep up?
