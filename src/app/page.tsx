@@ -6,12 +6,21 @@ import type { User } from '@supabase/supabase-js'
 import { track } from '@vercel/analytics'
 import { createClient, US_STATES } from '@/lib/supabase'
 import { captureReferralFromUrl } from '@/lib/referral'
+import { catchUpPace, challengeDaysRemaining, isChallengeLive } from '@/lib/dates'
 import Countdown from '@/components/Countdown'
 
 // Hide the live counter until there is enough signal to be social proof.
 const SOCIAL_PROOF_THRESHOLD = 100
 
-const challengeSteps = [
+// Catch-up pace for visitors landing mid-challenge. Computed after mount so
+// the prerendered HTML (which has no clock) matches the first client render.
+interface PaceInfo {
+  reps: number
+  daysLeft: number
+  midChallenge: boolean
+}
+
+const challengeSteps = (pace: PaceInfo | null) => [
   {
     number: '01',
     title: 'Choose your ground',
@@ -20,7 +29,9 @@ const challengeSteps = [
   {
     number: '02',
     title: 'Put in the work',
-    copy: 'Log 1776 push-ups across July. That is roughly 58 a day.',
+    copy: pace?.midChallenge
+      ? `Log 1776 push-ups by July 31. Starting today, that is ${pace.reps} a day.`
+      : 'Log 1776 push-ups across July. That is roughly 58 a day.',
   },
   {
     number: '03',
@@ -49,12 +60,21 @@ export default function Home() {
   const [enlisted, setEnlisted] = useState<number | null>(null)
   const [showVideo, setShowVideo] = useState(false)
   const [liveBoard, setLiveBoard] = useState<BoardRow[] | null>(null)
+  const [pace, setPace] = useState<PaceInfo | null>(null)
   const supabase = createClient()
 
   useEffect(() => {
     // Defer the 1.7MB hero video until after first paint; the poster carries the hero.
     const timer = setTimeout(() => setShowVideo(true), 300)
     return () => clearTimeout(timer)
+  }, [])
+
+  useEffect(() => {
+    const now = new Date()
+    const reps = catchUpPace(now)
+    if (!isChallengeLive(now) || reps === null) return
+    const daysLeft = challengeDaysRemaining(now)
+    setPace({ reps, daysLeft, midChallenge: daysLeft < 31 })
   }, [])
 
   useEffect(() => {
@@ -162,6 +182,14 @@ export default function Home() {
 
           <Countdown />
 
+          {!user && pace?.midChallenge && (
+            <p className="campaign-late-note" role="status">
+              Missed the start? Hardly. Join today, log{' '}
+              <strong>{pace.reps} a day</strong>, and you still finish all 1,776
+              by July 31.
+            </p>
+          )}
+
           <div className="campaign-actions">
             <Link
               href={primaryHref}
@@ -181,12 +209,16 @@ export default function Home() {
 
         <div className="campaign-hero-footer">
           <div>
-            <span className="campaign-stat-value">58</span>
-            <span className="campaign-stat-label">reps a day</span>
+            <span className="campaign-stat-value">{pace?.midChallenge ? pace.reps : 58}</span>
+            <span className="campaign-stat-label">
+              {pace?.midChallenge ? 'a day from today' : 'reps a day'}
+            </span>
           </div>
           <div>
-            <span className="campaign-stat-value">31</span>
-            <span className="campaign-stat-label">days in July</span>
+            <span className="campaign-stat-value">{pace?.midChallenge ? pace.daysLeft : 31}</span>
+            <span className="campaign-stat-label">
+              {pace?.midChallenge ? 'days left in July' : 'days in July'}
+            </span>
           </div>
           {enlisted !== null && (
             <div>
@@ -235,7 +267,7 @@ export default function Home() {
       <section className="campaign-section challenge-steps-section">
         <div className="campaign-section-label">How it works</div>
         <div className="challenge-steps">
-          {challengeSteps.map((step) => (
+          {challengeSteps(pace).map((step) => (
             <article key={step.number} className="challenge-step">
               <span className="challenge-step-number">{step.number}</span>
               <h3>{step.title}</h3>
