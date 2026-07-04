@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { fetchProfileStatsByHandle, fetchPublicProfileByHandle, isFoundingFather } from '@/lib/public-data'
+import { fetchProfileStatsByHandle, fetchPublicProfileByHandle, isDeclarationSigner } from '@/lib/public-data'
 import { US_STATES } from '@/lib/supabase'
 
 export const revalidate = 60
@@ -86,11 +86,15 @@ export default async function PublicProfilePage({ params }: PageProps) {
                 {stateName ? `Team ${stateName}` : 'The push-up challenge'}
               </div>
               <h1 className="app-title text-5xl sm:text-6xl mb-2">{name}</h1>
-              {isFoundingFather(stats.created_at) && (
+              {total >= 1776 ? (
                 <div className="inline-flex items-center gap-2 px-3 py-1 mb-2 border border-liberty-gold/50 bg-liberty-gold/10 text-liberty-gold text-xs font-bold uppercase tracking-[0.15em]">
-                  ★ Founding Father
+                  🏛️ Founding Father
                 </div>
-              )}
+              ) : isDeclarationSigner(stats.created_at) ? (
+                <div className="inline-flex items-center gap-2 px-3 py-1 mb-2 border border-liberty-gold/50 bg-liberty-gold/10 text-liberty-gold text-xs font-bold uppercase tracking-[0.15em]">
+                  📜 Declaration Signer
+                </div>
+              ) : null}
               <p className="text-white/60 mb-8">
                 {total >= 1776
                   ? 'Completed the 1776 push-up challenge.'
@@ -136,9 +140,9 @@ export default async function PublicProfilePage({ params }: PageProps) {
                 {stateName ? `Team ${stateName}` : 'The push-up challenge'}
               </div>
               <h1 className="app-title text-5xl sm:text-6xl mb-2">{name}</h1>
-              {isFoundingFather(fallback.created_at) && (
+              {isDeclarationSigner(fallback.created_at) && (
                 <div className="inline-flex items-center gap-2 px-3 py-1 mb-2 border border-liberty-gold/50 bg-liberty-gold/10 text-liberty-gold text-xs font-bold uppercase tracking-[0.15em]">
-                  ★ Founding Father
+                  📜 Declaration Signer
                 </div>
               )}
               <p className="text-white/60 mb-8">

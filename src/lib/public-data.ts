@@ -15,8 +15,9 @@ export interface PublicProfileStats {
   created_at?: string
 }
 
-// Joined before the challenge started on July 1, 2026.
-export function isFoundingFather(createdAt: string | null | undefined) {
+// Joined before the challenge started on July 1, 2026 — the Declaration
+// Signer badge. (Founding Father is the badge for completing all 1776.)
+export function isDeclarationSigner(createdAt: string | null | undefined) {
   return Boolean(createdAt && createdAt < '2026-07-01')
 }
 

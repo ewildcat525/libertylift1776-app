@@ -128,7 +128,7 @@ export const AMERICAN_FACTS = [
   { threshold: 1492, fact: "1492 - Columbus sailed the ocean blue, and you're sailing toward victory!" },
   { threshold: 1600, fact: "Almost there! The White House has 132 rooms and 35 bathrooms." },
   { threshold: 1700, fact: "76 to go! The Statue of Liberty's torch is 305 feet above the ground." },
-  { threshold: 1776, fact: "🎆 LIBERTY ACHIEVED! 🎆 You've completed the 1776 Push-Up Challenge! You are a TRUE PATRIOT!" },
+  { threshold: 1776, fact: "🎆 LIBERTY ACHIEVED! 🎆 You've completed the 1776 Push-Up Challenge! The 🏛️ Founding Father badge is yours!" },
 ]
 
 export const US_STATES: Record<string, string> = {

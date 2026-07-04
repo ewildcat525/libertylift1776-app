@@ -39,7 +39,7 @@ export default function DashboardPage() {
   })
   const [logging, setLogging] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
-  const [showFireworks, setShowFireworks] = useState(false)
+  const [fireworksShow, setFireworksShow] = useState<'fourth' | 'liberty' | null>(null)
   const [showError, setShowError] = useState<string | null>(null)
   const [editingProfile, setEditingProfile] = useState(false)
   const [profileName, setProfileName] = useState('')
@@ -347,9 +347,13 @@ export default function DashboardPage() {
 
       track('pushups_logged', { count })
 
-      // Independence Day easter egg: reps logged for July 4th get fireworks.
-      if (logDate === '2026-07-04') {
-        setShowFireworks(true)
+      // Crossing 1776 gets the full fireworks show; it outranks the
+      // Independence Day easter egg for reps logged on July 4th.
+      if (oldTotal < 1776 && newTotal >= 1776) {
+        setFireworksShow('liberty')
+        track('liberty_achieved_fireworks')
+      } else if (logDate === '2026-07-04') {
+        setFireworksShow('fourth')
         track('july_4th_fireworks')
       }
 
@@ -485,16 +489,29 @@ export default function DashboardPage() {
   return (
     <>
       <Navigation />
-      {showFireworks && <Fireworks onDone={() => setShowFireworks(false)} />}
+      {fireworksShow && (
+        <Fireworks
+          onDone={() => setFireworksShow(null)}
+          {...(fireworksShow === 'liberty' && {
+            title: '🇺🇸 LIBERTY ACHIEVED 🇺🇸',
+            subtitle: '1,776 push-ups — Founding Father',
+          })}
+        />
+      )}
       <div className="min-h-screen pt-24 pb-12 px-4 app-surface">
         <div className="max-w-4xl mx-auto">
           {/* Header */}
           <div className="mb-8">
             <div className="flex flex-wrap items-center gap-3 mb-3">
               <div className="app-eyebrow">Personal board</div>
+              {(stats?.total_pushups ?? 0) >= 1776 && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 border border-liberty-gold/50 bg-liberty-gold/10 text-liberty-gold text-[10px] font-bold uppercase tracking-[0.15em]">
+                  🏛️ Founding Father
+                </span>
+              )}
               {profile?.created_at && profile.created_at < '2026-07-01' && (
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 border border-liberty-gold/50 bg-liberty-gold/10 text-liberty-gold text-[10px] font-bold uppercase tracking-[0.15em]">
-                  ★ Founding Father
+                  📜 Declaration Signer
                 </span>
               )}
             </div>
