@@ -43,9 +43,16 @@ interface Rocket {
 interface FireworksProps {
   /** Called once the show wraps up so the parent can unmount us. */
   onDone: () => void
+  /** Banner text; defaults to the July 4th easter egg. */
+  title?: string
+  subtitle?: string
 }
 
-export default function Fireworks({ onDone }: FireworksProps) {
+export default function Fireworks({
+  onDone,
+  title = '🇺🇸 HAPPY FOURTH 🇺🇸',
+  subtitle = 'Reps for the Republic',
+}: FireworksProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const onDoneRef = useRef(onDone)
   onDoneRef.current = onDone
@@ -278,10 +285,10 @@ export default function Fireworks({ onDone }: FireworksProps) {
       <div className="absolute inset-x-0 top-[18%] flex justify-center px-4">
         <div className="fireworks-banner text-center">
           <div className="font-bebas text-5xl sm:text-7xl text-white drop-shadow-[0_0_25px_rgba(255,212,71,0.6)]">
-            🇺🇸 HAPPY FOURTH 🇺🇸
+            {title}
           </div>
           <div className="mt-1 text-sm sm:text-base uppercase tracking-[0.3em] text-liberty-gold font-bold">
-            Reps for the Republic
+            {subtitle}
           </div>
         </div>
       </div>

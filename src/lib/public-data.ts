@@ -15,8 +15,9 @@ export interface PublicProfileStats {
   created_at?: string
 }
 
-// Joined before the challenge started on July 1, 2026.
-export function isFoundingFather(createdAt: string | null | undefined) {
+// Joined before the challenge started on July 1, 2026 — the Declaration
+// Signer badge. (Founding Father is the badge for completing all 1776.)
+export function isDeclarationSigner(createdAt: string | null | undefined) {
   return Boolean(createdAt && createdAt < '2026-07-01')
 }
 
@@ -77,6 +78,32 @@ export async function fetchPublicProfileByHandle(handle: string): Promise<Public
     return rows[0] ?? null
   } catch {
     return null
+  }
+}
+
+export interface EarnedBadge {
+  achievement_id: string
+  earned_at: string
+  achievements: {
+    name: string
+    description: string
+    icon: string
+  } | null
+}
+
+// Badges this user has earned, oldest first so the row reads like a timeline.
+// user_achievements and achievements are world-readable by RLS policy.
+export async function fetchEarnedBadges(userId: string): Promise<EarnedBadge[]> {
+  try {
+    const response = await restRequest(
+      `user_achievements?user_id=eq.${encodeURIComponent(userId)}` +
+        `&select=achievement_id,earned_at,achievements(name,description,icon)` +
+        `&order=earned_at.asc`
+    )
+    if (!response?.ok) return []
+    return (await response.json()) as EarnedBadge[]
+  } catch {
+    return []
   }
 }
 
