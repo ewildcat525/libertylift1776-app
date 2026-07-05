@@ -17,8 +17,15 @@ export interface PublicProfileStats {
 
 // Joined before the challenge started on July 1, 2026 — the Declaration
 // Signer badge. (Founding Father is the badge for completing all 1776.)
+// The cutoff is midnight US Eastern, matching the app's Eastern anchor for
+// challenge dates (see lib/dates.ts): a UTC-midnight cutoff would call a
+// stateside signup on the evening of June 30 "July".
+const JULY_1_MIDNIGHT_ET = Date.parse('2026-07-01T04:00:00Z')
+
 export function isDeclarationSigner(createdAt: string | null | undefined) {
-  return Boolean(createdAt && createdAt < '2026-07-01')
+  if (!createdAt) return false
+  const signedUpAt = Date.parse(createdAt)
+  return Number.isFinite(signedUpAt) && signedUpAt < JULY_1_MIDNIGHT_ET
 }
 
 export interface PublicStateStats {
