@@ -2,12 +2,21 @@
 
 import { useState, useEffect } from 'react'
 import { createClient, LeaderboardEntry, US_STATES } from '@/lib/supabase'
+import CommunityMilestoneBanner from '@/components/CommunityMilestoneBanner'
 import Navigation from '@/components/Navigation'
 
 export default function LeaderboardPage() {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'all' | 'streak' | 'daily' | 'recruits'>('all')
+  const [userId, setUserId] = useState<string | null>(null)
+
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setUserId(user?.id ?? null)
+    })
+  }, [])
 
   useEffect(() => {
     const loadLeaderboard = async () => {
@@ -50,6 +59,9 @@ export default function LeaderboardPage() {
             <h1 className="app-title text-6xl sm:text-7xl">Leaderboard</h1>
             <p className="text-white/60 mt-3">The people putting in the work.</p>
           </div>
+
+          {/* Nationwide count + milestone celebration */}
+          <CommunityMilestoneBanner userId={userId} className="mb-8" />
 
           {/* Filter Tabs */}
           <div className="flex justify-center gap-2 mb-8">

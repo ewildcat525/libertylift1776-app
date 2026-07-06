@@ -8,6 +8,7 @@ import { clearPendingSignup, generateDisplayName, readPendingSignup } from '@/li
 import { localDateString } from '@/lib/dates'
 import { clearReferral } from '@/lib/referral'
 import BadgeCase from '@/components/BadgeCase'
+import CommunityMilestoneBanner from '@/components/CommunityMilestoneBanner'
 import Countdown from '@/components/Countdown'
 import Fireworks from '@/components/Fireworks'
 import Navigation from '@/components/Navigation'
@@ -715,6 +716,15 @@ export default function DashboardPage() {
               </div>
             )}
           </div>
+
+          {/* Nationwide count + milestone celebration. Keyed to the user's
+              total so it refetches right after a log — if that rep rang the
+              bell, the fireworks fire on the spot. */}
+          <CommunityMilestoneBanner
+            userId={user.id}
+            refreshKey={stats?.total_pushups ?? 0}
+            className="mb-8"
+          />
 
           {/* Main Stats Card */}
           <div className="card p-8 mb-8">

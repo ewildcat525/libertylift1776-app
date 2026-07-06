@@ -12,6 +12,11 @@ interface BadgeCaseProps {
 // then special badges. Within a group, easiest first.
 const TYPE_ORDER: Record<string, number> = { total: 0, daily: 1, streak: 2, special: 3 }
 
+// Community-milestone badges go to exactly one patriot in history (see the
+// community_milestones migration), so showing them as "Locked" to everyone
+// else would be a lie. Only the earner sees them in their case.
+const ONE_OF_A_KIND = new Set(['liberty_bell', 'grand_union'])
+
 function sortAchievements(a: Achievement, b: Achievement) {
   const typeDiff = (TYPE_ORDER[a.requirement_type] ?? 9) - (TYPE_ORDER[b.requirement_type] ?? 9)
   if (typeDiff !== 0) return typeDiff
@@ -85,7 +90,8 @@ export default function BadgeCase({ userId, stats }: BadgeCaseProps) {
 
   if (loading || achievements.length === 0) return null
 
-  const earnedCount = achievements.filter(a => earned[a.id]).length
+  const visible = achievements.filter(a => !ONE_OF_A_KIND.has(a.id) || earned[a.id])
+  const earnedCount = visible.filter(a => earned[a.id]).length
   let popIndex = 0
 
   return (
@@ -93,7 +99,7 @@ export default function BadgeCase({ userId, stats }: BadgeCaseProps) {
       <div className="flex flex-wrap items-end justify-between gap-2 mb-1">
         <h2 className="font-bebas text-3xl text-liberty-red">BADGE CASE</h2>
         <div className="text-sm text-white/50 uppercase tracking-wider">
-          <span className="text-liberty-gold font-bold">{earnedCount}</span> of {achievements.length} earned
+          <span className="text-liberty-gold font-bold">{earnedCount}</span> of {visible.length} earned
         </div>
       </div>
       <p className="text-white/50 text-sm mb-6">
@@ -101,7 +107,7 @@ export default function BadgeCase({ userId, stats }: BadgeCaseProps) {
       </p>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-        {achievements.map(achievement => {
+        {visible.map(achievement => {
           const earnedAt = earned[achievement.id]
           const isJustEarned = justEarned.has(achievement.id)
           const current = earnedAt ? null : progressStat(achievement, stats)
