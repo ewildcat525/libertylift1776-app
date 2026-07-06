@@ -21,7 +21,10 @@ interface CommunityMilestoneBannerProps {
   className?: string
 }
 
-const seenKey = (threshold: number) => `ll-community-milestone-${threshold}-seen`
+// Keyed to hit_at so a re-armed milestone (a claim reset server-side, like
+// the early 50k ring under the old all-logs count) celebrates again when
+// it's genuinely crossed.
+const seenKey = (m: CommunityMilestone) => `ll-community-milestone-${m.threshold}-${m.hit_at}-seen`
 
 export default function CommunityMilestoneBanner({
   userId,
@@ -42,8 +45,8 @@ export default function CommunityMilestoneBanner({
 
       // Fireworks once per milestone per device, for hero and crowd alike.
       const hit = [...next.milestones].reverse().find(m => m.hit_at)
-      if (hit && typeof window !== 'undefined' && !localStorage.getItem(seenKey(hit.threshold))) {
-        localStorage.setItem(seenKey(hit.threshold), '1')
+      if (hit && typeof window !== 'undefined' && !localStorage.getItem(seenKey(hit))) {
+        localStorage.setItem(seenKey(hit), '1')
         setCelebrating(hit)
         track('community_milestone_celebrated', {
           threshold: hit.threshold,
