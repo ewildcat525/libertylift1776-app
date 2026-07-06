@@ -109,6 +109,19 @@ export interface Pledge {
   is_active: boolean
 }
 
+export interface CommunityMilestone {
+  threshold: number
+  hit_by: string | null
+  hit_at: string | null
+  hit_by_name: string | null
+  hit_by_state: string | null
+}
+
+export interface CommunityProgress {
+  total_pushups: number
+  milestones: CommunityMilestone[]
+}
+
 export const DAILY_PACE = 58 // push-ups/day target to finish by July 31
 
 // American fun facts for milestones
