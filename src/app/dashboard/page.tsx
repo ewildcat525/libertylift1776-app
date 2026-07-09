@@ -26,6 +26,52 @@ import {
   ReferenceLine,
 } from 'recharts'
 
+type ChartPoint = { day: number; pace: number; you: number; required: number | null }
+
+// Day of July the "required pace" projection starts from, clamped to the challenge
+// window. Returns 32 once the challenge is over, so no days remain.
+const requiredStartDay = (now: Date) => {
+  const julyStart = new Date(2026, 6, 1)
+  const julyEnd = new Date(2026, 6, 31, 23, 59, 59)
+  if (now < julyStart) return 1
+  if (now > julyEnd) return 32
+  return now.getDate()
+}
+
+const buildChartData = (logs: Record<string, number>): ChartPoint[] => {
+  const julyLogs: Record<number, number> = {}
+  for (let d = 1; d <= 31; d++) julyLogs[d] = 0
+  Object.entries(logs).forEach(([dateStr, count]) => {
+    if (dateStr.startsWith('2026-07-')) {
+      const day = parseInt(dateStr.split('-')[2], 10)
+      julyLogs[day] = count
+    }
+  })
+
+  let cumulative = 0
+  const points: ChartPoint[] = Array.from({ length: 31 }, (_, i) => {
+    const day = i + 1
+    cumulative += julyLogs[day]
+    return { day, pace: Math.round(DAILY_PACE * day), you: cumulative, required: null }
+  })
+
+  // Straight line to 1776 on July 31, anchored at the last fully elapsed day.
+  // Today is still in progress, so it counts as one of the remaining days.
+  const startDay = requiredStartDay(new Date())
+  const anchorDay = startDay - 1 // 0 = before July begins
+  const anchorTotal = anchorDay >= 1 ? points[anchorDay - 1].you : 0
+  const currentTotal = points[Math.min(startDay, 31) - 1].you
+  const daysLeft = 31 - anchorDay
+  if (currentTotal < 1776 && daysLeft > 0) {
+    const perDay = (1776 - anchorTotal) / daysLeft
+    for (let day = Math.max(anchorDay, 1); day <= 31; day++) {
+      points[day - 1].required = Math.round(anchorTotal + perDay * (day - anchorDay))
+    }
+  }
+
+  return points
+}
+
 export default function DashboardPage() {
   const [user, setUser] = useState<any>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
@@ -51,7 +97,7 @@ export default function DashboardPage() {
   const [currentFact, setCurrentFact] = useState<string | null>(null)
   const [dailyLogs, setDailyLogs] = useState<Record<string, number>>({})
   const [calendarMonth] = useState(() => new Date(2026, 6, 1)) // July is month 6 (0-indexed)
-  const [chartData, setChartData] = useState<{ day: number; pace: number; you: number }[]>([])
+  const [chartData, setChartData] = useState<ChartPoint[]>([])
   const [recruitCount, setRecruitCount] = useState(0)
   const router = useRouter()
   const supabase = createClient()
@@ -188,30 +234,7 @@ export default function DashboardPage() {
         })
         setDailyLogs(grouped)
 
-        // Build chart data for July
-        const julyLogs: Record<number, number> = {}
-        for (let d = 1; d <= 31; d++) julyLogs[d] = 0
-
-        logsData.forEach(log => {
-          const logDate = new Date(log.logged_at)
-          if (logDate.getFullYear() === 2026 && logDate.getMonth() === 6) {
-            const day = logDate.getDate()
-            julyLogs[day] += log.count
-          }
-        })
-
-        // Build cumulative data
-        let cumulative = 0
-        const chartPoints: { day: number; pace: number; you: number }[] = []
-        for (let day = 1; day <= 31; day++) {
-          cumulative += julyLogs[day]
-          chartPoints.push({
-            day,
-            pace: Math.round(DAILY_PACE * day),
-            you: cumulative,
-          })
-        }
-        setChartData(chartPoints)
+        setChartData(buildChartData(grouped))
       }
     }
 
@@ -416,23 +439,6 @@ export default function DashboardPage() {
     setTimeout(() => setShowSuccess(false), 3000)
   }
 
-  const buildChartData = (logs: Record<string, number>) => {
-    const julyLogs: Record<number, number> = {}
-    for (let d = 1; d <= 31; d++) julyLogs[d] = 0
-    Object.entries(logs).forEach(([dateStr, count]) => {
-      if (dateStr.startsWith('2026-07-')) {
-        const day = parseInt(dateStr.split('-')[2], 10)
-        julyLogs[day] = count
-      }
-    })
-    let cumulative = 0
-    return Array.from({ length: 31 }, (_, i) => {
-      const day = i + 1
-      cumulative += julyLogs[day]
-      return { day, pace: Math.round(DAILY_PACE * day), you: cumulative }
-    })
-  }
-
   // Calendar helpers
   const getDaysInMonth = (date: Date) => {
     const year = date.getFullYear()
@@ -450,6 +456,16 @@ export default function DashboardPage() {
   const today = new Date()
   const julyStart = new Date(2026, 6, 1)
   const julyEnd = new Date(2026, 6, 31, 23, 59, 59)
+
+  // Push-ups per day needed (today included) to reach 1776 by July 31
+  const reqStartDay = requiredStartDay(today)
+  const reqAnchorDay = reqStartDay - 1
+  const reqAnchorTotal = reqAnchorDay >= 1 ? chartData[reqAnchorDay - 1]?.you ?? 0 : 0
+  const reqCurrentTotal = chartData[Math.min(reqStartDay, 31) - 1]?.you ?? 0
+  const requiredPerDay =
+    chartData.length > 0 && reqCurrentTotal < 1776 && reqAnchorDay < 31
+      ? Math.ceil((1776 - reqAnchorTotal) / (31 - reqAnchorDay))
+      : null
 
   // Determine challenge phase and pace
   let pace: 'before' | 'ahead' | 'ontrack' | 'behind' | 'complete'
@@ -844,12 +860,22 @@ export default function DashboardPage() {
                     labelStyle={{ color: '#999' }}
                     formatter={(value: number, name: string) => [
                       value.toLocaleString(),
-                      name === 'you' ? 'Your Push-ups' : '58/day Pace'
+                      name === 'you'
+                        ? 'Your Push-ups'
+                        : name === 'required'
+                          ? `${requiredPerDay}/day Needed`
+                          : '58/day Pace'
                     ]}
                     labelFormatter={(day) => `July ${day}`}
                   />
                   <Legend
-                    formatter={(value) => value === 'you' ? 'Your Push-ups' : '58/day Pace'}
+                    formatter={(value) =>
+                      value === 'you'
+                        ? 'Your Push-ups'
+                        : value === 'required'
+                          ? `${requiredPerDay}/day Needed`
+                          : '58/day Pace'
+                    }
                   />
 
                   {/* Pace line */}
@@ -862,6 +888,19 @@ export default function DashboardPage() {
                     strokeWidth={2}
                     dot={false}
                   />
+
+                  {/* Required pace from today */}
+                  {requiredPerDay !== null && (
+                    <Line
+                      type="monotone"
+                      dataKey="required"
+                      name="required"
+                      stroke="#3B82F6"
+                      strokeDasharray="5 5"
+                      strokeWidth={2}
+                      dot={false}
+                    />
+                  )}
 
                   {/* User's line */}
                   <Line
@@ -886,6 +925,9 @@ export default function DashboardPage() {
             </div>
             <p className="text-center text-white/40 text-sm mt-2">
               Dashed gray line = 58 push-ups/day pace to hit 1776 by July 31.
+              {requiredPerDay !== null && (
+                <> Dashed blue line = {requiredPerDay} push-ups/day needed from today to finish.</>
+              )}
             </p>
           </div>
 
