@@ -294,6 +294,70 @@ body {
   100% { opacity: 0; }
 }
 
+/* Iwo Jima flag raising — the 177,600 community milestone.
+   The scene fades in, six silhouettes walk the pole up from -58°,
+   Old Glory unfurls at the top, then the whole thing fades out. */
+.flag-raising-scene {
+  animation: flagRaisingScene 9.2s ease-in-out forwards;
+}
+
+@keyframes flagRaisingScene {
+  0% { opacity: 0; }
+  5% { opacity: 1; }
+  92% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* On portrait screens the slice crop shows only the middle of the scene,
+   so slide the summit action left to keep the pole and flag in frame. */
+@media (orientation: portrait) {
+  .flag-raising-action {
+    transform-box: view-box;
+    transform: translateX(-95px);
+  }
+}
+
+.flag-raising-pole {
+  transform-box: view-box;
+  /* Pivot on the pole's base at (640,358) in the scene's viewBox. */
+  transform-origin: 640px 358px;
+  animation: flagRaisingRaise 4.2s cubic-bezier(0.33, 0, 0.15, 1) 0.9s both;
+}
+
+@keyframes flagRaisingRaise {
+  0% { transform: rotate(-58deg); }
+  82% { transform: rotate(2deg); }
+  100% { transform: rotate(0deg); }
+}
+
+.flag-raising-flag {
+  transform-box: fill-box;
+  transform-origin: left center;
+  animation: flagRaisingUnfurl 1.6s ease-out 3.8s both;
+}
+
+@keyframes flagRaisingUnfurl {
+  0% { transform: scaleX(0.07); }
+  70% { transform: scaleX(1.04); }
+  100% { transform: scaleX(1); }
+}
+
+.summit-banner {
+  animation: fireworksBanner 9.2s ease-out forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Show the resting pose — flag already raised — with a gentle fade. */
+  .flag-raising-scene,
+  .summit-banner {
+    animation: fireworksBannerFade 5s ease-out forwards;
+  }
+  .flag-raising-pole,
+  .flag-raising-flag {
+    animation: none;
+  }
+}
+
 /* Landing campaign */
 .campaign-page {
   --campaign-red: #d32331;
