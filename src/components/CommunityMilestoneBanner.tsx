@@ -4,13 +4,19 @@ import { useEffect, useState } from 'react'
 import { track } from '@vercel/analytics'
 import { createClient, CommunityMilestone, CommunityProgress, US_STATES } from '@/lib/supabase'
 import Fireworks from './Fireworks'
+import IwoJimaFlagRaising from './IwoJimaFlagRaising'
 
 // Badge granted to whoever presses each milestone rep (see the
 // community_milestones migration). Used for the hero's congratulations copy.
 const MILESTONE_BADGES: Record<number, string> = {
   50000: 'Liberty Bell',
   100000: 'Grand Union',
+  177600: 'Flag Raiser',
 }
+
+// 1,776 × 100 — the summit. This one gets the Iwo Jima flag raising
+// instead of fireworks, and flag-raising copy instead of bell-ringing.
+const SUMMIT_THRESHOLD = 177600
 
 interface CommunityMilestoneBannerProps {
   // Current user, so the patriot who rang the bell gets the hero treatment.
@@ -66,6 +72,7 @@ export default function CommunityMilestoneBanner({
   const latestHit = [...progress.milestones].reverse().find(m => m.hit_at) ?? null
   const nextUp = progress.milestones.find(m => !m.hit_at) ?? null
   const isHero = Boolean(userId && latestHit && latestHit.hit_by === userId)
+  const isSummit = latestHit?.threshold === SUMMIT_THRESHOLD
 
   const milestoneLabel = latestHit ? latestHit.threshold.toLocaleString() : ''
   const heroName = latestHit?.hit_by_name || 'A patriot'
@@ -75,9 +82,13 @@ export default function CommunityMilestoneBanner({
     : null
 
   const shareText = latestHit
-    ? isHero
-      ? `I pressed America's ${milestoneLabel}th push-up in the Liberty Lift 1776 challenge. 🔔🇺🇸 Every rep counts:`
-      : `America just pressed past ${milestoneLabel} push-ups in the Liberty Lift 1776 challenge — and some of them were mine. 🇺🇸 Join us:`
+    ? isSummit
+      ? isHero
+        ? `I pressed America's ${milestoneLabel}th push-up — 1,776 × 100 — and raised the flag in the Liberty Lift 1776 challenge. 🇺🇸 Every rep counts:`
+        : `America raised the flag at ${milestoneLabel} push-ups in the Liberty Lift 1776 challenge — and some of them were mine. 🇺🇸 Join us:`
+      : isHero
+        ? `I pressed America's ${milestoneLabel}th push-up in the Liberty Lift 1776 challenge. 🔔🇺🇸 Every rep counts:`
+        : `America just pressed past ${milestoneLabel} push-ups in the Liberty Lift 1776 challenge — and some of them were mine. 🇺🇸 Join us:`
     : ''
   const shareUrl = typeof window !== 'undefined' ? window.location.origin : ''
   const canNativeShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function'
@@ -110,20 +121,34 @@ export default function CommunityMilestoneBanner({
 
   return (
     <>
-      {celebrating && (
-        <Fireworks
-          onDone={() => setCelebrating(null)}
-          {...(isHero
-            ? {
-                title: '🔔 YOU RANG THE BELL 🔔',
-                subtitle: `America's ${milestoneLabel}th push-up was yours`,
-              }
-            : {
-                title: `🔔 ${milestoneLabel} STRONG 🔔`,
-                subtitle: 'One nation. Every rep counted.',
-              })}
-        />
-      )}
+      {celebrating &&
+        (celebrating.threshold === SUMMIT_THRESHOLD ? (
+          <IwoJimaFlagRaising
+            onDone={() => setCelebrating(null)}
+            {...(userId && celebrating.hit_by === userId
+              ? {
+                  title: '🇺🇸 YOU RAISED THE FLAG 🇺🇸',
+                  subtitle: `America's ${celebrating.threshold.toLocaleString()}th push-up was yours`,
+                }
+              : {
+                  title: `${celebrating.threshold.toLocaleString()} STRONG`,
+                  subtitle: 'The flag is up. Raised together, rep by rep.',
+                })}
+          />
+        ) : (
+          <Fireworks
+            onDone={() => setCelebrating(null)}
+            {...(isHero
+              ? {
+                  title: '🔔 YOU RANG THE BELL 🔔',
+                  subtitle: `America's ${milestoneLabel}th push-up was yours`,
+                }
+              : {
+                  title: `🔔 ${milestoneLabel} STRONG 🔔`,
+                  subtitle: 'One nation. Every rep counted.',
+                })}
+          />
+        ))}
 
       <div className={`card p-6 sm:p-8 ${className}`}>
         <div className="text-center">
@@ -158,7 +183,7 @@ export default function CommunityMilestoneBanner({
             {isHero ? (
               <>
                 <div className="font-bebas text-3xl sm:text-4xl text-liberty-gold">
-                  🔔 YOU RANG THE BELL
+                  {isSummit ? '🇺🇸 YOU RAISED THE FLAG' : '🔔 YOU RANG THE BELL'}
                 </div>
                 <p className="text-white/80 mt-2">
                   America&apos;s {milestoneLabel}th push-up was yours, {heroName}. The
@@ -169,14 +194,27 @@ export default function CommunityMilestoneBanner({
             ) : (
               <>
                 <div className="font-bebas text-3xl sm:text-4xl text-liberty-gold">
-                  🔔 {milestoneLabel} STRONG
+                  {isSummit ? '🇺🇸' : '🔔'} {milestoneLabel} STRONG
                 </div>
                 <p className="text-white/80 mt-2">
-                  {hitDate ? `On ${hitDate}, America` : 'America'} pressed past{' '}
-                  {milestoneLabel} push-ups. {heroName}
-                  {heroState ? ` of ${heroState}` : ''} pressed the rep that rang the
-                  bell — but it took every single one of yours to get there. Stand
-                  tall, patriot.
+                  {isSummit ? (
+                    <>
+                      {hitDate ? `On ${hitDate}, America` : 'America'} reached the
+                      summit: {milestoneLabel} push-ups — 1,776, a hundred times
+                      over. {heroName}
+                      {heroState ? ` of ${heroState}` : ''} pressed the rep that
+                      raised the flag — but it took every single one of yours to
+                      carry it up there. Stand tall, patriot.
+                    </>
+                  ) : (
+                    <>
+                      {hitDate ? `On ${hitDate}, America` : 'America'} pressed past{' '}
+                      {milestoneLabel} push-ups. {heroName}
+                      {heroState ? ` of ${heroState}` : ''} pressed the rep that rang the
+                      bell — but it took every single one of yours to get there. Stand
+                      tall, patriot.
+                    </>
+                  )}
                 </p>
               </>
             )}
