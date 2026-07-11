@@ -281,9 +281,30 @@ body {
   animation: fireworksBanner 6.5s ease-out forwards;
 }
 
+/* Scrim behind the fireworks so the banner and bursts read against dark,
+   not against whatever the page has at that scroll position. Runs a beat
+   longer than the banner and is fully faded by the time the last particles
+   die and the overlay unmounts (~8s). */
+.fireworks-backdrop {
+  background: #05070f;
+  opacity: 0;
+  animation: fireworksBackdrop 8s ease-in-out forwards;
+}
+
+@keyframes fireworksBackdrop {
+  0% { opacity: 0; }
+  5% { opacity: 0.78; }
+  80% { opacity: 0.78; }
+  100% { opacity: 0; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .fireworks-banner {
     animation: fireworksBannerFade 4s ease-out forwards;
+  }
+  /* Banner-only mode unmounts at 4s; keep the scrim on the same clock. */
+  .fireworks-backdrop {
+    animation-duration: 4s;
   }
 }
 
