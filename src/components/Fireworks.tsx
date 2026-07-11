@@ -189,8 +189,13 @@ export default function Fireworks({
       timers.push(setTimeout(() => launch(), 4300 + i * 180))
     }
 
+    // Curtain call arms the shutdown; the backdrop-clear flag keeps the
+    // overlay mounted until the scrim has fully faded (8s, see
+    // .fireworks-backdrop) even if the last particles die sooner.
     let curtainCall = false
+    let backdropClear = false
     timers.push(setTimeout(() => { curtainCall = true }, 5500))
+    timers.push(setTimeout(() => { backdropClear = true }, 8000))
 
     let raf = 0
     const tick = () => {
@@ -264,7 +269,7 @@ export default function Fireworks({
       }
       ctx.globalAlpha = 1
 
-      if (curtainCall && rockets.length === 0 && particles.length === 0) {
+      if (curtainCall && backdropClear && rockets.length === 0 && particles.length === 0) {
         onDoneRef.current()
         return
       }
@@ -281,7 +286,10 @@ export default function Fireworks({
 
   return (
     <div className="fixed inset-0 z-[100] pointer-events-none" aria-hidden="true">
-      {!reducedMotion && <canvas ref={canvasRef} className="w-full h-full" />}
+      {/* Dim the page underneath so the banner doesn't fight the dashboard
+          text; fades in with the first launch and out with the last embers. */}
+      <div className="absolute inset-0 fireworks-backdrop" />
+      {!reducedMotion && <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />}
       <div className="absolute inset-x-0 top-[18%] flex justify-center px-4">
         <div className="fireworks-banner text-center">
           <div className="font-bebas text-5xl sm:text-7xl text-white drop-shadow-[0_0_25px_rgba(255,212,71,0.6)]">
