@@ -367,14 +367,50 @@ body {
   animation: fireworksBanner 9.2s ease-out forwards;
 }
 
+/* Moon landing — the 239,000 community milestone (one push-up per mile
+   to the moon). Same choreography as the Iwo Jima scene: fade in, tilt
+   the pole upright, telescope the flag out along its crossbar, fade out. */
+.moon-landing-scene {
+  animation: flagRaisingScene 9.2s ease-in-out forwards;
+}
+
+@media (orientation: portrait) {
+  .moon-landing-action {
+    transform-box: view-box;
+    transform: translateX(-170px);
+  }
+}
+
+.moon-landing-pole {
+  transform-box: view-box;
+  /* Pivot on the pole's base at (588,444) in the scene's viewBox. */
+  transform-origin: 588px 444px;
+  animation: moonLandingPlant 3s cubic-bezier(0.33, 0, 0.2, 1) 1s both;
+}
+
+@keyframes moonLandingPlant {
+  0% { transform: rotate(-30deg); }
+  85% { transform: rotate(1.5deg); }
+  100% { transform: rotate(0deg); }
+}
+
+.moon-landing-flag {
+  transform-box: fill-box;
+  transform-origin: left top;
+  animation: flagRaisingUnfurl 1.8s ease-out 3.9s both;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  /* Show the resting pose — flag already raised — with a gentle fade. */
+  /* Show the resting pose — flag already raised/planted — with a fade. */
   .flag-raising-scene,
+  .moon-landing-scene,
   .summit-banner {
     animation: fireworksBannerFade 5s ease-out forwards;
   }
   .flag-raising-pole,
-  .flag-raising-flag {
+  .flag-raising-flag,
+  .moon-landing-pole,
+  .moon-landing-flag {
     animation: none;
   }
 }
