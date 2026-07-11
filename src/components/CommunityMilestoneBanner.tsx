@@ -5,6 +5,7 @@ import { track } from '@vercel/analytics'
 import { createClient, CommunityMilestone, CommunityProgress, US_STATES } from '@/lib/supabase'
 import Fireworks from './Fireworks'
 import IwoJimaFlagRaising from './IwoJimaFlagRaising'
+import MoonLanding from './MoonLanding'
 
 // Badge granted to whoever presses each milestone rep (see the
 // community_milestones migration). Used for the hero's congratulations copy.
@@ -12,11 +13,15 @@ const MILESTONE_BADGES: Record<number, string> = {
   50000: 'Liberty Bell',
   100000: 'Grand Union',
   177600: 'Flag Raiser',
+  239000: 'The Eagle Has Landed',
 }
 
 // 1,776 × 100 — the summit. This one gets the Iwo Jima flag raising
 // instead of fireworks, and flag-raising copy instead of bell-ringing.
 const SUMMIT_THRESHOLD = 177600
+
+// One push-up per mile to the moon. Gets the lunar flag plant.
+const MOON_THRESHOLD = 239000
 
 interface CommunityMilestoneBannerProps {
   // Current user, so the patriot who rang the bell gets the hero treatment.
@@ -73,6 +78,7 @@ export default function CommunityMilestoneBanner({
   const nextUp = progress.milestones.find(m => !m.hit_at) ?? null
   const isHero = Boolean(userId && latestHit && latestHit.hit_by === userId)
   const isSummit = latestHit?.threshold === SUMMIT_THRESHOLD
+  const isMoon = latestHit?.threshold === MOON_THRESHOLD
 
   const milestoneLabel = latestHit ? latestHit.threshold.toLocaleString() : ''
   const heroName = latestHit?.hit_by_name || 'A patriot'
@@ -82,13 +88,17 @@ export default function CommunityMilestoneBanner({
     : null
 
   const shareText = latestHit
-    ? isSummit
+    ? isMoon
       ? isHero
-        ? `I pressed America's ${milestoneLabel}th push-up — 1,776 × 100 — and raised the flag in the Liberty Lift 1776 challenge. 🇺🇸 Every rep counts:`
-        : `America raised the flag at ${milestoneLabel} push-ups in the Liberty Lift 1776 challenge — and some of them were mine. 🇺🇸 Join us:`
-      : isHero
-        ? `I pressed America's ${milestoneLabel}th push-up in the Liberty Lift 1776 challenge. 🔔🇺🇸 Every rep counts:`
-        : `America just pressed past ${milestoneLabel} push-ups in the Liberty Lift 1776 challenge — and some of them were mine. 🇺🇸 Join us:`
+        ? `I pressed America's ${milestoneLabel}th push-up — one for every mile to the moon — and planted the flag in the Liberty Lift 1776 challenge. 🌕🇺🇸 Every rep counts:`
+        : `America pressed its way to the moon — ${milestoneLabel} push-ups, one per mile — in the Liberty Lift 1776 challenge, and some of them were mine. 🌕🇺🇸 Join us:`
+      : isSummit
+        ? isHero
+          ? `I pressed America's ${milestoneLabel}th push-up — 1,776 × 100 — and raised the flag in the Liberty Lift 1776 challenge. 🇺🇸 Every rep counts:`
+          : `America raised the flag at ${milestoneLabel} push-ups in the Liberty Lift 1776 challenge — and some of them were mine. 🇺🇸 Join us:`
+        : isHero
+          ? `I pressed America's ${milestoneLabel}th push-up in the Liberty Lift 1776 challenge. 🔔🇺🇸 Every rep counts:`
+          : `America just pressed past ${milestoneLabel} push-ups in the Liberty Lift 1776 challenge — and some of them were mine. 🇺🇸 Join us:`
     : ''
   const shareUrl = typeof window !== 'undefined' ? window.location.origin : ''
   const canNativeShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function'
@@ -122,7 +132,20 @@ export default function CommunityMilestoneBanner({
   return (
     <>
       {celebrating &&
-        (celebrating.threshold === SUMMIT_THRESHOLD ? (
+        (celebrating.threshold === MOON_THRESHOLD ? (
+          <MoonLanding
+            onDone={() => setCelebrating(null)}
+            {...(userId && celebrating.hit_by === userId
+              ? {
+                  title: '🌕 YOU PLANTED THE FLAG 🌕',
+                  subtitle: `America's ${celebrating.threshold.toLocaleString()}th push-up was yours`,
+                }
+              : {
+                  title: `${celebrating.threshold.toLocaleString()} STRONG`,
+                  subtitle: 'One mile per rep, all the way to the moon',
+                })}
+          />
+        ) : celebrating.threshold === SUMMIT_THRESHOLD ? (
           <IwoJimaFlagRaising
             onDone={() => setCelebrating(null)}
             {...(userId && celebrating.hit_by === userId
@@ -183,7 +206,11 @@ export default function CommunityMilestoneBanner({
             {isHero ? (
               <>
                 <div className="font-bebas text-3xl sm:text-4xl text-liberty-gold">
-                  {isSummit ? '🇺🇸 YOU RAISED THE FLAG' : '🔔 YOU RANG THE BELL'}
+                  {isMoon
+                    ? '🌕 YOU PLANTED THE FLAG ON THE MOON'
+                    : isSummit
+                      ? '🇺🇸 YOU RAISED THE FLAG'
+                      : '🔔 YOU RANG THE BELL'}
                 </div>
                 <p className="text-white/80 mt-2">
                   America&apos;s {milestoneLabel}th push-up was yours, {heroName}. The
@@ -194,10 +221,19 @@ export default function CommunityMilestoneBanner({
             ) : (
               <>
                 <div className="font-bebas text-3xl sm:text-4xl text-liberty-gold">
-                  {isSummit ? '🇺🇸' : '🔔'} {milestoneLabel} STRONG
+                  {isMoon ? '🌕' : isSummit ? '🇺🇸' : '🔔'} {milestoneLabel} STRONG
                 </div>
                 <p className="text-white/80 mt-2">
-                  {isSummit ? (
+                  {isMoon ? (
+                    <>
+                      {hitDate ? `On ${hitDate}, America` : 'America'} pressed its
+                      way to the moon: {milestoneLabel} push-ups — one for every
+                      mile between Earth and the Sea of Tranquility. {heroName}
+                      {heroState ? ` of ${heroState}` : ''} pressed the rep that
+                      planted the flag — but every single one of yours carried it
+                      off the pad. Stand tall, patriot.
+                    </>
+                  ) : isSummit ? (
                     <>
                       {hitDate ? `On ${hitDate}, America` : 'America'} reached the
                       summit: {milestoneLabel} push-ups — 1,776, a hundred times

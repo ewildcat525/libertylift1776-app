@@ -23,7 +23,7 @@ Liberty Lift 1776 is a Next.js campaign app for a July 1-31, 2026 push-up challe
 - Top Recruiters leaderboard tab and Founding Father badges for pre-July signups
 - Spread-the-word page (`/spread-the-word`) with copy-paste captions and the #LibertyLift1776 hashtag
 - Landing page state board flips from preview data to live totals once reps are logged
-- Nationwide push-up counter with community milestones (50k, 100k, 177,600): the patriot whose rep crosses the line earns a one-of-a-kind badge, and everyone gets a shared celebration banner on the dashboard and leaderboard. The 50k and 100k milestones fire fireworks; the 177,600 summit (1,776 × 100) plays an animated Iwo Jima-style flag raising
+- Nationwide push-up counter with community milestones (50k, 100k, 177,600, 239,000): the patriot whose rep crosses the line earns a one-of-a-kind badge, and everyone gets a shared celebration banner on the dashboard and leaderboard. The 50k and 100k milestones fire fireworks; the 177,600 summit (1,776 × 100) plays an animated Iwo Jima-style flag raising; 239,000 (one push-up per mile to the moon) plays a lunar flag plant beside the Eagle
 
 ## Email Reminders
 
