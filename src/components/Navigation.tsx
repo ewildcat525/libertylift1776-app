@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase'
+import { canUseChat } from '@/lib/flags'
 import NotificationBell from '@/components/NotificationBell'
 import type { User } from '@supabase/supabase-js'
 
@@ -34,13 +35,14 @@ export default function Navigation() {
   }, [])
 
   // Different nav links for logged in vs logged out
+  const showChat = canUseChat(user?.email)
+
   const navLinks = isCampaignHome
     ? [
         { href: '/leaderboard', label: 'Leaderboard' },
         { href: '/pledge/leaderboard', label: 'Pledges' },
         { href: '/states', label: 'States' },
         { href: '/contests', label: 'Contests' },
-        { href: '/chat', label: 'Trash Talk' },
       ]
     : user
     ? [
@@ -49,7 +51,6 @@ export default function Navigation() {
         { href: '/pledge/leaderboard', label: 'Pledges' },
         { href: '/states', label: 'States' },
         { href: '/contests', label: 'Contests' },
-        { href: '/chat', label: 'Trash Talk' },
       ]
     : [
         { href: '/', label: 'Home' },
@@ -57,8 +58,11 @@ export default function Navigation() {
         { href: '/pledge/leaderboard', label: 'Pledges' },
         { href: '/states', label: 'States' },
         { href: '/contests', label: 'Contests' },
-        { href: '/chat', label: 'Trash Talk' },
       ]
+
+  if (showChat) {
+    navLinks.push({ href: '/chat', label: 'Trash Talk' })
+  }
 
   const isActive = (href: string) => pathname === href
 
@@ -97,7 +101,7 @@ export default function Navigation() {
           <div className="hidden md:flex items-center gap-4">
             {user ? (
               <>
-                <NotificationBell userId={user.id} />
+                {showChat && <NotificationBell userId={user.id} />}
                 <button
                   onClick={handleSignOut}
                   className="text-xs font-bold uppercase tracking-[0.12em] text-white/62 hover:text-white transition-colors"
@@ -119,7 +123,7 @@ export default function Navigation() {
 
           {/* Mobile: bell + menu button */}
           <div className="md:hidden flex items-center gap-1">
-          {user && <NotificationBell userId={user.id} />}
+          {user && showChat && <NotificationBell userId={user.id} />}
           <button
             onClick={() => setMenuOpen(!menuOpen)}
             className="p-2 text-white"

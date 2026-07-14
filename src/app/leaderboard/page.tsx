@@ -5,17 +5,20 @@ import { createClient, LeaderboardEntry, US_STATES } from '@/lib/supabase'
 import CommunityMilestoneBanner from '@/components/CommunityMilestoneBanner'
 import Navigation from '@/components/Navigation'
 import Link from 'next/link'
+import { canUseChat } from '@/lib/flags'
 
 export default function LeaderboardPage() {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'all' | 'streak' | 'daily' | 'recruits'>('all')
   const [userId, setUserId] = useState<string | null>(null)
+  const [showChat, setShowChat] = useState(false)
 
   useEffect(() => {
     const supabase = createClient()
     supabase.auth.getUser().then(({ data: { user } }) => {
       setUserId(user?.id ?? null)
+      setShowChat(canUseChat(user?.email))
     })
   }, [])
 
@@ -134,6 +137,7 @@ export default function LeaderboardPage() {
           )}
 
           {/* Trash Talk CTA */}
+          {showChat && (
           <Link
             href="/chat"
             className="card mt-8 p-5 flex items-center justify-between gap-4 hover:bg-white/5 transition-colors group"
@@ -144,6 +148,7 @@ export default function LeaderboardPage() {
             </div>
             <span className="text-liberty-gold text-sm font-bold group-hover:translate-x-1 transition-transform">→</span>
           </Link>
+          )}
         </div>
       </div>
     </>

@@ -1,21 +1,30 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
+import { canUseChat } from '@/lib/flags'
 import GlobalChat from '@/components/GlobalChat'
 import Navigation from '@/components/Navigation'
 
 export default function ChatPage() {
+  const router = useRouter()
   const [userId, setUserId] = useState<string | null>(null)
-  const [checked, setChecked] = useState(false)
+  const [allowed, setAllowed] = useState(false)
 
   useEffect(() => {
     const supabase = createClient()
     supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!canUseChat(user?.email)) {
+        router.replace('/leaderboard')
+        return
+      }
       setUserId(user?.id ?? null)
-      setChecked(true)
+      setAllowed(true)
     })
-  }, [])
+  }, [router])
+
+  if (!allowed) return null
 
   return (
     <>
@@ -30,7 +39,7 @@ export default function ChatPage() {
             </p>
           </div>
 
-          {checked && <GlobalChat userId={userId} heightClass="h-[55vh]" />}
+          <GlobalChat userId={userId} heightClass="h-[55vh]" />
         </div>
       </div>
     </>

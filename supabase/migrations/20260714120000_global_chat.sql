@@ -20,6 +20,15 @@ create index idx_chat_messages_created
 
 alter table public.chat_messages enable row level security;
 
+-- TEMPORARY LAUNCH GATE: chat is in live testing and limited to the accounts
+-- below. Mirrors CHAT_TESTER_EMAILS in src/lib/flags.ts. To launch for
+-- everyone, replace the body with `select true` (and clear the frontend
+-- list).
+create or replace function public.can_use_chat()
+returns boolean as $$
+  select lower(coalesce(auth.jwt() ->> 'email', '')) in ('kevinabbas@gmail.com');
+$$ language sql stable;
+
 -- Trash talk between rivals is the point, so plain profanity passes, but the
 -- hate/abuse terms from the handle blocklist stay banned in chat too.
 create or replace function public.is_message_allowed(message text)
@@ -64,17 +73,19 @@ create trigger enforce_chat_message_rules
   before insert on public.chat_messages
   for each row execute function public.enforce_chat_message_rules();
 
--- Read: any signed-in participant.
+-- Read: any signed-in participant (behind the launch gate).
 create policy "Signed-in users can read chat" on public.chat_messages
-  for select to authenticated using (true);
+  for select to authenticated using (public.can_use_chat());
 
--- Write: only your own messages.
+-- Write: only your own messages (behind the launch gate).
 create policy "Users can post own messages" on public.chat_messages
-  for insert to authenticated with check (auth.uid() = user_id);
+  for insert to authenticated
+  with check (auth.uid() = user_id and public.can_use_chat());
 
--- Delete: your own messages.
+-- Delete: your own messages (behind the launch gate).
 create policy "Users can delete own messages" on public.chat_messages
-  for delete to authenticated using (auth.uid() = user_id);
+  for delete to authenticated
+  using (auth.uid() = user_id and public.can_use_chat());
 
 -- ============================================================
 -- Mention notifications
@@ -103,14 +114,17 @@ alter table public.notifications enable row level security;
 -- Recipients see and manage only their own notifications. Rows are created
 -- exclusively by the security-definer trigger below, so no insert policy.
 create policy "Users can read own notifications" on public.notifications
-  for select to authenticated using (auth.uid() = user_id);
+  for select to authenticated
+  using (auth.uid() = user_id and public.can_use_chat());
 
 create policy "Users can mark own notifications read" on public.notifications
   for update to authenticated
-  using (auth.uid() = user_id) with check (auth.uid() = user_id);
+  using (auth.uid() = user_id and public.can_use_chat())
+  with check (auth.uid() = user_id);
 
 create policy "Users can delete own notifications" on public.notifications
-  for delete to authenticated using (auth.uid() = user_id);
+  for delete to authenticated
+  using (auth.uid() = user_id and public.can_use_chat());
 
 -- Fan @handle mentions out to the mentioned users. Handles are generated as
 -- single tokens (e.g. TXLifter4821), so mentions parse as @ + word chars.
