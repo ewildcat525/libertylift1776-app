@@ -35,7 +35,12 @@ export default function ChatPage() {
       <div className="app-surface flex flex-col h-screen" style={{ height: '100dvh' }}>
         <div className="flex-1 min-h-0 flex flex-col w-full max-w-3xl mx-auto px-4 pt-20 sm:pt-24 pb-[max(1rem,env(safe-area-inset-bottom))]">
           <div className="flex items-baseline justify-between gap-4 mb-3 sm:mb-5">
-            <h1 className="app-title text-4xl sm:text-6xl">Chat</h1>
+            <div className="flex items-center gap-3">
+              <h1 className="app-title text-4xl sm:text-6xl">Chat</h1>
+              <span className="text-[10px] sm:text-xs font-extrabold uppercase tracking-[0.12em] px-2 py-1 bg-liberty-gold/15 text-liberty-gold border border-liberty-gold/40">
+                Beta
+              </span>
+            </div>
             <span className="app-eyebrow">National feed</span>
           </div>
           <p className="hidden sm:block text-white/60 mb-5">

@@ -16,14 +16,6 @@ interface SenderInfo {
 const MAX_MESSAGE_LENGTH = 280
 const MENTION_PATTERN = /(@[A-Za-z0-9_]+)/g
 
-// One-tap openers to get the smack talk flowing
-const QUICK_JABS = [
-  'Is that all you’ve got, America? 🦅',
-  'Scoreboard. 🇺🇸',
-  'My state carries this leaderboard.',
-  '1776 won’t reach itself. Pick up the pace.',
-]
-
 export default function GlobalChat({ userId }: GlobalChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [senders, setSenders] = useState<Record<string, SenderInfo>>({})
@@ -314,21 +306,6 @@ export default function GlobalChat({ userId }: GlobalChatProps) {
             )
           })
         )}
-      </div>
-
-      {/* Quick jabs: single row, swipe sideways on mobile instead of eating
-          vertical space. */}
-      <div className="flex gap-2 mb-2 overflow-x-auto overscroll-x-contain pb-1 -mx-1 px-1">
-        {QUICK_JABS.map((jab) => (
-          <button
-            key={jab}
-            onClick={() => sendMessage(jab)}
-            disabled={sending}
-            className="flex-none whitespace-nowrap text-xs px-3 py-1.5 bg-white/[0.04] border border-white/15 text-white/60 hover:text-white hover:border-white/30 transition-colors disabled:opacity-50"
-          >
-            {jab}
-          </button>
-        ))}
       </div>
 
       <div className="relative">
