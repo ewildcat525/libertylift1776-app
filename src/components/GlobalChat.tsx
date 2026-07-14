@@ -6,7 +6,6 @@ import { createClient, ChatMessage } from '@/lib/supabase'
 
 interface GlobalChatProps {
   userId: string | null
-  heightClass?: string
 }
 
 interface SenderInfo {
@@ -25,7 +24,7 @@ const QUICK_JABS = [
   '1776 won’t reach itself. Pick up the pace.',
 ]
 
-export default function GlobalChat({ userId, heightClass = 'max-h-80' }: GlobalChatProps) {
+export default function GlobalChat({ userId }: GlobalChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [senders, setSenders] = useState<Record<string, SenderInfo>>({})
   const [myHandle, setMyHandle] = useState<string | null>(null)
@@ -36,8 +35,16 @@ export default function GlobalChat({ userId, heightClass = 'max-h-80' }: GlobalC
   const [loading, setLoading] = useState(true)
   const scrollRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  // Follow new messages only while the reader is at (or near) the bottom, so
+  // incoming chatter doesn't yank them away from older messages.
+  const followBottomRef = useRef(true)
 
   const supabase = createClient()
+
+  const scrollToBottom = () => {
+    const el = scrollRef.current
+    if (el) el.scrollTop = el.scrollHeight
+  }
 
   const resolveMissingSenders = useCallback(async (msgs: ChatMessage[]) => {
     setSenders(prev => {
@@ -133,10 +140,15 @@ export default function GlobalChat({ userId, heightClass = 'max-h-80' }: GlobalC
   }, [userId])
 
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight
-    }
+    if (followBottomRef.current) scrollToBottom()
   }, [messages])
+
+  const handleListScroll = () => {
+    const el = scrollRef.current
+    if (el) {
+      followBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 120
+    }
+  }
 
   // @mention autocomplete against public handles
   const updateInput = async (value: string) => {
@@ -186,6 +198,7 @@ export default function GlobalChat({ userId, heightClass = 'max-h-80' }: GlobalC
           : 'Could not send. Try again.')
     } else {
       setInput('')
+      followBottomRef.current = true
       if (data) {
         setMessages(prev => (prev.some(m => m.id === data.id) ? prev : [...prev, data]))
       }
@@ -236,128 +249,141 @@ export default function GlobalChat({ userId, heightClass = 'max-h-80' }: GlobalC
     }
   }
 
+  if (!userId) {
+    return (
+      <div className="card p-6 text-center py-8">
+        <p className="text-white/60 mb-1">🔒 The smack talk stays between patriots.</p>
+        <p className="text-white/40 text-sm">
+          <Link href="/login" className="text-liberty-gold hover:underline">Sign in</Link> to join the chat.
+        </p>
+      </div>
+    )
+  }
+
   return (
-    <div className="card p-6">
-      <div className="flex items-baseline justify-between gap-4 mb-4">
-        <h2 className="font-bebas text-3xl text-liberty-red">Chat</h2>
-        <span className="text-xs text-white/40 uppercase tracking-[0.12em]">Nationwide</span>
+    <div className="card flex-1 min-h-0 flex flex-col p-3 sm:p-6">
+      {/* Message list: the only scrollable region. overscroll-contain keeps
+          the scroll from chaining to the page on mobile. */}
+      <div
+        ref={scrollRef}
+        onScroll={handleListScroll}
+        className="flex-1 min-h-0 overflow-y-auto overscroll-contain space-y-3 mb-3 pr-1"
+      >
+        {loading ? (
+          <p className="text-white/40 text-sm text-center py-6">Loading the banter...</p>
+        ) : messages.length === 0 ? (
+          <p className="text-white/40 text-sm text-center py-6">
+            Silence before the battle. Fire the first shot. 🎯
+          </p>
+        ) : (
+          messages.map((msg) => {
+            const isOwn = msg.user_id === userId
+            return (
+              <div key={msg.id} className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
+                <div className={`group max-w-[85%] px-3 py-2 border ${
+                  isOwn
+                    ? 'bg-liberty-gold/10 border-liberty-gold/30'
+                    : 'bg-white/[0.04] border-white/15'
+                }`}>
+                  <div className="flex items-baseline gap-2 mb-0.5">
+                    {isOwn ? (
+                      <span className="text-xs font-bold text-liberty-gold">You</span>
+                    ) : (
+                      <button
+                        onClick={() => mentionSender(msg)}
+                        className="text-xs font-bold text-white/70 hover:text-liberty-gold transition-colors"
+                        title="Mention this patriot"
+                      >
+                        {senderLabel(msg.user_id)}
+                      </button>
+                    )}
+                    <span className="text-[10px] text-white/30">{formatTime(msg.created_at)}</span>
+                    {isOwn && (
+                      <button
+                        onClick={() => deleteMessage(msg.id)}
+                        className="text-[10px] text-white/30 hover:text-liberty-red opacity-60 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity ml-auto"
+                        aria-label="Delete message"
+                      >
+                        Delete
+                      </button>
+                    )}
+                  </div>
+                  <p className="text-sm text-white/85 break-words whitespace-pre-wrap">{renderBody(msg.body)}</p>
+                </div>
+              </div>
+            )
+          })
+        )}
       </div>
 
-      {!userId ? (
-        <div className="text-center py-8">
-          <p className="text-white/60 mb-1">🔒 The smack talk stays between patriots.</p>
-          <p className="text-white/40 text-sm">
-            <Link href="/login" className="text-liberty-gold hover:underline">Sign in</Link> to join the chat.
-          </p>
-        </div>
-      ) : (
-        <>
-          <div ref={scrollRef} className={`${heightClass} overflow-y-auto space-y-3 mb-4 pr-1`}>
-            {loading ? (
-              <p className="text-white/40 text-sm text-center py-6">Loading the banter...</p>
-            ) : messages.length === 0 ? (
-              <p className="text-white/40 text-sm text-center py-6">
-                Silence before the battle. Fire the first shot. 🎯
-              </p>
-            ) : (
-              messages.map((msg) => {
-                const isOwn = msg.user_id === userId
-                return (
-                  <div key={msg.id} className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`group max-w-[85%] px-3 py-2 border ${
-                      isOwn
-                        ? 'bg-liberty-gold/10 border-liberty-gold/30'
-                        : 'bg-white/[0.04] border-white/15'
-                    }`}>
-                      <div className="flex items-baseline gap-2 mb-0.5">
-                        {isOwn ? (
-                          <span className="text-xs font-bold text-liberty-gold">You</span>
-                        ) : (
-                          <button
-                            onClick={() => mentionSender(msg)}
-                            className="text-xs font-bold text-white/70 hover:text-liberty-gold transition-colors"
-                            title="Mention this patriot"
-                          >
-                            {senderLabel(msg.user_id)}
-                          </button>
-                        )}
-                        <span className="text-[10px] text-white/30">{formatTime(msg.created_at)}</span>
-                        {isOwn && (
-                          <button
-                            onClick={() => deleteMessage(msg.id)}
-                            className="text-[10px] text-white/30 hover:text-liberty-red opacity-0 group-hover:opacity-100 transition-opacity ml-auto"
-                            aria-label="Delete message"
-                          >
-                            Delete
-                          </button>
-                        )}
-                      </div>
-                      <p className="text-sm text-white/85 break-words whitespace-pre-wrap">{renderBody(msg.body)}</p>
-                    </div>
-                  </div>
-                )
-              })
-            )}
-          </div>
+      {/* Quick jabs: single row, swipe sideways on mobile instead of eating
+          vertical space. */}
+      <div className="flex gap-2 mb-2 overflow-x-auto overscroll-x-contain pb-1 -mx-1 px-1">
+        {QUICK_JABS.map((jab) => (
+          <button
+            key={jab}
+            onClick={() => sendMessage(jab)}
+            disabled={sending}
+            className="flex-none whitespace-nowrap text-xs px-3 py-1.5 bg-white/[0.04] border border-white/15 text-white/60 hover:text-white hover:border-white/30 transition-colors disabled:opacity-50"
+          >
+            {jab}
+          </button>
+        ))}
+      </div>
 
-          <div className="flex flex-wrap gap-2 mb-3">
-            {QUICK_JABS.map((jab) => (
+      <div className="relative">
+        {suggestions.length > 0 && (
+          <div className="absolute bottom-full left-0 right-0 mb-1 bg-liberty-dark border border-white/20 divide-y divide-white/10 z-10">
+            {suggestions.map((s) => (
               <button
-                key={jab}
-                onClick={() => sendMessage(jab)}
-                disabled={sending}
-                className="text-xs px-3 py-1.5 bg-white/[0.04] border border-white/15 text-white/60 hover:text-white hover:border-white/30 transition-colors disabled:opacity-50"
+                key={s.id}
+                onClick={() => applySuggestion(s.display_name)}
+                className="block w-full text-left px-3 py-2 text-sm text-white/80 hover:bg-white/10 transition-colors"
               >
-                {jab}
+                @{s.display_name}
               </button>
             ))}
           </div>
+        )}
+        <form
+          onSubmit={(e) => {
+            e.preventDefault()
+            sendMessage(input)
+          }}
+          className="flex gap-2"
+        >
+          {/* text-base (16px) on mobile so iOS Safari doesn't auto-zoom the
+              page when the input is focused. */}
+          <input
+            ref={inputRef}
+            type="text"
+            value={input}
+            onChange={(e) => updateInput(e.target.value)}
+            onFocus={() => {
+              // Keep the latest messages visible once the keyboard settles.
+              setTimeout(() => {
+                if (followBottomRef.current) scrollToBottom()
+              }, 300)
+            }}
+            maxLength={MAX_MESSAGE_LENGTH}
+            enterKeyHint="send"
+            autoComplete="off"
+            placeholder="Talk your trash... use @ to call someone out"
+            className="flex-1 min-w-0 bg-white/[0.04] border border-white/15 px-3 py-2 text-base sm:text-sm text-white placeholder-white/30 focus:outline-none focus:border-liberty-gold/50"
+          />
+          <button
+            type="submit"
+            disabled={sending || !input.trim()}
+            className="btn-gold text-sm py-2 px-4 disabled:opacity-50"
+          >
+            {sending ? '...' : 'Send'}
+          </button>
+        </form>
+      </div>
 
-          <div className="relative">
-            {suggestions.length > 0 && (
-              <div className="absolute bottom-full left-0 right-0 mb-1 bg-liberty-dark border border-white/20 divide-y divide-white/10 z-10">
-                {suggestions.map((s) => (
-                  <button
-                    key={s.id}
-                    onClick={() => applySuggestion(s.display_name)}
-                    className="block w-full text-left px-3 py-2 text-sm text-white/80 hover:bg-white/10 transition-colors"
-                  >
-                    @{s.display_name}
-                  </button>
-                ))}
-              </div>
-            )}
-            <form
-              onSubmit={(e) => {
-                e.preventDefault()
-                sendMessage(input)
-              }}
-              className="flex gap-2"
-            >
-              <input
-                ref={inputRef}
-                type="text"
-                value={input}
-                onChange={(e) => updateInput(e.target.value)}
-                maxLength={MAX_MESSAGE_LENGTH}
-                placeholder="Talk your trash... use @ to call someone out"
-                className="flex-1 bg-white/[0.04] border border-white/15 px-3 py-2 text-sm text-white placeholder-white/30 focus:outline-none focus:border-liberty-gold/50"
-              />
-              <button
-                type="submit"
-                disabled={sending || !input.trim()}
-                className="btn-gold text-sm py-2 px-4 disabled:opacity-50"
-              >
-                {sending ? 'Sending...' : 'Send'}
-              </button>
-            </form>
-          </div>
-
-          {error && <p className="text-liberty-red text-xs mt-2">{error}</p>}
-          {input.length >= MAX_MESSAGE_LENGTH - 40 && (
-            <p className="text-white/30 text-xs mt-2">{MAX_MESSAGE_LENGTH - input.length} characters left</p>
-          )}
-        </>
+      {error && <p className="text-liberty-red text-xs mt-2">{error}</p>}
+      {input.length >= MAX_MESSAGE_LENGTH - 40 && (
+        <p className="text-white/30 text-xs mt-2">{MAX_MESSAGE_LENGTH - input.length} characters left</p>
       )}
     </div>
   )

@@ -29,17 +29,20 @@ export default function ChatPage() {
   return (
     <>
       <Navigation />
-      <div className="min-h-screen pt-24 pb-12 px-4 app-surface">
-        <div className="max-w-3xl mx-auto">
-          <div className="mb-8">
-            <div className="app-eyebrow mb-3">National feed</div>
-            <h1 className="app-title text-6xl sm:text-7xl">Chat</h1>
-            <p className="text-white/60 mt-3">
-              One feed, all fifty states. Use @ to mention someone — they&apos;ll get a notification.
-            </p>
+      {/* App-style chat screen: the page never scrolls, only the message list
+          does. 100dvh tracks the mobile browser's collapsing toolbars; the
+          inline style falls back to h-screen where dvh is unsupported. */}
+      <div className="app-surface flex flex-col h-screen" style={{ height: '100dvh' }}>
+        <div className="flex-1 min-h-0 flex flex-col w-full max-w-3xl mx-auto px-4 pt-20 sm:pt-24 pb-[max(1rem,env(safe-area-inset-bottom))]">
+          <div className="flex items-baseline justify-between gap-4 mb-3 sm:mb-5">
+            <h1 className="app-title text-4xl sm:text-6xl">Chat</h1>
+            <span className="app-eyebrow">National feed</span>
           </div>
+          <p className="hidden sm:block text-white/60 mb-5">
+            One feed, all fifty states. Use @ to mention someone — they&apos;ll get a notification.
+          </p>
 
-          <GlobalChat userId={userId} heightClass="h-[55vh]" />
+          <GlobalChat userId={userId} />
         </div>
       </div>
     </>
