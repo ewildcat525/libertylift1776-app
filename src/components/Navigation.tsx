@@ -86,13 +86,18 @@ export default function Navigation() {
               <Link
                 key={link.href}
                 href={link.href}
-                className={`text-sm font-medium transition-colors ${
+                className={`text-sm font-medium transition-colors inline-flex items-center gap-1.5 ${
                   isActive(link.href)
                     ? 'text-liberty-red'
                     : 'text-white/62 hover:text-white'
                 }`}
               >
                 {link.label}
+                {link.href === '/chat' && (
+                  <span className="text-[9px] font-extrabold uppercase tracking-[0.1em] px-1.5 py-0.5 bg-liberty-gold/15 text-liberty-gold border border-liberty-gold/40 leading-none">
+                    Beta
+                  </span>
+                )}
               </Link>
             ))}
           </div>
@@ -146,11 +151,16 @@ export default function Navigation() {
                 key={link.href}
                 href={link.href}
                 onClick={() => setMenuOpen(false)}
-                className={`block py-2 text-sm font-medium ${
+                className={`flex items-center gap-1.5 py-2 text-sm font-medium ${
                   isActive(link.href) ? 'text-liberty-red' : 'text-white/70'
                 }`}
               >
                 {link.label}
+                {link.href === '/chat' && (
+                  <span className="text-[9px] font-extrabold uppercase tracking-[0.1em] px-1.5 py-0.5 bg-liberty-gold/15 text-liberty-gold border border-liberty-gold/40 leading-none">
+                    Beta
+                  </span>
+                )}
               </Link>
             ))}
             <div className="mt-4 pt-4 border-t border-white/10 flex flex-col gap-2">
