@@ -239,7 +239,7 @@ export default function GlobalChat({ userId, heightClass = 'max-h-80' }: GlobalC
   return (
     <div className="card p-6">
       <div className="flex items-baseline justify-between gap-4 mb-4">
-        <h2 className="font-bebas text-3xl text-liberty-red">Trash Talk</h2>
+        <h2 className="font-bebas text-3xl text-liberty-red">Chat</h2>
         <span className="text-xs text-white/40 uppercase tracking-[0.12em]">Nationwide</span>
       </div>
 

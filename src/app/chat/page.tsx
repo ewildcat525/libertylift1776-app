@@ -33,9 +33,9 @@ export default function ChatPage() {
         <div className="max-w-3xl mx-auto">
           <div className="mb-8">
             <div className="app-eyebrow mb-3">National feed</div>
-            <h1 className="app-title text-6xl sm:text-7xl">Trash Talk</h1>
+            <h1 className="app-title text-6xl sm:text-7xl">Chat</h1>
             <p className="text-white/60 mt-3">
-              One feed, fifty states, zero mercy. Use @ to call someone out — they&apos;ll get the notification.
+              One feed, all fifty states. Use @ to mention someone — they&apos;ll get a notification.
             </p>
           </div>
 
