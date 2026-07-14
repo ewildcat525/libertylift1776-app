@@ -632,7 +632,9 @@ export default function DashboardPage() {
               <p className="text-sm text-white/60 mt-3">
                 {pace === 'complete'
                   ? "You did it: 1776 push-ups in July."
-                  : `Target: ${dailyTarget} push-ups per day to hit 1776 by July 31.`}
+                  : requiredPerDay !== null
+                    ? `Target: ${requiredPerDay} push-ups per day from today to hit 1776 by July 31.`
+                    : `Target: ${dailyTarget} push-ups per day to hit 1776 by July 31.`}
               </p>
             </div>
           )}
