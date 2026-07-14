@@ -7,3 +7,7 @@ export const siteUrl =
   (process.env.VERCEL_ENV === 'preview' && process.env.VERCEL_URL
     ? `https://${process.env.VERCEL_URL}`
     : 'https://libertylift1776.com')
+
+// Public contact address shown on the About page. This inbox does not exist
+// yet — set up forwarding for it (or swap in a real address) before launch.
+export const contactEmail = 'hello@libertylift1776.com'

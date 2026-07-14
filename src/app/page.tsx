@@ -349,6 +349,7 @@ export default function Home() {
         </Link>
         <div className="campaign-final-mark">LIBERTY LIFT / 1776</div>
         <div className="mt-8 flex justify-center gap-6 text-xs text-white/40">
+          <Link href="/about" className="hover:text-white/70">About</Link>
           <Link href="/privacy" className="hover:text-white/70">Privacy</Link>
           <Link href="/terms" className="hover:text-white/70">Terms</Link>
         </div>
