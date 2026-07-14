@@ -97,18 +97,19 @@ export default function Navigation() {
             ))}
           </div>
 
+          {/* Right side: bell (single instance for all breakpoints) + auth + mobile menu */}
+          <div className="flex items-center gap-2">
+          {user && showChat && <NotificationBell userId={user.id} />}
+
           {/* Auth Buttons */}
           <div className="hidden md:flex items-center gap-4">
             {user ? (
-              <>
-                {showChat && <NotificationBell userId={user.id} />}
-                <button
-                  onClick={handleSignOut}
-                  className="text-xs font-bold uppercase tracking-[0.12em] text-white/62 hover:text-white transition-colors"
-                >
-                  Sign Out
-                </button>
-              </>
+              <button
+                onClick={handleSignOut}
+                className="text-xs font-bold uppercase tracking-[0.12em] text-white/62 hover:text-white transition-colors"
+              >
+                Sign Out
+              </button>
             ) : (
               <>
                 <Link href="/login" className="text-xs font-bold uppercase tracking-[0.12em] text-white/62 hover:text-white transition-colors">
@@ -121,12 +122,10 @@ export default function Navigation() {
             )}
           </div>
 
-          {/* Mobile: bell + menu button */}
-          <div className="md:hidden flex items-center gap-1">
-          {user && showChat && <NotificationBell userId={user.id} />}
+          {/* Mobile Menu Button */}
           <button
             onClick={() => setMenuOpen(!menuOpen)}
-            className="p-2 text-white"
+            className="md:hidden p-2 text-white"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               {menuOpen ? (

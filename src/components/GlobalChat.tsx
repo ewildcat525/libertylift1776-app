@@ -96,32 +96,39 @@ export default function GlobalChat({ userId, heightClass = 'max-h-80' }: GlobalC
 
     loadMessages()
 
-    const channel = supabase
-      .channel('global-chat')
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'chat_messages' },
-        (payload) => {
-          const msg = payload.new as ChatMessage
-          setMessages(prev => (prev.some(m => m.id === msg.id) ? prev : [...prev, msg]))
-          resolveMissingSenders([msg])
-        }
-      )
-      .on(
-        'postgres_changes',
-        { event: 'DELETE', schema: 'public', table: 'chat_messages' },
-        (payload) => {
-          const deletedId = (payload.old as { id?: string }).id
-          if (deletedId) {
-            setMessages(prev => prev.filter(m => m.id !== deletedId))
+    // Unique per mount: reusing a fixed name can collide with a channel that
+    // is still tearing down and throw, which crashes the page.
+    let channel: ReturnType<typeof supabase.channel> | null = null
+    try {
+      channel = supabase
+        .channel(`global-chat-${Math.random().toString(36).slice(2)}`)
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'chat_messages' },
+          (payload) => {
+            const msg = payload.new as ChatMessage
+            setMessages(prev => (prev.some(m => m.id === msg.id) ? prev : [...prev, msg]))
+            resolveMissingSenders([msg])
           }
-        }
-      )
-      .subscribe()
+        )
+        .on(
+          'postgres_changes',
+          { event: 'DELETE', schema: 'public', table: 'chat_messages' },
+          (payload) => {
+            const deletedId = (payload.old as { id?: string }).id
+            if (deletedId) {
+              setMessages(prev => prev.filter(m => m.id !== deletedId))
+            }
+          }
+        )
+        .subscribe()
+    } catch (err) {
+      console.error('Chat realtime unavailable:', err)
+    }
 
     return () => {
       active = false
-      supabase.removeChannel(channel)
+      if (channel) supabase.removeChannel(channel)
     }
   }, [userId])
 

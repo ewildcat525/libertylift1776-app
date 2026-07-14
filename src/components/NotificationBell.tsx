@@ -58,24 +58,31 @@ export default function NotificationBell({ userId }: NotificationBellProps) {
 
     loadNotifications()
 
-    const channel = supabase
-      .channel(`notifications-${userId}`)
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` },
-        (payload) => {
-          const notification = payload.new as AppNotification
-          setNotifications(prev =>
-            prev.some(n => n.id === notification.id) ? prev : [notification, ...prev].slice(0, 20)
-          )
-          resolveActorNames([notification])
-        }
-      )
-      .subscribe()
+    // Unique per mount: reusing a fixed name can collide with a channel that
+    // is still tearing down and throw, which crashes the page.
+    let channel: ReturnType<typeof supabase.channel> | null = null
+    try {
+      channel = supabase
+        .channel(`notifications-${userId}-${Math.random().toString(36).slice(2)}`)
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` },
+          (payload) => {
+            const notification = payload.new as AppNotification
+            setNotifications(prev =>
+              prev.some(n => n.id === notification.id) ? prev : [notification, ...prev].slice(0, 20)
+            )
+            resolveActorNames([notification])
+          }
+        )
+        .subscribe()
+    } catch (err) {
+      console.error('Notification realtime unavailable:', err)
+    }
 
     return () => {
       active = false
-      supabase.removeChannel(channel)
+      if (channel) supabase.removeChannel(channel)
     }
   }, [userId])
 
