@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { createClient, Contest, US_STATES, DAILY_PACE } from '@/lib/supabase'
 import Navigation from '@/components/Navigation'
-import ContestChat from '@/components/ContestChat'
 import Link from 'next/link'
 import {
   LineChart,
@@ -430,19 +429,6 @@ export default function ContestDetailPage() {
               ))}
             </div>
           )}
-
-          {/* Trash Talk Chat */}
-          <div className="mt-8">
-            <ContestChat
-              contestId={contestId}
-              userId={user?.id || null}
-              isMember={isMember}
-              isCreator={Boolean(user && contest.creator_id === user.id)}
-              memberNames={Object.fromEntries(
-                members.map(m => [m.user_id, m.display_name || 'Anonymous'])
-              )}
-            />
-          </div>
         </div>
       </div>
     </>

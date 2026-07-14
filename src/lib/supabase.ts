@@ -84,9 +84,8 @@ export interface Contest {
   created_at: string
 }
 
-export interface ContestMessage {
+export interface ChatMessage {
   id: string
-  contest_id: string
   user_id: string
   body: string
   created_at: string

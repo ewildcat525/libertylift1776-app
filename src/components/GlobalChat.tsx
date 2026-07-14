@@ -1,60 +1,65 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { createClient, ContestMessage } from '@/lib/supabase'
+import Link from 'next/link'
+import { createClient, ChatMessage } from '@/lib/supabase'
 
-interface ContestChatProps {
-  contestId: string
+interface GlobalChatProps {
   userId: string | null
-  isMember: boolean
-  isCreator: boolean
-  memberNames: Record<string, string>
+}
+
+interface SenderInfo {
+  display_name: string | null
+  state_code: string | null
 }
 
 const MAX_MESSAGE_LENGTH = 280
 
 // One-tap openers to get the smack talk flowing
 const QUICK_JABS = [
-  'Is that all you’ve got? 🦅',
+  'Is that all you’ve got, America? 🦅',
   'Scoreboard. 🇺🇸',
-  'My grandma logs more reps before breakfast.',
+  'My state carries this leaderboard.',
   '1776 won’t reach itself. Pick up the pace.',
 ]
 
-export default function ContestChat({ contestId, userId, isMember, isCreator, memberNames }: ContestChatProps) {
-  const [messages, setMessages] = useState<ContestMessage[]>([])
-  const [names, setNames] = useState<Record<string, string>>(memberNames)
+export default function GlobalChat({ userId }: GlobalChatProps) {
+  const [messages, setMessages] = useState<ChatMessage[]>([])
+  const [senders, setSenders] = useState<Record<string, SenderInfo>>({})
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const scrollRef = useRef<HTMLDivElement>(null)
-  const canChat = Boolean(userId) && (isMember || isCreator)
 
   const supabase = createClient()
 
-  const resolveMissingNames = useCallback(async (msgs: ContestMessage[], known: Record<string, string>) => {
-    const missing = Array.from(new Set(msgs.map(m => m.user_id))).filter(id => !known[id])
-    if (missing.length === 0) return
-
-    const { data } = await supabase
-      .from('public_profiles')
-      .select('id, display_name')
-      .in('id', missing)
-
-    if (data && data.length > 0) {
-      setNames(prev => {
-        const next = { ...prev }
-        data.forEach((p: { id: string; display_name: string | null }) => {
-          next[p.id] = p.display_name || 'Anonymous'
-        })
-        return next
-      })
-    }
+  const resolveMissingSenders = useCallback(async (msgs: ChatMessage[]) => {
+    setSenders(prev => {
+      const missing = Array.from(new Set(msgs.map(m => m.user_id))).filter(id => !prev[id])
+      if (missing.length > 0) {
+        supabase
+          .from('public_profiles')
+          .select('id, display_name, state_code')
+          .in('id', missing)
+          .then(({ data }) => {
+            if (data && data.length > 0) {
+              setSenders(current => {
+                const next = { ...current }
+                data.forEach((p: { id: string; display_name: string | null; state_code: string | null }) => {
+                  next[p.id] = { display_name: p.display_name, state_code: p.state_code }
+                })
+                return next
+              })
+            }
+          })
+      }
+      return prev
+    })
   }, [supabase])
 
   useEffect(() => {
-    if (!canChat) {
+    if (!userId) {
       setLoading(false)
       return
     }
@@ -63,9 +68,8 @@ export default function ContestChat({ contestId, userId, isMember, isCreator, me
 
     const loadMessages = async () => {
       const { data } = await supabase
-        .from('contest_messages')
+        .from('chat_messages')
         .select('*')
-        .eq('contest_id', contestId)
         .order('created_at', { ascending: false })
         .limit(100)
 
@@ -73,25 +77,25 @@ export default function ContestChat({ contestId, userId, isMember, isCreator, me
       const ordered = (data || []).reverse()
       setMessages(ordered)
       setLoading(false)
-      resolveMissingNames(ordered, memberNames)
+      resolveMissingSenders(ordered)
     }
 
     loadMessages()
 
     const channel = supabase
-      .channel(`contest-chat-${contestId}`)
+      .channel('global-chat')
       .on(
         'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'contest_messages', filter: `contest_id=eq.${contestId}` },
+        { event: 'INSERT', schema: 'public', table: 'chat_messages' },
         (payload) => {
-          const msg = payload.new as ContestMessage
+          const msg = payload.new as ChatMessage
           setMessages(prev => (prev.some(m => m.id === msg.id) ? prev : [...prev, msg]))
-          resolveMissingNames([msg], memberNames)
+          resolveMissingSenders([msg])
         }
       )
       .on(
         'postgres_changes',
-        { event: 'DELETE', schema: 'public', table: 'contest_messages', filter: `contest_id=eq.${contestId}` },
+        { event: 'DELETE', schema: 'public', table: 'chat_messages' },
         (payload) => {
           const deletedId = (payload.old as { id?: string }).id
           if (deletedId) {
@@ -105,7 +109,7 @@ export default function ContestChat({ contestId, userId, isMember, isCreator, me
       active = false
       supabase.removeChannel(channel)
     }
-  }, [contestId, canChat])
+  }, [userId])
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -121,8 +125,8 @@ export default function ContestChat({ contestId, userId, isMember, isCreator, me
     setError(null)
 
     const { data, error: sendError } = await supabase
-      .from('contest_messages')
-      .insert({ contest_id: contestId, user_id: userId, body: trimmed })
+      .from('chat_messages')
+      .insert({ user_id: userId, body: trimmed })
       .select()
       .single()
 
@@ -143,7 +147,7 @@ export default function ContestChat({ contestId, userId, isMember, isCreator, me
 
   const deleteMessage = async (id: string) => {
     setMessages(prev => prev.filter(m => m.id !== id))
-    await supabase.from('contest_messages').delete().eq('id', id)
+    await supabase.from('chat_messages').delete().eq('id', id)
   }
 
   const formatTime = (iso: string) => {
@@ -154,17 +158,26 @@ export default function ContestChat({ contestId, userId, isMember, isCreator, me
     return sameDay ? time : `${date.toLocaleDateString([], { month: 'short', day: 'numeric' })} ${time}`
   }
 
+  const senderLabel = (id: string) => {
+    const sender = senders[id]
+    if (!sender) return 'Anonymous'
+    const name = sender.display_name || 'Anonymous'
+    return sender.state_code ? `${name} · ${sender.state_code}` : name
+  }
+
   return (
-    <div className="card p-6 mb-8">
+    <div className="card p-6">
       <div className="flex items-baseline justify-between gap-4 mb-4">
         <h2 className="font-bebas text-3xl text-liberty-red">Trash Talk</h2>
-        <span className="text-xs text-white/40 uppercase tracking-[0.12em]">Members only</span>
+        <span className="text-xs text-white/40 uppercase tracking-[0.12em]">Nationwide</span>
       </div>
 
-      {!canChat ? (
+      {!userId ? (
         <div className="text-center py-8">
-          <p className="text-white/60 mb-1">🔒 The smack talk stays between rivals.</p>
-          <p className="text-white/40 text-sm">Join the contest to unlock the chat.</p>
+          <p className="text-white/60 mb-1">🔒 The smack talk stays between patriots.</p>
+          <p className="text-white/40 text-sm">
+            <Link href="/login" className="text-liberty-gold hover:underline">Sign in</Link> to join the chat.
+          </p>
         </div>
       ) : (
         <>
@@ -187,10 +200,10 @@ export default function ContestChat({ contestId, userId, isMember, isCreator, me
                     }`}>
                       <div className="flex items-baseline gap-2 mb-0.5">
                         <span className={`text-xs font-bold ${isOwn ? 'text-liberty-gold' : 'text-white/70'}`}>
-                          {isOwn ? 'You' : names[msg.user_id] || 'Anonymous'}
+                          {isOwn ? 'You' : senderLabel(msg.user_id)}
                         </span>
                         <span className="text-[10px] text-white/30">{formatTime(msg.created_at)}</span>
-                        {(isOwn || isCreator) && (
+                        {isOwn && (
                           <button
                             onClick={() => deleteMessage(msg.id)}
                             className="text-[10px] text-white/30 hover:text-liberty-red opacity-0 group-hover:opacity-100 transition-opacity ml-auto"

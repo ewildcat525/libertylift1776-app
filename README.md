@@ -11,7 +11,7 @@ Liberty Lift 1776 is a Next.js campaign app for a July 1-31, 2026 push-up challe
 - Personal stats, calendar tracking, cumulative progress chart, and milestone messages
 - Global leaderboard with total, streak, and best-day rankings
 - Private and public contests with invite codes
-- Members-only trash-talk chat on every contest page with live updates, quick-jab presets, and creator moderation
+- Nationwide trash-talk chat on the leaderboard with live updates and quick-jab presets for signed-in patriots
 - Charity pledge setup: donate a fixed rate per push-up completed to Wounded Warrior Project
 - Supabase-backed profiles, logs, stats, achievements, contests, pledges, and email subscribers
 - Public shareable profile pages (`/p/[handle]`) with dynamic Open Graph cards

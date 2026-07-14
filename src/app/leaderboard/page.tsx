@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { createClient, LeaderboardEntry, US_STATES } from '@/lib/supabase'
 import CommunityMilestoneBanner from '@/components/CommunityMilestoneBanner'
+import GlobalChat from '@/components/GlobalChat'
 import Navigation from '@/components/Navigation'
 
 export default function LeaderboardPage() {
@@ -131,6 +132,11 @@ export default function LeaderboardPage() {
               ))}
             </div>
           )}
+
+          {/* Nationwide Trash Talk */}
+          <div className="mt-8">
+            <GlobalChat userId={userId} />
+          </div>
         </div>
       </div>
     </>
