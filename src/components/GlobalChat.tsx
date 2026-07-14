@@ -6,6 +6,7 @@ import { createClient, ChatMessage } from '@/lib/supabase'
 
 interface GlobalChatProps {
   userId: string | null
+  heightClass?: string
 }
 
 interface SenderInfo {
@@ -14,6 +15,7 @@ interface SenderInfo {
 }
 
 const MAX_MESSAGE_LENGTH = 280
+const MENTION_PATTERN = /(@[A-Za-z0-9_]+)/g
 
 // One-tap openers to get the smack talk flowing
 const QUICK_JABS = [
@@ -23,14 +25,17 @@ const QUICK_JABS = [
   '1776 won’t reach itself. Pick up the pace.',
 ]
 
-export default function GlobalChat({ userId }: GlobalChatProps) {
+export default function GlobalChat({ userId, heightClass = 'max-h-80' }: GlobalChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [senders, setSenders] = useState<Record<string, SenderInfo>>({})
+  const [myHandle, setMyHandle] = useState<string | null>(null)
   const [input, setInput] = useState('')
+  const [suggestions, setSuggestions] = useState<{ id: string; display_name: string }[]>([])
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const scrollRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
 
   const supabase = createClient()
 
@@ -65,6 +70,15 @@ export default function GlobalChat({ userId }: GlobalChatProps) {
     }
 
     let active = true
+
+    supabase
+      .from('public_profiles')
+      .select('display_name')
+      .eq('id', userId)
+      .single()
+      .then(({ data }) => {
+        if (active && data?.display_name) setMyHandle(data.display_name)
+      })
 
     const loadMessages = async () => {
       const { data } = await supabase
@@ -117,12 +131,39 @@ export default function GlobalChat({ userId }: GlobalChatProps) {
     }
   }, [messages])
 
+  // @mention autocomplete against public handles
+  const updateInput = async (value: string) => {
+    setInput(value)
+    const mention = /@([A-Za-z0-9_]*)$/.exec(value)
+    if (!mention) {
+      setSuggestions([])
+      return
+    }
+
+    const { data } = await supabase
+      .from('public_profiles')
+      .select('id, display_name')
+      .ilike('display_name', `${mention[1]}%`)
+      .not('display_name', 'is', null)
+      .neq('id', userId)
+      .limit(5)
+
+    setSuggestions((data || []).filter((p: { display_name: string | null }) => p.display_name) as { id: string; display_name: string }[])
+  }
+
+  const applySuggestion = (handle: string) => {
+    setInput(prev => prev.replace(/@[A-Za-z0-9_]*$/, `@${handle} `))
+    setSuggestions([])
+    inputRef.current?.focus()
+  }
+
   const sendMessage = async (body: string) => {
     const trimmed = body.trim()
     if (!trimmed || !userId || sending) return
 
     setSending(true)
     setError(null)
+    setSuggestions([])
 
     const { data, error: sendError } = await supabase
       .from('chat_messages')
@@ -165,6 +206,29 @@ export default function GlobalChat({ userId }: GlobalChatProps) {
     return sender.state_code ? `${name} · ${sender.state_code}` : name
   }
 
+  const renderBody = (body: string) => {
+    return body.split(MENTION_PATTERN).map((part, i) => {
+      if (!part.startsWith('@')) return part
+      const isMe = myHandle && part.slice(1).toLowerCase() === myHandle.toLowerCase()
+      return (
+        <span
+          key={i}
+          className={isMe ? 'text-liberty-gold font-bold bg-liberty-gold/15 px-0.5' : 'text-liberty-gold'}
+        >
+          {part}
+        </span>
+      )
+    })
+  }
+
+  const mentionSender = (msg: ChatMessage) => {
+    const handle = senders[msg.user_id]?.display_name
+    if (handle) {
+      updateInput(input.trim() ? `${input.trim()} @${handle} ` : `@${handle} `)
+      inputRef.current?.focus()
+    }
+  }
+
   return (
     <div className="card p-6">
       <div className="flex items-baseline justify-between gap-4 mb-4">
@@ -181,7 +245,7 @@ export default function GlobalChat({ userId }: GlobalChatProps) {
         </div>
       ) : (
         <>
-          <div ref={scrollRef} className="max-h-80 overflow-y-auto space-y-3 mb-4 pr-1">
+          <div ref={scrollRef} className={`${heightClass} overflow-y-auto space-y-3 mb-4 pr-1`}>
             {loading ? (
               <p className="text-white/40 text-sm text-center py-6">Loading the banter...</p>
             ) : messages.length === 0 ? (
@@ -199,9 +263,17 @@ export default function GlobalChat({ userId }: GlobalChatProps) {
                         : 'bg-white/[0.04] border-white/15'
                     }`}>
                       <div className="flex items-baseline gap-2 mb-0.5">
-                        <span className={`text-xs font-bold ${isOwn ? 'text-liberty-gold' : 'text-white/70'}`}>
-                          {isOwn ? 'You' : senderLabel(msg.user_id)}
-                        </span>
+                        {isOwn ? (
+                          <span className="text-xs font-bold text-liberty-gold">You</span>
+                        ) : (
+                          <button
+                            onClick={() => mentionSender(msg)}
+                            className="text-xs font-bold text-white/70 hover:text-liberty-gold transition-colors"
+                            title="Mention this patriot"
+                          >
+                            {senderLabel(msg.user_id)}
+                          </button>
+                        )}
                         <span className="text-[10px] text-white/30">{formatTime(msg.created_at)}</span>
                         {isOwn && (
                           <button
@@ -213,7 +285,7 @@ export default function GlobalChat({ userId }: GlobalChatProps) {
                           </button>
                         )}
                       </div>
-                      <p className="text-sm text-white/85 break-words whitespace-pre-wrap">{msg.body}</p>
+                      <p className="text-sm text-white/85 break-words whitespace-pre-wrap">{renderBody(msg.body)}</p>
                     </div>
                   </div>
                 )
@@ -234,29 +306,45 @@ export default function GlobalChat({ userId }: GlobalChatProps) {
             ))}
           </div>
 
-          <form
-            onSubmit={(e) => {
-              e.preventDefault()
-              sendMessage(input)
-            }}
-            className="flex gap-2"
-          >
-            <input
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              maxLength={MAX_MESSAGE_LENGTH}
-              placeholder="Talk your trash..."
-              className="flex-1 bg-white/[0.04] border border-white/15 px-3 py-2 text-sm text-white placeholder-white/30 focus:outline-none focus:border-liberty-gold/50"
-            />
-            <button
-              type="submit"
-              disabled={sending || !input.trim()}
-              className="btn-gold text-sm py-2 px-4 disabled:opacity-50"
+          <div className="relative">
+            {suggestions.length > 0 && (
+              <div className="absolute bottom-full left-0 right-0 mb-1 bg-liberty-dark border border-white/20 divide-y divide-white/10 z-10">
+                {suggestions.map((s) => (
+                  <button
+                    key={s.id}
+                    onClick={() => applySuggestion(s.display_name)}
+                    className="block w-full text-left px-3 py-2 text-sm text-white/80 hover:bg-white/10 transition-colors"
+                  >
+                    @{s.display_name}
+                  </button>
+                ))}
+              </div>
+            )}
+            <form
+              onSubmit={(e) => {
+                e.preventDefault()
+                sendMessage(input)
+              }}
+              className="flex gap-2"
             >
-              {sending ? 'Sending...' : 'Send'}
-            </button>
-          </form>
+              <input
+                ref={inputRef}
+                type="text"
+                value={input}
+                onChange={(e) => updateInput(e.target.value)}
+                maxLength={MAX_MESSAGE_LENGTH}
+                placeholder="Talk your trash... use @ to call someone out"
+                className="flex-1 bg-white/[0.04] border border-white/15 px-3 py-2 text-sm text-white placeholder-white/30 focus:outline-none focus:border-liberty-gold/50"
+              />
+              <button
+                type="submit"
+                disabled={sending || !input.trim()}
+                className="btn-gold text-sm py-2 px-4 disabled:opacity-50"
+              >
+                {sending ? 'Sending...' : 'Send'}
+              </button>
+            </form>
+          </div>
 
           {error && <p className="text-liberty-red text-xs mt-2">{error}</p>}
           {input.length >= MAX_MESSAGE_LENGTH - 40 && (

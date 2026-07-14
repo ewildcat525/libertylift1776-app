@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase'
+import NotificationBell from '@/components/NotificationBell'
 import type { User } from '@supabase/supabase-js'
 
 export default function Navigation() {
@@ -39,6 +40,7 @@ export default function Navigation() {
         { href: '/pledge/leaderboard', label: 'Pledges' },
         { href: '/states', label: 'States' },
         { href: '/contests', label: 'Contests' },
+        { href: '/chat', label: 'Trash Talk' },
       ]
     : user
     ? [
@@ -47,6 +49,7 @@ export default function Navigation() {
         { href: '/pledge/leaderboard', label: 'Pledges' },
         { href: '/states', label: 'States' },
         { href: '/contests', label: 'Contests' },
+        { href: '/chat', label: 'Trash Talk' },
       ]
     : [
         { href: '/', label: 'Home' },
@@ -54,6 +57,7 @@ export default function Navigation() {
         { href: '/pledge/leaderboard', label: 'Pledges' },
         { href: '/states', label: 'States' },
         { href: '/contests', label: 'Contests' },
+        { href: '/chat', label: 'Trash Talk' },
       ]
 
   const isActive = (href: string) => pathname === href
@@ -92,12 +96,15 @@ export default function Navigation() {
           {/* Auth Buttons */}
           <div className="hidden md:flex items-center gap-4">
             {user ? (
-              <button
-                onClick={handleSignOut}
-                className="text-xs font-bold uppercase tracking-[0.12em] text-white/62 hover:text-white transition-colors"
-              >
-                Sign Out
-              </button>
+              <>
+                <NotificationBell userId={user.id} />
+                <button
+                  onClick={handleSignOut}
+                  className="text-xs font-bold uppercase tracking-[0.12em] text-white/62 hover:text-white transition-colors"
+                >
+                  Sign Out
+                </button>
+              </>
             ) : (
               <>
                 <Link href="/login" className="text-xs font-bold uppercase tracking-[0.12em] text-white/62 hover:text-white transition-colors">
@@ -110,10 +117,12 @@ export default function Navigation() {
             )}
           </div>
 
-          {/* Mobile Menu Button */}
+          {/* Mobile: bell + menu button */}
+          <div className="md:hidden flex items-center gap-1">
+          {user && <NotificationBell userId={user.id} />}
           <button
             onClick={() => setMenuOpen(!menuOpen)}
-            className="md:hidden p-2 text-white"
+            className="p-2 text-white"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               {menuOpen ? (
@@ -123,6 +132,7 @@ export default function Navigation() {
               )}
             </svg>
           </button>
+          </div>
         </div>
 
         {/* Mobile Menu */}

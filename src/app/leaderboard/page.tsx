@@ -3,8 +3,8 @@
 import { useState, useEffect } from 'react'
 import { createClient, LeaderboardEntry, US_STATES } from '@/lib/supabase'
 import CommunityMilestoneBanner from '@/components/CommunityMilestoneBanner'
-import GlobalChat from '@/components/GlobalChat'
 import Navigation from '@/components/Navigation'
+import Link from 'next/link'
 
 export default function LeaderboardPage() {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([])
@@ -133,10 +133,17 @@ export default function LeaderboardPage() {
             </div>
           )}
 
-          {/* Nationwide Trash Talk */}
-          <div className="mt-8">
-            <GlobalChat userId={userId} />
-          </div>
+          {/* Trash Talk CTA */}
+          <Link
+            href="/chat"
+            className="card mt-8 p-5 flex items-center justify-between gap-4 hover:bg-white/5 transition-colors group"
+          >
+            <div>
+              <div className="font-bebas text-2xl text-liberty-red">Got something to say? 🗣️</div>
+              <p className="text-sm text-white/60">Take it to the nationwide Trash Talk feed.</p>
+            </div>
+            <span className="text-liberty-gold text-sm font-bold group-hover:translate-x-1 transition-transform">→</span>
+          </Link>
         </div>
       </div>
     </>
