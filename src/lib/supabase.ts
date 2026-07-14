@@ -84,6 +84,24 @@ export interface Contest {
   created_at: string
 }
 
+export interface ChatMessage {
+  id: string
+  user_id: string
+  body: string
+  created_at: string
+}
+
+export interface AppNotification {
+  id: string
+  user_id: string
+  actor_id: string
+  type: string
+  message_id: string | null
+  body: string | null
+  read_at: string | null
+  created_at: string
+}
+
 export interface Achievement {
   id: string
   name: string
