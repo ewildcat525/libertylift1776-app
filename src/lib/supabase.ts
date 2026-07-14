@@ -84,6 +84,14 @@ export interface Contest {
   created_at: string
 }
 
+export interface ContestMessage {
+  id: string
+  contest_id: string
+  user_id: string
+  body: string
+  created_at: string
+}
+
 export interface Achievement {
   id: string
   name: string
