@@ -11,7 +11,7 @@ Liberty Lift 1776 is a Next.js campaign app for a July 1-31, 2026 push-up challe
 - Personal stats, calendar tracking, cumulative progress chart, and milestone messages
 - Global leaderboard with total, streak, and best-day rankings
 - Private and public contests with invite codes
-- Nationwide trash-talk chat page (`/chat`) with live updates, quick-jab presets, @mentions with autocomplete, and a notification bell for call-outs (currently gated to tester accounts via `src/lib/flags.ts` and `public.can_use_chat()`)
+- Nationwide chat page (`/chat`) with live updates, quick-jab presets, @mentions with autocomplete, and a notification bell for call-outs (currently gated to tester accounts via `src/lib/flags.ts` and `public.can_use_chat()`)
 - Charity pledge setup: donate a fixed rate per push-up completed to Wounded Warrior Project
 - Supabase-backed profiles, logs, stats, achievements, contests, pledges, and email subscribers
 - Public shareable profile pages (`/p/[handle]`) with dynamic Open Graph cards
@@ -174,7 +174,7 @@ Runs the Next.js lint command.
 - `/auth/confirm` - Auth confirmation page
 - `/dashboard` - Authenticated push-up logging dashboard
 - `/leaderboard` - Global leaderboard
-- `/chat` - Nationwide trash-talk chat with @mentions
+- `/chat` - Nationwide chat with @mentions
 - `/states` - State competition view
 - `/contests` - Contest discovery, creation, and invite-code joining
 - `/contests/[id]` - Individual contest page

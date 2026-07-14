@@ -61,7 +61,7 @@ export default function Navigation() {
       ]
 
   if (showChat) {
-    navLinks.push({ href: '/chat', label: 'Trash Talk' })
+    navLinks.push({ href: '/chat', label: 'Chat' })
   }
 
   const isActive = (href: string) => pathname === href
