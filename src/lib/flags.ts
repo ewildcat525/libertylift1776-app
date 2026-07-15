@@ -1,12 +1,8 @@
 // Feature gates for staged rollouts.
 
-// Trash Talk chat is in live testing. Only these accounts see the chat page,
-// nav link, leaderboard CTA, and notification bell. The database enforces the
-// same list via public.can_use_chat() in the global_chat migration — update
-// both together, and clear this list (plus flip can_use_chat to true) to
-// launch for everyone.
-export const CHAT_TESTER_EMAILS = ['kevinabbas@gmail.com']
-
-export function canUseChat(email?: string | null) {
-  return Boolean(email && CHAT_TESTER_EMAILS.includes(email.toLowerCase()))
+// Chat is now live for everyone. Kept as a gate (rather than deleting the
+// call sites) so it can be re-limited quickly if needed: return an allowlist
+// check here and update public.can_use_chat() in the database to match.
+export function canUseChat(_email?: string | null) {
+  return true
 }
