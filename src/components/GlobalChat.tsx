@@ -14,7 +14,21 @@ interface SenderInfo {
 }
 
 const MAX_MESSAGE_LENGTH = 280
-const MENTION_PATTERN = /(@[A-Za-z0-9_]+)/g
+// A mention is either a delimited handle (@[Gern Blanston], for names with
+// spaces or punctuation) or a bare single-token handle (@MDLifterCannon7).
+const MENTION_PATTERN = /(@\[[^\]]+\]|@[A-Za-z0-9_]+)/g
+
+// Handles that aren't a single word/underscore token get wrapped in [ ] so
+// parsing, highlighting, and the notification trigger all know where the
+// handle ends.
+function formatMention(handle: string) {
+  return /^[A-Za-z0-9_]+$/.test(handle) ? `@${handle}` : `@[${handle}]`
+}
+
+// Strip the @ (and any [ ]) from a matched mention token to get the handle.
+function mentionHandle(token: string) {
+  return token.startsWith('@[') ? token.slice(2, -1) : token.slice(1)
+}
 
 export default function GlobalChat({ userId }: GlobalChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([])
@@ -194,10 +208,13 @@ export default function GlobalChat({ userId }: GlobalChatProps) {
     }
   }
 
-  // @mention autocomplete against public handles
+  // @mention autocomplete against public handles. The partial after @ may
+  // contain spaces (handles like "Gern Blanston"); cap the length so we stop
+  // querying once the text is clearly no longer a handle. A completed
+  // @[...] mention won't retrigger because ] is excluded from the partial.
   const updateInput = async (value: string) => {
     setInput(value)
-    const mention = /@([A-Za-z0-9_]*)$/.exec(value)
+    const mention = /@([^@\]]{0,40})$/.exec(value)
     if (!mention) {
       setSuggestions([])
       return
@@ -215,7 +232,7 @@ export default function GlobalChat({ userId }: GlobalChatProps) {
   }
 
   const applySuggestion = (handle: string) => {
-    setInput(prev => prev.replace(/@[A-Za-z0-9_]*$/, `@${handle} `))
+    setInput(prev => prev.replace(/@[^@\]]*$/, `${formatMention(handle)} `))
     setSuggestions([])
     inputRef.current?.focus()
   }
@@ -297,13 +314,14 @@ export default function GlobalChat({ userId }: GlobalChatProps) {
   const renderBody = (body: string) => {
     return body.split(MENTION_PATTERN).map((part, i) => {
       if (!part.startsWith('@')) return part
-      const isMe = myHandle && part.slice(1).toLowerCase() === myHandle.toLowerCase()
+      const handle = mentionHandle(part)
+      const isMe = myHandle && handle.toLowerCase() === myHandle.toLowerCase()
       return (
         <span
           key={i}
           className={isMe ? 'text-liberty-gold font-bold bg-liberty-gold/15 px-0.5' : 'text-liberty-gold'}
         >
-          {part}
+          @{handle}
         </span>
       )
     })
@@ -312,7 +330,9 @@ export default function GlobalChat({ userId }: GlobalChatProps) {
   const mentionSender = (msg: ChatMessage) => {
     const handle = senders[msg.user_id]?.display_name
     if (handle) {
-      updateInput(input.trim() ? `${input.trim()} @${handle} ` : `@${handle} `)
+      const token = formatMention(handle)
+      setInput(prev => (prev.trim() ? `${prev.trim()} ${token} ` : `${token} `))
+      setSuggestions([])
       inputRef.current?.focus()
     }
   }
