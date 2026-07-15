@@ -91,6 +91,13 @@ export interface ChatMessage {
   created_at: string
 }
 
+export interface ChatMessageReaction {
+  id: string
+  message_id: string
+  user_id: string
+  created_at: string
+}
+
 export interface AppNotification {
   id: string
   user_id: string

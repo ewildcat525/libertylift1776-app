@@ -19,6 +19,8 @@ const MENTION_PATTERN = /(@[A-Za-z0-9_]+)/g
 export default function GlobalChat({ userId }: GlobalChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [senders, setSenders] = useState<Record<string, SenderInfo>>({})
+  // messageId -> { count, mine } for 👍 reactions
+  const [reactions, setReactions] = useState<Record<string, { count: number; mine: boolean }>>({})
   const [myHandle, setMyHandle] = useState<string | null>(null)
   const [input, setInput] = useState('')
   const [suggestions, setSuggestions] = useState<{ id: string; display_name: string }[]>([])
@@ -62,6 +64,29 @@ export default function GlobalChat({ userId }: GlobalChatProps) {
     })
   }, [supabase])
 
+  // Load 👍 counts for a batch of messages (initial load only — messages that
+  // arrive later via realtime start with zero reactions).
+  const loadReactions = useCallback(async (messageIds: string[]) => {
+    if (messageIds.length === 0) return
+    const { data } = await supabase
+      .from('chat_message_reactions')
+      .select('message_id, user_id')
+      .in('message_id', messageIds)
+
+    if (!data) return
+    setReactions(prev => {
+      const next = { ...prev }
+      messageIds.forEach(id => { next[id] = { count: 0, mine: false } })
+      data.forEach((r: { message_id: string; user_id: string }) => {
+        const entry = next[r.message_id] || { count: 0, mine: false }
+        entry.count += 1
+        if (r.user_id === userId) entry.mine = true
+        next[r.message_id] = entry
+      })
+      return next
+    })
+  }, [supabase, userId])
+
   useEffect(() => {
     if (!userId) {
       setLoading(false)
@@ -91,6 +116,7 @@ export default function GlobalChat({ userId }: GlobalChatProps) {
       setMessages(ordered)
       setLoading(false)
       resolveMissingSenders(ordered)
+      loadReactions(ordered.map(m => m.id))
     }
 
     loadMessages()
@@ -118,6 +144,32 @@ export default function GlobalChat({ userId }: GlobalChatProps) {
             if (deletedId) {
               setMessages(prev => prev.filter(m => m.id !== deletedId))
             }
+          }
+        )
+        // Reactions from other users (our own are applied optimistically, so
+        // skip them here to avoid double-counting).
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'chat_message_reactions' },
+          (payload) => {
+            const r = payload.new as { message_id: string; user_id: string }
+            if (r.user_id === userId) return
+            setReactions(prev => {
+              const cur = prev[r.message_id] || { count: 0, mine: false }
+              return { ...prev, [r.message_id]: { count: cur.count + 1, mine: cur.mine } }
+            })
+          }
+        )
+        .on(
+          'postgres_changes',
+          { event: 'DELETE', schema: 'public', table: 'chat_message_reactions' },
+          (payload) => {
+            const r = payload.old as { message_id?: string; user_id?: string }
+            if (!r.message_id || r.user_id === userId) return
+            setReactions(prev => {
+              const cur = prev[r.message_id!] || { count: 0, mine: false }
+              return { ...prev, [r.message_id!]: { count: Math.max(0, cur.count - 1), mine: cur.mine } }
+            })
           }
         )
         .subscribe()
@@ -201,6 +253,30 @@ export default function GlobalChat({ userId }: GlobalChatProps) {
   const deleteMessage = async (id: string) => {
     setMessages(prev => prev.filter(m => m.id !== id))
     await supabase.from('chat_messages').delete().eq('id', id)
+  }
+
+  // Toggle our 👍 on a message, optimistically, reverting on error.
+  const toggleReaction = async (messageId: string) => {
+    if (!userId) return
+    const current = reactions[messageId] || { count: 0, mine: false }
+    const optimistic = current.mine
+      ? { count: Math.max(0, current.count - 1), mine: false }
+      : { count: current.count + 1, mine: true }
+    setReactions(prev => ({ ...prev, [messageId]: optimistic }))
+
+    const { error: reactError } = current.mine
+      ? await supabase
+          .from('chat_message_reactions')
+          .delete()
+          .eq('message_id', messageId)
+          .eq('user_id', userId)
+      : await supabase
+          .from('chat_message_reactions')
+          .insert({ message_id: messageId, user_id: userId })
+
+    if (reactError) {
+      setReactions(prev => ({ ...prev, [messageId]: current }))
+    }
   }
 
   const formatTime = (iso: string) => {
@@ -301,6 +377,21 @@ export default function GlobalChat({ userId }: GlobalChatProps) {
                     )}
                   </div>
                   <p className="text-sm text-white/85 break-words whitespace-pre-wrap">{renderBody(msg.body)}</p>
+                  <div className={`flex mt-1 ${isOwn ? 'justify-end' : 'justify-start'}`}>
+                    <button
+                      onClick={() => toggleReaction(msg.id)}
+                      className={`inline-flex items-center gap-1 text-xs px-1.5 py-0.5 border transition-colors ${
+                        reactions[msg.id]?.mine
+                          ? 'border-liberty-gold/50 text-liberty-gold bg-liberty-gold/10'
+                          : 'border-white/10 text-white/40 hover:text-white/80 hover:border-white/25'
+                      }`}
+                      aria-label={reactions[msg.id]?.mine ? 'Remove thumbs up' : 'Thumbs up'}
+                      aria-pressed={Boolean(reactions[msg.id]?.mine)}
+                    >
+                      <span aria-hidden="true">👍</span>
+                      {reactions[msg.id]?.count ? <span>{reactions[msg.id].count}</span> : null}
+                    </button>
+                  </div>
                 </div>
               </div>
             )
