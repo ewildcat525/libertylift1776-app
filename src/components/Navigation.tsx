@@ -43,6 +43,7 @@ export default function Navigation() {
         { href: '/pledge/leaderboard', label: 'Pledges' },
         { href: '/states', label: 'States' },
         { href: '/contests', label: 'Contests' },
+        { href: '/merch', label: 'Merch' },
       ]
     : user
     ? [
@@ -51,6 +52,7 @@ export default function Navigation() {
         { href: '/pledge/leaderboard', label: 'Pledges' },
         { href: '/states', label: 'States' },
         { href: '/contests', label: 'Contests' },
+        { href: '/merch', label: 'Merch' },
       ]
     : [
         { href: '/', label: 'Home' },
@@ -58,6 +60,7 @@ export default function Navigation() {
         { href: '/pledge/leaderboard', label: 'Pledges' },
         { href: '/states', label: 'States' },
         { href: '/contests', label: 'Contests' },
+        { href: '/merch', label: 'Merch' },
       ]
 
   if (showChat) {
