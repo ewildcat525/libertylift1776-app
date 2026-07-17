@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { createClient, Contest, US_STATES, DAILY_PACE } from '@/lib/supabase'
 import Navigation from '@/components/Navigation'
+import ClickableName from '@/components/UserPushupChartModal'
 import Link from 'next/link'
 import {
   LineChart,
@@ -402,12 +403,17 @@ export default function ContestDetailPage() {
                   <div className="flex-1 min-w-0">
                     <div className="font-semibold text-white truncate flex items-center gap-2">
                       <span
-                        className="w-3 h-3 rounded-full"
+                        className="w-3 h-3 rounded-full shrink-0"
                         style={{ backgroundColor: CHART_COLORS[members.findIndex(m => m.user_id === member.user_id) % CHART_COLORS.length] }}
                       />
-                      {member.display_name || 'Anonymous'}
+                      <ClickableName
+                        userId={member.user_id}
+                        displayName={member.display_name}
+                        stateCode={member.state_code}
+                        className="min-w-0 truncate"
+                      />
                       {user && member.user_id === user.id && (
-                        <span className="text-xs text-liberty-gold">(You)</span>
+                        <span className="text-xs text-liberty-gold shrink-0">(You)</span>
                       )}
                     </div>
                     <div className="text-sm text-white/50">

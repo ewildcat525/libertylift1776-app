@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { createClient, LeaderboardEntry, US_STATES } from '@/lib/supabase'
 import CommunityMilestoneBanner from '@/components/CommunityMilestoneBanner'
 import Navigation from '@/components/Navigation'
+import ClickableName from '@/components/UserPushupChartModal'
 import Link from 'next/link'
 import { canUseChat } from '@/lib/flags'
 
@@ -111,7 +112,12 @@ export default function LeaderboardPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="font-semibold text-white truncate">
-                      {entry.display_name || 'Anonymous'}
+                      <ClickableName
+                        userId={entry.id}
+                        displayName={entry.display_name}
+                        stateCode={entry.state_code}
+                        className="max-w-full truncate"
+                      />
                     </div>
                     <div className="text-sm text-white/50">
                       {entry.state_code ? US_STATES[entry.state_code] : 'No state'}

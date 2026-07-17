@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase'
 import Navigation from '@/components/Navigation'
+import ClickableName from '@/components/UserPushupChartModal'
 import Link from 'next/link'
 
 interface PledgeLeaderEntry {
@@ -125,7 +126,12 @@ export default function PledgeLeaderboardPage() {
                     {/* User info */}
                     <div className="flex-1 min-w-0">
                       <div className="font-semibold text-white truncate">
-                        {entry.display_name}
+                        <ClickableName
+                          userId={entry.user_id}
+                          displayName={entry.display_name}
+                          stateCode={entry.state_code}
+                          className="max-w-full truncate"
+                        />
                       </div>
                       <div className="text-sm text-white/50 flex items-center gap-2">
                         <span>{charityInfo.logo} {charityInfo.shortName}</span>
