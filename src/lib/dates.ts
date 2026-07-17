@@ -44,3 +44,28 @@ export function catchUpPace(date: Date = new Date()): number | null {
 export function easternNow(): Date {
   return new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }))
 }
+
+// The live current streak, expiring a stored value the moment it goes stale.
+//
+// user_stats.current_streak is only rewritten when a log is inserted or
+// deleted, so a user who stops logging keeps showing their last streak
+// forever — the board reads "16 day streak" days after they quit. A streak
+// is only alive while its last logged day is yesterday or today (US Eastern),
+// matching compute_streaks() in the DB; today gets a grace day because it may
+// not be logged yet. Once yesterday is missed the streak is broken, so it
+// reads 0 rather than the frozen last value. Callers that read user_stats
+// (or any raw current_streak + last_log_date) must pass it through here; the
+// leaderboard view applies the same rule in SQL for the public boards.
+export function liveStreak(
+  currentStreak: number | null | undefined,
+  lastLogDate: string | null | undefined,
+): number {
+  const streak = currentStreak ?? 0
+  if (streak <= 0 || !lastLogDate) return 0
+  const today = easternNow()
+  const yesterday = localDateString(
+    new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1),
+  )
+  // last_log_date is a 'YYYY-MM-DD' date, so lexical >= is chronological >=.
+  return lastLogDate >= yesterday ? streak : 0
+}
