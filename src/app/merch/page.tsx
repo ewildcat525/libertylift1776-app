@@ -98,8 +98,7 @@ export default function MerchPage() {
             <p className="text-white/50 text-sm">
               That leaves {formatUsd(merchTotal - merchCost)} on a {formatUsd(merchTotal)} shirt —
               this isn&apos;t a fundraiser, it&apos;s a trophy at cost. Shipping is included in the
-              price. No hidden fees, no surprise add-ons, no tip screen. Sales tax is added at
-              checkout only if your state requires it.
+              price. The {formatUsd(merchTotal)} is the whole number — nothing added at checkout.
             </p>
           </div>
 
