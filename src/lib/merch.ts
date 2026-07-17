@@ -26,7 +26,7 @@ export const merchConfig = {
   // total MUST match what Stripe actually charges (shipping included — do not
   // add a separate shipping rate on the payment link).
   pricing: {
-    total: 42.5,
+    total: 44,
     breakdown: [
       {
         label: 'Shirt + screen printing',
@@ -37,6 +37,11 @@ export const merchConfig = {
         label: 'Shipping to your door',
         note: 'USPS, anywhere in the US',
         amount: 5,
+      },
+      {
+        label: 'Payment processing',
+        note: 'Card / Apple Pay processing fees',
+        amount: 1.58,
       },
     ],
   },
