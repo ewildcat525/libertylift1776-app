@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { track } from '@vercel/analytics'
 import Navigation from '@/components/Navigation'
+import ClickableName from '@/components/UserPushupChartModal'
 import { createClient, isValidStateCode, LeaderboardEntry, US_STATES } from '@/lib/supabase'
 
 interface StateStats {
@@ -188,7 +189,12 @@ export default function StateBoardClient() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="font-semibold text-white truncate">
-                      {entry.display_name || 'Anonymous'}
+                      <ClickableName
+                        userId={entry.id}
+                        displayName={entry.display_name}
+                        stateCode={entry.state_code}
+                        className="max-w-full truncate"
+                      />
                     </div>
                     <div className="text-sm text-white/50">
                       {entry.current_streak > 0 ? `${entry.current_streak} day streak` : stateName}
