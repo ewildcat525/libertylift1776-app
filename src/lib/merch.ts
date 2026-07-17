@@ -17,17 +17,28 @@ export const merchConfig = {
       'Front: full-size "Reps for the Republic" print — 2-color screen print (black + Old Glory red)',
       'Back: LL 1776 vertical spine print',
       'Screen printed, not direct-to-garment — inks are laid on thick and hold up to washing',
-      'White heavyweight cotton tee, unisex fit',
+      'White Bayside heavyweight cotton tee, unisex fit',
     ],
     sizes: ['S', 'M', 'L', 'XL', '2XL'],
   },
 
-  // The transparent cost breakdown. These MUST match what Stripe actually
-  // charges — if you change the price or shipping in Stripe, change it here.
+  // The all-in price and the Everlane-style cost breakdown shown on the page.
+  // total MUST match what Stripe actually charges (shipping included — do not
+  // add a separate shipping rate on the payment link).
   pricing: {
-    shirt: 30,
-    shipping: 5,
-    shippingLabel: 'Flat-rate US shipping',
+    total: 42.5,
+    breakdown: [
+      {
+        label: 'Shirt + screen printing',
+        note: 'Bayside tee, printed locally by Needle and Mesh',
+        amount: 37.16,
+      },
+      {
+        label: 'Shipping to your door',
+        note: 'USPS, anywhere in the US',
+        amount: 5,
+      },
+    ],
   },
 
   // Buying is locked until the user finishes the challenge.
@@ -42,7 +53,12 @@ export const merchConfig = {
   },
 } as const
 
-export const merchTotal = merchConfig.pricing.shirt + merchConfig.pricing.shipping
+export const merchTotal = merchConfig.pricing.total
+
+export const merchCost = merchConfig.pricing.breakdown.reduce(
+  (sum, item) => sum + item.amount,
+  0
+)
 
 export function formatUsd(amount: number): string {
   return `$${amount.toFixed(2).replace(/\.00$/, '')}`

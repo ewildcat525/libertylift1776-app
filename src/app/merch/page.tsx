@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import Image from 'next/image'
 import Navigation from '@/components/Navigation'
 import MerchBuy from '@/components/MerchBuy'
-import { merchConfig, merchTotal, formatUsd } from '@/lib/merch'
+import { merchConfig, merchTotal, merchCost, formatUsd } from '@/lib/merch'
 
 export const metadata: Metadata = {
   title: 'Merch — Liberty Lift 1776',
@@ -68,28 +68,38 @@ export default function MerchPage() {
             </figure>
           </div>
 
-          {/* The transparent price breakdown — the centerpiece of the page */}
+          {/* Everlane-style radical transparency: what it costs us vs. what you pay */}
           <div className="card p-6 mb-6">
-            <h2 className="font-bebas text-2xl text-liberty-red mb-4">
-              The price, all of it
+            <h2 className="font-bebas text-2xl text-liberty-red mb-1">
+              Where your {formatUsd(merchTotal)} goes
             </h2>
+            <p className="text-white/50 text-sm mb-4">
+              We believe you should know exactly what this shirt costs to make.
+            </p>
             <dl className="text-white/80">
-              <div className="flex justify-between py-2 border-b border-white/10">
-                <dt>Shirt</dt>
-                <dd className="font-bold">{formatUsd(pricing.shirt)}</dd>
-              </div>
-              <div className="flex justify-between py-2 border-b border-white/10">
-                <dt>{pricing.shippingLabel}</dt>
-                <dd className="font-bold">{formatUsd(pricing.shipping)}</dd>
+              {pricing.breakdown.map((item) => (
+                <div key={item.label} className="flex justify-between gap-4 py-2 border-b border-white/10">
+                  <dt>
+                    {item.label}
+                    <span className="block text-white/40 text-xs">{item.note}</span>
+                  </dt>
+                  <dd className="font-bold">{formatUsd(item.amount)}</dd>
+                </div>
+              ))}
+              <div className="flex justify-between py-2 border-b border-white/10 text-white/60">
+                <dt>Our cost</dt>
+                <dd>{formatUsd(merchCost)}</dd>
               </div>
               <div className="flex justify-between py-3 text-white">
-                <dt className="font-bebas text-xl tracking-wide">Total at checkout</dt>
+                <dt className="font-bebas text-xl tracking-wide">You pay, all-in</dt>
                 <dd className="font-bebas text-xl text-liberty-gold">{formatUsd(merchTotal)}</dd>
               </div>
             </dl>
             <p className="text-white/50 text-sm">
-              That&apos;s the whole number. No hidden fees, no surprise add-ons, no tip screen.
-              Sales tax is added at checkout only if your state requires it.
+              That leaves {formatUsd(merchTotal - merchCost)} on a {formatUsd(merchTotal)} shirt —
+              this isn&apos;t a fundraiser, it&apos;s a trophy at cost. Shipping is included in the
+              price. No hidden fees, no surprise add-ons, no tip screen. Sales tax is added at
+              checkout only if your state requires it.
             </p>
           </div>
 
@@ -123,15 +133,12 @@ export default function MerchPage() {
                 <span className="text-liberty-gold font-bold">{fulfillment.preorderNote}</span>
               </li>
               <li>{fulfillment.shipsFrom}</li>
-              {fulfillment.usOnly && <li>US shipping only (for now)</li>}
+              {fulfillment.usOnly && <li>US shipping only</li>}
               <li>
                 Ordering unlocks once you&apos;ve logged all {goal} push-ups — this shirt is
                 proof of work, not just merch.
               </li>
-              <li>
-                Checkout is handled by Stripe — we never see your card. On your phone it&apos;s
-                two taps with Apple Pay or Google Pay.
-              </li>
+              <li>On your phone it&apos;s two taps with Apple Pay or Google Pay.</li>
             </ul>
           </div>
 

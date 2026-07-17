@@ -55,7 +55,7 @@ export default function MerchBuy() {
               {formatUsd(merchTotal)}
             </div>
             <div className="text-white/50 text-[10px] uppercase tracking-[0.12em] font-bold">
-              shirt + shipping, all-in
+              all-in, shipping included
             </div>
           </div>
           <StickyAction gate={gate} />
@@ -140,7 +140,7 @@ function GateBody({ gate }: { gate: GateState }) {
       </p>
       <BuyButton className="px-10 py-4 text-lg" />
       <p className="text-white/50 text-xs uppercase tracking-[0.12em] font-bold mt-3">
-        Apple Pay &middot; Google Pay &middot; Card — secure checkout by Stripe
+        Apple Pay &middot; Google Pay &middot; Card
       </p>
     </>
   )
