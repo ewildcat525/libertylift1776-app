@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { track } from '@vercel/analytics'
 import { createClient, UserStats, Profile, AMERICAN_FACTS, DAILY_PACE, isValidStateCode } from '@/lib/supabase'
 import { clearPendingSignup, generateDisplayName, readPendingSignup } from '@/lib/onboarding'
-import { localDateString } from '@/lib/dates'
+import { localDateString, liveStreak } from '@/lib/dates'
 import { clearReferral } from '@/lib/referral'
 import BadgeCase from '@/components/BadgeCase'
 import CommunityMilestoneBanner from '@/components/CommunityMilestoneBanner'
@@ -695,7 +695,7 @@ export default function DashboardPage() {
                   <ShareProgress
                     handle={profile.display_name}
                     totalPushups={stats?.total_pushups || 0}
-                    currentStreak={stats?.current_streak || 0}
+                    currentStreak={liveStreak(stats?.current_streak, stats?.last_log_date)}
                     stateCode={profile.state_code}
                     context="log_success"
                   />
@@ -719,7 +719,7 @@ export default function DashboardPage() {
                   <ShareProgress
                     handle={profile.display_name}
                     totalPushups={stats?.total_pushups || 0}
-                    currentStreak={stats?.current_streak || 0}
+                    currentStreak={liveStreak(stats?.current_streak, stats?.last_log_date)}
                     stateCode={profile.state_code}
                     context="milestone"
                     className="mt-3"
@@ -776,7 +776,7 @@ export default function DashboardPage() {
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <div className="text-center p-4 bg-white/[0.04] border border-liberty-red/30">
                 <div className="font-bebas text-3xl text-liberty-red">
-                  {stats?.current_streak || 0}
+                  {liveStreak(stats?.current_streak, stats?.last_log_date)}
                 </div>
                 <div className="text-xs text-white/50 uppercase">Day Streak</div>
               </div>
@@ -821,7 +821,7 @@ export default function DashboardPage() {
               <ShareProgress
                 handle={profile.display_name}
                 totalPushups={stats?.total_pushups || 0}
-                currentStreak={stats?.current_streak || 0}
+                currentStreak={liveStreak(stats?.current_streak, stats?.last_log_date)}
                 stateCode={profile.state_code}
                 context="dashboard"
                 showInviteLink

@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { buildLaunchEmail, buildReminderEmail, sendEmailBatch } from '@/lib/email'
+import { liveStreak } from '@/lib/dates'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -103,7 +104,7 @@ export async function GET(request: NextRequest) {
       const { dayStart, dayEnd } = challengeDayBounds(today)
 
       const [{ data: stats }, { data: todayLogs }, { data: pledges }] = await Promise.all([
-        supabase.from('user_stats').select('user_id, total_pushups, current_streak').in('user_id', ids),
+        supabase.from('user_stats').select('user_id, total_pushups, current_streak, last_log_date').in('user_id', ids),
         supabase
           .from('pushup_logs')
           .select('user_id')
@@ -128,7 +129,7 @@ export async function GET(request: NextRequest) {
               profileId: p.id,
               displayName: p.display_name,
               totalPushups: s?.total_pushups || 0,
-              currentStreak: s?.current_streak || 0,
+              currentStreak: liveStreak(s?.current_streak, s?.last_log_date),
               dayOfJuly,
               hasPledge: pledgedUsers.has(p.id),
             }),

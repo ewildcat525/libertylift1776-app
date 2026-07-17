@@ -6,6 +6,7 @@ import { createClient, Contest, US_STATES, DAILY_PACE } from '@/lib/supabase'
 import Navigation from '@/components/Navigation'
 import ClickableName from '@/components/UserPushupChartModal'
 import Link from 'next/link'
+import { liveStreak } from '@/lib/dates'
 import {
   LineChart,
   Line,
@@ -96,7 +97,7 @@ export default function ContestDetailPage() {
 
         const { data: stats } = await supabase
           .from('user_stats')
-          .select('user_id, total_pushups, current_streak, best_day')
+          .select('user_id, total_pushups, current_streak, best_day, last_log_date')
           .in('user_id', userIds)
 
         // Get daily pushup logs for chart (July 2026 only)
@@ -116,7 +117,7 @@ export default function ContestDetailPage() {
             display_name: profile?.display_name || null,
             state_code: profile?.state_code || null,
             total_pushups: stat?.total_pushups || 0,
-            current_streak: stat?.current_streak || 0,
+            current_streak: liveStreak(stat?.current_streak, stat?.last_log_date),
             best_day: stat?.best_day || 0,
             joined_at: p.joined_at,
           }
