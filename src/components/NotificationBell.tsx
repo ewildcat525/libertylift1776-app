@@ -170,12 +170,22 @@ export default function NotificationBell({ userId }: NotificationBellProps) {
                   onClick={() => setOpen(false)}
                   className="block px-4 py-3 hover:bg-white/5 transition-colors"
                 >
-                  <p className="text-sm text-white/80">
-                    <span className="font-bold text-liberty-gold">
-                      @{actorNames[n.actor_id] || 'A patriot'}
-                    </span>{' '}
-                    called you out
-                  </p>
+                  {n.type === 'everyone' ? (
+                    <p className="text-sm text-white/80">
+                      📢{' '}
+                      <span className="font-bold text-liberty-red">
+                        @{actorNames[n.actor_id] || 'A patriot'}
+                      </span>{' '}
+                      summoned all patriots
+                    </p>
+                  ) : (
+                    <p className="text-sm text-white/80">
+                      <span className="font-bold text-liberty-gold">
+                        @{actorNames[n.actor_id] || 'A patriot'}
+                      </span>{' '}
+                      called you out
+                    </p>
+                  )}
                   {n.body && (
                     <p className="text-xs text-white/50 truncate mt-0.5">{n.body}</p>
                   )}

@@ -3,13 +3,14 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
-import { canUseChat } from '@/lib/flags'
+import { canUseChat, canBroadcastEveryone } from '@/lib/flags'
 import GlobalChat from '@/components/GlobalChat'
 import Navigation from '@/components/Navigation'
 
 export default function ChatPage() {
   const router = useRouter()
   const [userId, setUserId] = useState<string | null>(null)
+  const [canBroadcast, setCanBroadcast] = useState(false)
   const [allowed, setAllowed] = useState(false)
 
   useEffect(() => {
@@ -20,6 +21,7 @@ export default function ChatPage() {
         return
       }
       setUserId(user?.id ?? null)
+      setCanBroadcast(canBroadcastEveryone(user?.email))
       setAllowed(true)
     })
   }, [router])
@@ -47,7 +49,7 @@ export default function ChatPage() {
             One feed, all fifty states. Use @ to mention someone — they&apos;ll get a notification.
           </p>
 
-          <GlobalChat userId={userId} />
+          <GlobalChat userId={userId} canBroadcast={canBroadcast} />
         </div>
       </div>
     </>
