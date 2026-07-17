@@ -1,9 +1,12 @@
 // Single source of truth for the merch page. Every price and claim shown on
 // /merch comes from here — update this file, not the page markup.
 
+import { CHALLENGE_TOTAL } from './dates'
+
 export const merchConfig = {
   // Paste the live Stripe Payment Link here (https://buy.stripe.com/...).
-  // While this is empty the buy button renders as a disabled "Coming soon".
+  // While this is empty the buy button renders as a disabled "Coming soon"
+  // even for people who have unlocked it.
   stripePaymentLink: '' as string,
 
   product: {
@@ -27,8 +30,13 @@ export const merchConfig = {
     shippingLabel: 'Flat-rate US shipping',
   },
 
+  // Buying is locked until the user finishes the challenge.
+  unlock: {
+    threshold: CHALLENGE_TOTAL,
+  },
+
   fulfillment: {
-    shipsWithin: 'Ships within 5–7 business days',
+    preorderNote: 'Orders are open now — all shirts ship in August.',
     shipsFrom: 'Printed and shipped from the USA',
     usOnly: true,
   },

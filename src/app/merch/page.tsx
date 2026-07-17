@@ -1,48 +1,23 @@
 import type { Metadata } from 'next'
 import Image from 'next/image'
 import Navigation from '@/components/Navigation'
+import MerchBuy from '@/components/MerchBuy'
 import { merchConfig, merchTotal, formatUsd } from '@/lib/merch'
 
 export const metadata: Metadata = {
   title: 'Merch — Liberty Lift 1776',
   description:
-    'The Reps for the Republic tee. Two-sided screen print, transparent pricing — the total you see is the total you pay.',
+    'The Reps for the Republic tee. You can\'t buy it — you unlock it by finishing all 1,776 push-ups. Transparent pricing, ships in August.',
   openGraph: {
     title: 'Reps for the Republic Tee — Liberty Lift 1776',
-    description: 'Two-sided screen print. Transparent pricing, Apple Pay checkout.',
+    description: 'Earned, not given: finish 1,776 push-ups to unlock it. Ships in August.',
     images: [{ url: '/merch/reps-tee-both.jpg', width: 1402, height: 1122 }],
   },
 }
 
-function BuyButton({ className = '' }: { className?: string }) {
-  const { stripePaymentLink } = merchConfig
-  if (!stripePaymentLink) {
-    return (
-      <span
-        className={`btn-primary opacity-40 cursor-not-allowed select-none ${className}`}
-        aria-disabled="true"
-      >
-        Coming soon
-      </span>
-    )
-  }
-  return (
-    <a href={stripePaymentLink} className={`btn-primary ${className}`}>
-      Buy — {formatUsd(merchTotal)} all-in
-    </a>
-  )
-}
-
-function PaymentMethods() {
-  return (
-    <p className="text-white/50 text-xs uppercase tracking-[0.12em] font-bold">
-      Apple Pay &middot; Google Pay &middot; Card — secure checkout by Stripe
-    </p>
-  )
-}
-
 export default function MerchPage() {
-  const { product, pricing, fulfillment } = merchConfig
+  const { product, pricing, fulfillment, unlock } = merchConfig
+  const goal = unlock.threshold.toLocaleString()
 
   return (
     <>
@@ -53,6 +28,14 @@ export default function MerchPage() {
             <div className="app-eyebrow mb-3">Merch</div>
             <h1 className="app-title text-5xl sm:text-7xl">{product.name}</h1>
             <p className="text-white/60 mt-3">{product.tagline}</p>
+            <div className="flex flex-wrap gap-2 mt-4">
+              <span className="text-[10px] font-extrabold uppercase tracking-[0.1em] px-2 py-1 bg-liberty-red/15 text-liberty-red border border-liberty-red/40 leading-none">
+                Unlocks at {goal} push-ups
+              </span>
+              <span className="text-[10px] font-extrabold uppercase tracking-[0.1em] px-2 py-1 bg-liberty-gold/15 text-liberty-gold border border-liberty-gold/40 leading-none">
+                Pre-order &middot; ships in August
+              </span>
+            </div>
           </div>
 
           {/* Product photos */}
@@ -136,9 +119,15 @@ export default function MerchPage() {
               Shipping &amp; checkout
             </h2>
             <ul className="text-white/70 text-sm space-y-2">
-              <li>{fulfillment.shipsWithin}</li>
+              <li>
+                <span className="text-liberty-gold font-bold">{fulfillment.preorderNote}</span>
+              </li>
               <li>{fulfillment.shipsFrom}</li>
               {fulfillment.usOnly && <li>US shipping only (for now)</li>}
+              <li>
+                Ordering unlocks once you&apos;ve logged all {goal} push-ups — this shirt is
+                proof of work, not just merch.
+              </li>
               <li>
                 Checkout is handled by Stripe — we never see your card. On your phone it&apos;s
                 two taps with Apple Pay or Google Pay.
@@ -146,28 +135,8 @@ export default function MerchPage() {
             </ul>
           </div>
 
-          {/* Desktop / in-flow CTA */}
-          <div className="text-center hidden sm:block">
-            <BuyButton className="px-10 py-4 text-lg" />
-            <div className="mt-3">
-              <PaymentMethods />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Sticky mobile buy bar: price always visible, one thumb tap to buy */}
-      <div className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-liberty-dark/95 backdrop-blur border-t border-white/15 px-4 py-3">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <div className="font-bebas text-2xl text-white leading-none">
-              {formatUsd(merchTotal)}
-            </div>
-            <div className="text-white/50 text-[10px] uppercase tracking-[0.12em] font-bold">
-              shirt + shipping, all-in
-            </div>
-          </div>
-          <BuyButton className="flex-1 max-w-[220px] py-3" />
+          {/* Buy gate: in-flow CTA + sticky mobile bar */}
+          <MerchBuy />
         </div>
       </div>
     </>
