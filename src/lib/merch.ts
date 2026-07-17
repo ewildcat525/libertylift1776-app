@@ -7,7 +7,7 @@ export const merchConfig = {
   // Paste the live Stripe Payment Link here (https://buy.stripe.com/...).
   // While this is empty the buy button renders as a disabled "Coming soon"
   // even for people who have unlocked it.
-  stripePaymentLink: '' as string,
+  stripePaymentLink: 'https://buy.stripe.com/00waER0kX0pBfNR1qY67S00' as string,
 
   product: {
     name: 'Reps for the Republic Tee',
