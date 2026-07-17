@@ -17,7 +17,7 @@ export const merchConfig = {
       'Front: full-size "Reps for the Republic" print — 2-color screen print (black + Old Glory red)',
       'Back: LL 1776 vertical spine print',
       'Screen printed, not direct-to-garment — inks are laid on thick and hold up to washing',
-      'White Bayside heavyweight cotton tee, unisex fit',
+      'Made in USA heavyweight cotton tee, printed in the US, unisex fit',
     ],
     sizes: ['S', 'M', 'L', 'XL', '2XL'],
   },
@@ -30,7 +30,7 @@ export const merchConfig = {
     breakdown: [
       {
         label: 'Shirt + screen printing',
-        note: 'Bayside tee, printed locally by Needle and Mesh',
+        note: 'Made in USA tee, printed in the US',
         amount: 37.16,
       },
       {
