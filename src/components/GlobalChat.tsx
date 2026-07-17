@@ -6,6 +6,9 @@ import { createClient, ChatMessage } from '@/lib/supabase'
 
 interface GlobalChatProps {
   userId: string | null
+  // When true, this user may summon @everyone (a chat-wide broadcast that
+  // notifies every participant). Gated in the DB too; this only unlocks the UI.
+  canBroadcast?: boolean
 }
 
 interface SenderInfo {
@@ -14,6 +17,9 @@ interface SenderInfo {
 }
 
 const MAX_MESSAGE_LENGTH = 280
+// Sentinel id for the synthetic "everyone" autocomplete entry (it isn't a real
+// profile row).
+const EVERYONE_SUGGESTION_ID = '__everyone__'
 // A mention is either a delimited handle (@[Gern Blanston], for names with
 // spaces or punctuation) or a bare single-token handle (@MDLifterCannon7).
 const MENTION_PATTERN = /(@\[[^\]]+\]|@[A-Za-z0-9_]+)/g
@@ -30,7 +36,7 @@ function mentionHandle(token: string) {
   return token.startsWith('@[') ? token.slice(2, -1) : token.slice(1)
 }
 
-export default function GlobalChat({ userId }: GlobalChatProps) {
+export default function GlobalChat({ userId, canBroadcast = false }: GlobalChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [senders, setSenders] = useState<Record<string, SenderInfo>>({})
   // messageId -> { count, mine } for 👍 reactions
@@ -220,15 +226,28 @@ export default function GlobalChat({ userId }: GlobalChatProps) {
       return
     }
 
+    const partial = mention[1]
+
     const { data } = await supabase
       .from('public_profiles')
       .select('id, display_name')
-      .ilike('display_name', `${mention[1]}%`)
+      .ilike('display_name', `${partial}%`)
       .not('display_name', 'is', null)
       .neq('id', userId)
       .limit(5)
 
-    setSuggestions((data || []).filter((p: { display_name: string | null }) => p.display_name) as { id: string; display_name: string }[])
+    const people = (data || []).filter(
+      (p: { display_name: string | null }) => p.display_name
+    ) as { id: string; display_name: string }[]
+
+    // Offer the @everyone broadcast to authorized users when their partial
+    // still prefixes "everyone" (so "@ev" surfaces it, "@zz" doesn't).
+    const everyone =
+      canBroadcast && 'everyone'.startsWith(partial.toLowerCase())
+        ? [{ id: EVERYONE_SUGGESTION_ID, display_name: 'everyone' }]
+        : []
+
+    setSuggestions([...everyone, ...people])
   }
 
   const applySuggestion = (handle: string) => {
@@ -315,6 +334,15 @@ export default function GlobalChat({ userId }: GlobalChatProps) {
     return body.split(MENTION_PATTERN).map((part, i) => {
       if (!part.startsWith('@')) return part
       const handle = mentionHandle(part)
+      // @everyone is a broadcast; give it its own rally-cry styling for all
+      // readers, not just the person mentioned.
+      if (handle.toLowerCase() === 'everyone') {
+        return (
+          <span key={i} className="text-liberty-red font-bold bg-liberty-red/15 px-0.5">
+            @everyone
+          </span>
+        )
+      }
       const isMe = myHandle && handle.toLowerCase() === myHandle.toLowerCase()
       return (
         <span
@@ -422,15 +450,25 @@ export default function GlobalChat({ userId }: GlobalChatProps) {
       <div className="relative">
         {suggestions.length > 0 && (
           <div className="absolute bottom-full left-0 right-0 mb-1 bg-liberty-dark border border-white/20 divide-y divide-white/10 z-10">
-            {suggestions.map((s) => (
-              <button
-                key={s.id}
-                onClick={() => applySuggestion(s.display_name)}
-                className="block w-full text-left px-3 py-2 text-sm text-white/80 hover:bg-white/10 transition-colors"
-              >
-                @{s.display_name}
-              </button>
-            ))}
+            {suggestions.map((s) =>
+              s.id === EVERYONE_SUGGESTION_ID ? (
+                <button
+                  key={s.id}
+                  onClick={() => applySuggestion(s.display_name)}
+                  className="block w-full text-left px-3 py-2 text-sm text-liberty-red font-bold hover:bg-white/10 transition-colors"
+                >
+                  📢 @everyone <span className="font-normal text-white/40">— notify all patriots</span>
+                </button>
+              ) : (
+                <button
+                  key={s.id}
+                  onClick={() => applySuggestion(s.display_name)}
+                  className="block w-full text-left px-3 py-2 text-sm text-white/80 hover:bg-white/10 transition-colors"
+                >
+                  @{s.display_name}
+                </button>
+              )
+            )}
           </div>
         )}
         <form
