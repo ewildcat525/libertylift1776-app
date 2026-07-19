@@ -20,9 +20,17 @@ const MAX_MESSAGE_LENGTH = 280
 // Sentinel id for the synthetic "everyone" autocomplete entry (it isn't a real
 // profile row).
 const EVERYONE_SUGGESTION_ID = '__everyone__'
-// A mention is either a delimited handle (@[Gern Blanston], for names with
-// spaces or punctuation) or a bare single-token handle (@MDLifterCannon7).
-const MENTION_PATTERN = /(@\[[^\]]+\]|@[A-Za-z0-9_]+)/g
+// A body token is either a mention or a URL. A mention is a delimited handle
+// (@[Gern Blanston], for names with spaces or punctuation) or a bare
+// single-token handle (@MDLifterCannon7). A URL is an http(s) link or a bare
+// www. host. The capture group keeps the tokens when splitting the body.
+const BODY_TOKEN_PATTERN =
+  /(@\[[^\]]+\]|@[A-Za-z0-9_]+|https?:\/\/[^\s]+|www\.[^\s]+)/g
+
+// Trailing punctuation that usually belongs to the surrounding sentence rather
+// than the URL (e.g. "check https://x.com." or "(https://x.com)"). We peel it
+// off the link and render it as plain text.
+const TRAILING_URL_PUNCTUATION = /[.,!?;:'")\]}]+$/
 
 // Handles that aren't a single word/underscore token get wrapped in [ ] so
 // parsing, highlighting, and the notification trigger all know where the
@@ -331,7 +339,27 @@ export default function GlobalChat({ userId, canBroadcast = false }: GlobalChatP
   }
 
   const renderBody = (body: string) => {
-    return body.split(MENTION_PATTERN).map((part, i) => {
+    return body.split(BODY_TOKEN_PATTERN).map((part, i) => {
+      // Links: http(s):// tokens link as-is; bare www. hosts get https://.
+      if (part.startsWith('http') || part.startsWith('www.')) {
+        // Peel trailing sentence punctuation off the link so it isn't clickable.
+        const trailing = TRAILING_URL_PUNCTUATION.exec(part)?.[0] ?? ''
+        const url = trailing ? part.slice(0, -trailing.length) : part
+        const href = url.startsWith('www.') ? `https://${url}` : url
+        return (
+          <span key={i}>
+            <a
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer nofollow"
+              className="text-liberty-gold underline underline-offset-2 hover:text-liberty-gold/80 break-all"
+            >
+              {url}
+            </a>
+            {trailing}
+          </span>
+        )
+      }
       if (!part.startsWith('@')) return part
       const handle = mentionHandle(part)
       // @everyone is a broadcast; give it its own rally-cry styling for all
