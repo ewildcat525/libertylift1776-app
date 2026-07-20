@@ -6,6 +6,7 @@ import { createClient, CommunityMilestone, CommunityProgress, US_STATES } from '
 import Fireworks from './Fireworks'
 import IwoJimaFlagRaising from './IwoJimaFlagRaising'
 import MoonLanding from './MoonLanding'
+import ArtemisEarthset from './ArtemisEarthset'
 
 // Badge granted to whoever presses each milestone rep (see the
 // community_milestones migration). Used for the hero's congratulations copy.
@@ -14,6 +15,7 @@ const MILESTONE_BADGES: Record<number, string> = {
   100000: 'Grand Union',
   177600: 'Flag Raiser',
   239000: 'The Eagle Has Landed',
+  252757: 'Farther Than Artemis II',
 }
 
 // 1,776 × 100 — the summit. This one gets the Iwo Jima flag raising
@@ -22,6 +24,11 @@ const SUMMIT_THRESHOLD = 177600
 
 // One push-up per mile to the moon. Gets the lunar flag plant.
 const MOON_THRESHOLD = 239000
+
+// One mile farther than the Artemis II crew flew from Earth (252,756 mi,
+// April 2026) — the rep that carries America past the farthest any human has
+// ever traveled. Gets the Orion "Earthset" scene with record-breaking copy.
+const ARTEMIS_THRESHOLD = 252757
 
 interface CommunityMilestoneBannerProps {
   // Current user, so the patriot who rang the bell gets the hero treatment.
@@ -79,6 +86,7 @@ export default function CommunityMilestoneBanner({
   const isHero = Boolean(userId && latestHit && latestHit.hit_by === userId)
   const isSummit = latestHit?.threshold === SUMMIT_THRESHOLD
   const isMoon = latestHit?.threshold === MOON_THRESHOLD
+  const isArtemis = latestHit?.threshold === ARTEMIS_THRESHOLD
 
   const milestoneLabel = latestHit ? latestHit.threshold.toLocaleString() : ''
   const heroName = latestHit?.hit_by_name || 'A patriot'
@@ -88,7 +96,11 @@ export default function CommunityMilestoneBanner({
     : null
 
   const shareText = latestHit
-    ? isMoon
+    ? isArtemis
+      ? isHero
+        ? `I pressed America's ${milestoneLabel}th push-up — one mile farther than Artemis II flew, past the farthest any human has ever traveled — in the Liberty Lift 1776 challenge. 🌘🇺🇸 Every rep counts:`
+        : `America pushed past Artemis II to ${milestoneLabel} push-ups in the Liberty Lift 1776 challenge — one mile farther than any human has ever traveled, and some of them were mine. 🌘🇺🇸 Join us:`
+      : isMoon
       ? isHero
         ? `I pressed America's ${milestoneLabel}th push-up — one for every mile to the moon — and planted the flag in the Liberty Lift 1776 challenge. 🌕🇺🇸 Every rep counts:`
         : `America pressed its way to the moon — ${milestoneLabel} push-ups, one per mile — in the Liberty Lift 1776 challenge, and some of them were mine. 🌕🇺🇸 Join us:`
@@ -158,6 +170,19 @@ export default function CommunityMilestoneBanner({
                   subtitle: 'The flag is up. Raised together, rep by rep.',
                 })}
           />
+        ) : celebrating.threshold === ARTEMIS_THRESHOLD ? (
+          <ArtemisEarthset
+            onDone={() => setCelebrating(null)}
+            {...(userId && celebrating.hit_by === userId
+              ? {
+                  title: '🌘 YOU BROKE THE RECORD 🌘',
+                  subtitle: `America's ${celebrating.threshold.toLocaleString()}th push-up was yours`,
+                }
+              : {
+                  title: `🌘 ${celebrating.threshold.toLocaleString()} STRONG 🌘`,
+                  subtitle: 'Farther than any human has ever traveled',
+                })}
+          />
         ) : (
           <Fireworks
             onDone={() => setCelebrating(null)}
@@ -206,11 +231,13 @@ export default function CommunityMilestoneBanner({
             {isHero ? (
               <>
                 <div className="font-bebas text-3xl sm:text-4xl text-liberty-gold">
-                  {isMoon
-                    ? '🌕 YOU PLANTED THE FLAG ON THE MOON'
-                    : isSummit
-                      ? '🇺🇸 YOU RAISED THE FLAG'
-                      : '🔔 YOU RANG THE BELL'}
+                  {isArtemis
+                    ? '🌘 YOU BROKE THE RECORD'
+                    : isMoon
+                      ? '🌕 YOU PLANTED THE FLAG ON THE MOON'
+                      : isSummit
+                        ? '🇺🇸 YOU RAISED THE FLAG'
+                        : '🔔 YOU RANG THE BELL'}
                 </div>
                 <p className="text-white/80 mt-2">
                   America&apos;s {milestoneLabel}th push-up was yours, {heroName}. The
@@ -221,10 +248,20 @@ export default function CommunityMilestoneBanner({
             ) : (
               <>
                 <div className="font-bebas text-3xl sm:text-4xl text-liberty-gold">
-                  {isMoon ? '🌕' : isSummit ? '🇺🇸' : '🔔'} {milestoneLabel} STRONG
+                  {isArtemis ? '🌘' : isMoon ? '🌕' : isSummit ? '🇺🇸' : '🔔'} {milestoneLabel} STRONG
                 </div>
                 <p className="text-white/80 mt-2">
-                  {isMoon ? (
+                  {isArtemis ? (
+                    <>
+                      {hitDate ? `On ${hitDate}, America` : 'America'} pushed past
+                      Artemis II to {milestoneLabel} push-ups — one mile farther than
+                      the crew flew from Earth, past the farthest any human has ever
+                      traveled. {heroName}
+                      {heroState ? ` of ${heroState}` : ''} pressed the rep that broke
+                      the record — but it took every single one of yours to get out
+                      there. Stand tall, patriot.
+                    </>
+                  ) : isMoon ? (
                     <>
                       {hitDate ? `On ${hitDate}, America` : 'America'} pressed its
                       way to the moon: {milestoneLabel} push-ups — one for every

@@ -400,17 +400,66 @@ body {
   animation: flagRaisingUnfurl 1.8s ease-out 3.9s both;
 }
 
+/* Artemis II Earthset — the 252,757 community milestone (one mile farther
+   than the crew flew from Earth, past the farthest any human has traveled).
+   Orion coasts up and out of frame while a crescent Earth sets behind the
+   Moon's limb, then the whole scene fades. */
+.artemis-scene {
+  animation: flagRaisingScene 9.2s ease-in-out forwards;
+}
+
+/* Orion drifts diagonally across the void — the record-setting coast. */
+.artemis-orion {
+  transform-box: view-box;
+  animation: artemisDrift 9.2s ease-in-out both;
+}
+
+@keyframes artemisDrift {
+  0% { transform: translate(20px, 30px) rotate(-1.5deg); }
+  100% { transform: translate(-16px, -26px) rotate(1deg); }
+}
+
+/* Earthset: the crescent slides down and tucks behind the Moon's limb. */
+.artemis-earth {
+  transform-box: view-box;
+  animation: artemisEarthset 9.2s ease-in-out both;
+}
+
+@keyframes artemisEarthset {
+  0% { transform: translateY(-6px); }
+  100% { transform: translateY(122px); }
+}
+
+/* A slow specular flare crossing a solar array. */
+.artemis-glint {
+  transform-box: fill-box;
+  transform-origin: left center;
+  opacity: 0;
+  animation: artemisGlint 9.2s ease-in-out both;
+}
+
+@keyframes artemisGlint {
+  0%, 100% { opacity: 0; transform: scaleX(0.15); }
+  42% { opacity: 0; transform: scaleX(0.15); }
+  55% { opacity: 0.55; transform: scaleX(1); }
+  70% { opacity: 0; transform: scaleX(0.15); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   /* Show the resting pose — flag already raised/planted — with a fade. */
   .flag-raising-scene,
   .moon-landing-scene,
+  .artemis-scene,
   .summit-banner {
     animation: fireworksBannerFade 5s ease-out forwards;
   }
   .flag-raising-pole,
   .flag-raising-flag,
   .moon-landing-pole,
-  .moon-landing-flag {
+  .moon-landing-flag,
+  .artemis-orion,
+  .artemis-earth,
+  .artemis-glint {
     animation: none;
   }
 }

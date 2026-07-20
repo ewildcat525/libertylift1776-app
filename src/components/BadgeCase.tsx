@@ -15,7 +15,7 @@ const TYPE_ORDER: Record<string, number> = { total: 0, daily: 1, streak: 2, spec
 // Community-milestone badges go to exactly one patriot in history (see the
 // community_milestones migration), so showing them as "Locked" to everyone
 // else would be a lie. Only the earner sees them in their case.
-const ONE_OF_A_KIND = new Set(['liberty_bell', 'grand_union', 'flag_raiser', 'eagle_has_landed'])
+const ONE_OF_A_KIND = new Set(['liberty_bell', 'grand_union', 'flag_raiser', 'eagle_has_landed', 'farther_than_artemis'])
 
 function sortAchievements(a: Achievement, b: Achievement) {
   const typeDiff = (TYPE_ORDER[a.requirement_type] ?? 9) - (TYPE_ORDER[b.requirement_type] ?? 9)
