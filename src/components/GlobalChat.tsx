@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import { createClient, ChatMessage } from '@/lib/supabase'
+import ChatFunStats from './ChatFunStats'
 
 interface GlobalChatProps {
   userId: string | null
@@ -55,6 +56,7 @@ export default function GlobalChat({ userId, canBroadcast = false }: GlobalChatP
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [showStats, setShowStats] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   // Follow new messages only while the reader is at (or near) the bottom, so
@@ -404,8 +406,37 @@ export default function GlobalChat({ userId, canBroadcast = false }: GlobalChatP
     )
   }
 
+  // Prefill the composer with a stats summary so the patriot who asked can
+  // post it to the feed as their own message (then close the panel).
+  const dropStatsInChat = (text: string) => {
+    setInput(prev => (prev.trim() ? `${prev.trim()} ${text}` : text))
+    setShowStats(false)
+    inputRef.current?.focus()
+  }
+
   return (
     <div className="card flex-1 min-h-0 flex flex-col p-3 sm:p-6">
+      {/* Toolbar: fun-stats toggle sits above the feed so anyone who asks for
+          stats can pull them up without leaving the chat. */}
+      <div className="flex items-center justify-between mb-3">
+        <span className="text-[10px] uppercase tracking-[0.15em] text-white/30 font-bold">
+          National feed
+        </span>
+        <button
+          onClick={() => setShowStats(s => !s)}
+          className={`text-xs font-bold uppercase tracking-[0.1em] px-2.5 py-1 border transition-colors ${
+            showStats
+              ? 'border-liberty-gold/60 text-liberty-gold bg-liberty-gold/10'
+              : 'border-white/15 text-white/50 hover:text-white/80 hover:border-white/30'
+          }`}
+          aria-pressed={showStats}
+        >
+          📊 {showStats ? 'Hide stats' : 'Fun stats'}
+        </button>
+      </div>
+
+      {showStats && <ChatFunStats onDropInChat={dropStatsInChat} />}
+
       {/* Message list: the only scrollable region. overscroll-contain keeps
           the scroll from chaining to the page on mobile. */}
       <div
