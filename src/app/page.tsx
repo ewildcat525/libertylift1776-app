@@ -6,7 +6,7 @@ import type { User } from '@supabase/supabase-js'
 import { track } from '@vercel/analytics'
 import { createClient, US_STATES } from '@/lib/supabase'
 import { captureReferralFromUrl } from '@/lib/referral'
-import { catchUpPace, challengeDaysRemaining, isChallengeLive } from '@/lib/dates'
+import { catchUpPace, challengeDaysRemaining, challengePhase, ChallengePhase, isChallengeLive } from '@/lib/dates'
 import Countdown from '@/components/Countdown'
 
 // Hide the live counter until there is enough signal to be social proof.
@@ -61,7 +61,23 @@ export default function Home() {
   const [showVideo, setShowVideo] = useState(false)
   const [liveBoard, setLiveBoard] = useState<BoardRow[] | null>(null)
   const [pace, setPace] = useState<PaceInfo | null>(null)
+  // Post-contest state, resolved after mount so the prerendered HTML (which
+  // has no clock) matches the first client render.
+  const [phase, setPhase] = useState<ChallengePhase | null>(null)
+  const [finalCount, setFinalCount] = useState<number | null>(null)
   const supabase = createClient()
+
+  useEffect(() => {
+    const p = challengePhase()
+    setPhase(p)
+    // Once the contest wraps, the hero leads with the final nationwide count.
+    if (p === 'grace' || p === 'ended') {
+      supabase.rpc('get_community_progress').then(({ data }) => {
+        if (data?.total_pushups) setFinalCount(data.total_pushups as number)
+      })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
     // Defer the 1.7MB hero video until after first paint; the poster carries the hero.
@@ -109,8 +125,13 @@ export default function Home() {
       })
   }, [])
 
-  const primaryHref = user ? '/dashboard' : '/signup'
-  const primaryLabel = user ? 'Open dashboard' : 'Join the challenge'
+  const postContest = phase === 'grace' || phase === 'ended'
+  const primaryHref = postContest ? '/finale' : user ? '/dashboard' : '/signup'
+  const primaryLabel = postContest
+    ? 'Enter the Hall of Honor'
+    : user
+      ? 'Open dashboard'
+      : 'Join the challenge'
   const trackCta = (location: string) => track('cta_clicked', { location })
 
   return (
@@ -166,7 +187,7 @@ export default function Home() {
           <div className="campaign-kicker">
             <span>July 1-31, 2026</span>
             <span className="campaign-kicker-line" />
-            <span>All 50 states</span>
+            <span>{postContest ? 'In the books' : 'All 50 states'}</span>
           </div>
 
           <h1 className="campaign-title">
@@ -175,12 +196,22 @@ export default function Home() {
           </h1>
 
           <p className="campaign-declaration">
-            Join your state. Log your reps.
-            <br />
-            Move the board.
+            {postContest ? (
+              <>
+                America answered.
+                <br />
+                The books are closed.
+              </>
+            ) : (
+              <>
+                Join your state. Log your reps.
+                <br />
+                Move the board.
+              </>
+            )}
           </p>
 
-          <Countdown />
+          {!postContest && <Countdown />}
 
           {!user && pace?.midChallenge && (
             <p className="campaign-late-note" role="status">
@@ -208,18 +239,29 @@ export default function Home() {
         </div>
 
         <div className="campaign-hero-footer">
-          <div>
-            <span className="campaign-stat-value">{pace?.midChallenge ? pace.reps : 58}</span>
-            <span className="campaign-stat-label">
-              {pace?.midChallenge ? 'a day from today' : 'reps a day'}
-            </span>
-          </div>
-          <div>
-            <span className="campaign-stat-value">{pace?.midChallenge ? pace.daysLeft : 31}</span>
-            <span className="campaign-stat-label">
-              {pace?.midChallenge ? 'days left in July' : 'days in July'}
-            </span>
-          </div>
+          {postContest ? (
+            <div>
+              <span className="campaign-stat-value">
+                {finalCount !== null ? finalCount.toLocaleString() : '—'}
+              </span>
+              <span className="campaign-stat-label">push-ups, all of us together</span>
+            </div>
+          ) : (
+            <>
+              <div>
+                <span className="campaign-stat-value">{pace?.midChallenge ? pace.reps : 58}</span>
+                <span className="campaign-stat-label">
+                  {pace?.midChallenge ? 'a day from today' : 'reps a day'}
+                </span>
+              </div>
+              <div>
+                <span className="campaign-stat-value">{pace?.midChallenge ? pace.daysLeft : 31}</span>
+                <span className="campaign-stat-label">
+                  {pace?.midChallenge ? 'days left in July' : 'days in July'}
+                </span>
+              </div>
+            </>
+          )}
           {enlisted !== null && (
             <div>
               <span className="campaign-stat-value">{enlisted.toLocaleString()}</span>
@@ -286,7 +328,8 @@ export default function Home() {
             your crew, and give your state something to rally around.
           </p>
           <Link href={primaryHref} className="campaign-button campaign-button-light">
-            Join your state <span aria-hidden="true">→</span>
+            {postContest ? 'See the final board' : 'Join your state'}{' '}
+            <span aria-hidden="true">→</span>
           </Link>
         </div>
 
@@ -329,8 +372,13 @@ export default function Home() {
             1,776 is $88.80. At the end of July you donate directly. We never
             collect or process a dime.
           </p>
-          <Link href={primaryHref} className="campaign-text-link" onClick={() => trackCta('pledge')}>
-            Join, then set your pledge <span aria-hidden="true">→</span>
+          <Link
+            href={postContest ? '/pledge/leaderboard' : primaryHref}
+            className="campaign-text-link"
+            onClick={() => trackCta('pledge')}
+          >
+            {postContest ? 'See the pledge board' : 'Join, then set your pledge'}{' '}
+            <span aria-hidden="true">→</span>
           </Link>
         </div>
       </section>
@@ -338,8 +386,12 @@ export default function Home() {
       <section className="campaign-final">
         <div className="campaign-final-rule" />
         <span className="campaign-final-eyebrow">July 1-31, 2026</span>
-        <h2>Will your state answer?</h2>
-        <p>1776 push-ups. Thirty-one days. No spectators.</p>
+        <h2>{postContest ? 'Your state answered.' : 'Will your state answer?'}</h2>
+        <p>
+          {postContest
+            ? '1776 push-ups. Thirty-one days. History made — see you in 2027.'
+            : '1776 push-ups. Thirty-one days. No spectators.'}
+        </p>
         <Link
           href={primaryHref}
           className="campaign-button campaign-button-primary"

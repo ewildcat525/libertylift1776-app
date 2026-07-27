@@ -1,6 +1,7 @@
 // Server-only email helpers for the reminder cron and unsubscribe flow.
 import { createHmac, timingSafeEqual } from 'node:crypto'
 import { siteUrl } from '@/lib/site'
+import { CHARITY_DONATE_URLS } from '@/lib/charities'
 
 export function getSiteUrl() {
   return siteUrl
@@ -141,6 +142,69 @@ export function buildReminderEmail({
         <br/><br/>${streakLine}${nudge}`,
       ctaLabel: 'Log today’s push-ups',
       ctaUrl: `${siteUrl}/dashboard`,
+      unsubscribe: unsubscribeUrl('profile', profileId),
+    }),
+  }
+}
+
+interface FinaleArgs {
+  profileId: string
+  displayName: string | null
+  totalPushups: number
+  bestDay: number
+  longestStreak: number
+  hasPledge: boolean
+  // Final nationwide count, shared by every message in the blast.
+  communityTotal: number
+}
+
+// One-time blast on August 2, once the books are closed: personal after-action
+// stats, the final national count, and the Hall of Honor. Finishers get the
+// merch call to action; pledgers get the fulfillment nudge.
+export function buildFinaleEmail({
+  profileId,
+  displayName,
+  totalPushups,
+  bestDay,
+  longestStreak,
+  hasPledge,
+  communityTotal,
+}: FinaleArgs) {
+  const name = displayName || 'Patriot'
+  const finisher = totalPushups >= 1776
+
+  const statsLine =
+    totalPushups > 0
+      ? `Your campaign: <strong style="color:#FFD700;">${totalPushups.toLocaleString()}</strong> push-ups,
+        best day ${bestDay.toLocaleString()}, longest streak ${longestStreak} ${longestStreak === 1 ? 'day' : 'days'}.
+        Every rep is in that number above.`
+      : `You enlisted, and the door's open for 2027 — same month, same 1,776.`
+
+  const shirtLine = finisher
+    ? `<br/><br/>You finished all 1,776, which means the <strong>Reps for the Republic tee</strong> is
+      unlocked for you — made in USA, screen printed, $44 all-in.
+      <a href="${siteUrl}/merch" style="color:#C9A227;">Claim your tee →</a>`
+    : ''
+
+  const pledgeLine = hasPledge
+    ? `<br/><br/>One mission left: you made an honor-system pledge to the Wounded Warrior Project.
+      Now's the time to make good.
+      <a href="${CHARITY_DONATE_URLS.wounded_warrior}" style="color:#C9A227;">Fulfill your pledge →</a>`
+    : ''
+
+  return {
+    subject: finisher
+      ? 'The books are closed — and you finished all 1,776. 🇺🇸'
+      : `The books are closed: ${communityTotal.toLocaleString()} push-ups, together 🎆`,
+    html: emailShell({
+      heading: finisher ? `Liberty achieved, ${name}.` : `It's in the books, ${name}.`,
+      body: `America pressed <strong style="color:#FFD700;">${communityTotal.toLocaleString()}</strong> push-ups
+        in 31 days. The Hall of Honor is open: champions, the state battle, and the
+        one-of-a-kind moments — replayable any time.
+        <br/><br/>${statsLine}${shirtLine}${pledgeLine}
+        <br/><br/>Thank you for answering the call. See you in July 2027.`,
+      ctaLabel: 'Enter the Hall of Honor',
+      ctaUrl: `${siteUrl}/finale`,
       unsubscribe: unsubscribeUrl('profile', profileId),
     }),
   }

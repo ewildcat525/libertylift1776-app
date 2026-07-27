@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase'
 import { canUseChat } from '@/lib/flags'
+import { challengePhase } from '@/lib/dates'
 import NotificationBell from '@/components/NotificationBell'
 import type { User } from '@supabase/supabase-js'
 
@@ -14,7 +15,14 @@ export default function Navigation() {
   const router = useRouter()
   const [user, setUser] = useState<User | null>(null)
   const [menuOpen, setMenuOpen] = useState(false)
+  // Resolved after mount so the prerendered HTML matches the first render.
+  const [postContest, setPostContest] = useState(false)
   const supabase = createClient()
+
+  useEffect(() => {
+    const phase = challengePhase()
+    setPostContest(phase === 'grace' || phase === 'ended')
+  }, [])
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
@@ -65,6 +73,11 @@ export default function Navigation() {
 
   if (showChat) {
     navLinks.push({ href: '/chat', label: 'Chat' })
+  }
+
+  // Once the contest wraps, the Hall of Honor leads the nav.
+  if (postContest) {
+    navLinks.unshift({ href: '/finale', label: 'Finale' })
   }
 
   const isActive = (href: string) => pathname === href
@@ -123,8 +136,8 @@ export default function Navigation() {
                 <Link href="/login" className="text-xs font-bold uppercase tracking-[0.12em] text-white/62 hover:text-white transition-colors">
                   Sign In
                 </Link>
-                <Link href="/signup" className="campaign-nav-cta">
-                  Accept the challenge
+                <Link href={postContest ? '/finale' : '/signup'} className="campaign-nav-cta">
+                  {postContest ? 'See the finale' : 'Accept the challenge'}
                 </Link>
               </>
             )}
@@ -179,8 +192,8 @@ export default function Navigation() {
                   <Link href="/login" className="text-sm text-white/70 py-2">
                     Sign In
                   </Link>
-                  <Link href="/signup" className="campaign-nav-cta text-center">
-                    Accept the challenge
+                  <Link href={postContest ? '/finale' : '/signup'} className="campaign-nav-cta text-center">
+                    {postContest ? 'See the finale' : 'Accept the challenge'}
                   </Link>
                 </>
               )}

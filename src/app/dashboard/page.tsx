@@ -3,9 +3,9 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { track } from '@vercel/analytics'
-import { createClient, UserStats, Profile, AMERICAN_FACTS, DAILY_PACE, isValidStateCode } from '@/lib/supabase'
+import { createClient, UserStats, Profile, AMERICAN_FACTS, DAILY_PACE, isValidStateCode, US_STATES } from '@/lib/supabase'
 import { clearPendingSignup, generateDisplayName, readPendingSignup } from '@/lib/onboarding'
-import { localDateString, liveStreak } from '@/lib/dates'
+import { challengePhase, ChallengePhase, localDateString, liveStreak } from '@/lib/dates'
 import { clearReferral } from '@/lib/referral'
 import BadgeCase from '@/components/BadgeCase'
 import CommunityMilestoneBanner from '@/components/CommunityMilestoneBanner'
@@ -100,8 +100,33 @@ export default function DashboardPage() {
   const [calendarMonth] = useState(() => new Date(2026, 6, 1)) // July is month 6 (0-indexed)
   const [chartData, setChartData] = useState<ChartPoint[]>([])
   const [recruitCount, setRecruitCount] = useState(0)
+  // Challenge lifecycle, resolved after mount so the prerendered HTML (which
+  // has no clock) matches the first client render.
+  const [phase, setPhase] = useState<ChallengePhase | null>(null)
+  const [finalRank, setFinalRank] = useState<number | null>(null)
+  const [boardSize, setBoardSize] = useState<number | null>(null)
   const router = useRouter()
   const supabase = createClient()
+
+  useEffect(() => {
+    setPhase(challengePhase())
+  }, [])
+
+  // Final standing for the after-action report, once the books are closed.
+  useEffect(() => {
+    if (phase !== 'ended' || !user) return
+    supabase
+      .from('leaderboard')
+      .select('global_rank')
+      .eq('id', user.id)
+      .limit(1)
+      .then(({ data }) => setFinalRank(data?.[0]?.global_rank ?? null))
+    supabase
+      .from('leaderboard')
+      .select('id', { count: 'exact', head: true })
+      .then(({ count }) => setBoardSize(count ?? null))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, user])
 
   useEffect(() => {
     setProfileName(profile?.display_name || '')
@@ -621,7 +646,9 @@ export default function DashboardPage() {
                 </button>
               )}
             </div>
-            <p className="text-white/60 mt-3">Your journey to 1776.</p>
+            <p className="text-white/60 mt-3">
+              {phase === 'ended' ? 'Your 2026 campaign, in the books.' : 'Your journey to 1776.'}
+            </p>
             {editingProfile && (
               <form onSubmit={saveProfileName} className="mt-5 max-w-xl">
                 <label htmlFor="profile-name" className="sr-only">
@@ -676,8 +703,67 @@ export default function DashboardPage() {
             )}
           </div>
 
-          {/* Pace Indicator */}
-          {pace === 'before' ? (
+          {/* Grace day: the books are still open for July reps. */}
+          {phase === 'grace' && (
+            <div
+              className="mb-8 p-4 bg-yellow-500/15 border border-yellow-500/40 text-center text-yellow-200 text-sm"
+              role="status"
+            >
+              🔔 <strong>Last call.</strong> The contest ended July 31 — you have until midnight
+              tonight to log any July reps you missed. After that, the books are closed for good.
+            </div>
+          )}
+
+          {/* After-action report replaces the pace card once standings are final. */}
+          {phase === 'ended' ? (
+            <div className="card p-8 mb-8 text-center">
+              <div className="app-eyebrow mb-3 justify-center">After-action report</div>
+              <h2 className="font-bebas text-4xl sm:text-5xl text-white mb-2">
+                {(stats?.total_pushups ?? 0) >= 1776 ? 'Liberty achieved.' : 'You answered the call.'}
+              </h2>
+              <p className="text-white/60 text-sm max-w-lg mx-auto">
+                {(stats?.total_pushups ?? 0) >= 1776
+                  ? 'All 1,776 push-ups, in the books. Founding Father, forever.'
+                  : `${(stats?.total_pushups ?? 0).toLocaleString()} push-ups on the board${
+                      profile?.state_code ? ` for ${US_STATES[profile.state_code]}` : ''
+                    } — every one of them counted in the national total.`}
+              </p>
+              {finalRank !== null && (
+                <p className="text-white/80 text-sm mt-3">
+                  Final standing:{' '}
+                  <span className="text-liberty-gold font-bold">#{finalRank.toLocaleString()}</span>{' '}
+                  in the nation
+                  {boardSize !== null && ` of ${boardSize.toLocaleString()} on the board`}.
+                </p>
+              )}
+              {(stats?.total_pushups ?? 0) >= 1776 && (
+                <p className="text-sm mt-3">
+                  <a
+                    href="/merch"
+                    onClick={() => track('merch_unlock_cta_clicked')}
+                    className="text-liberty-gold hover:underline"
+                  >
+                    🔓 You earned the Reps for the Republic tee — claim it →
+                  </a>
+                </p>
+              )}
+              <div className="flex flex-wrap justify-center gap-3 mt-6">
+                <a href="/finale" className="btn-gold px-8 py-3">
+                  Enter the Hall of Honor
+                </a>
+              </div>
+              {profile?.display_name && (
+                <ShareProgress
+                  handle={profile.display_name}
+                  totalPushups={stats?.total_pushups || 0}
+                  currentStreak={liveStreak(stats?.current_streak, stats?.last_log_date)}
+                  stateCode={profile.state_code}
+                  context="finale_recap"
+                  className="mt-4"
+                />
+              )}
+            </div>
+          ) : pace === 'before' ? (
             <Countdown className="dashboard-countdown mb-8" hideWhenLive />
           ) : (
             <div className="card p-6 text-center mb-8">
@@ -696,14 +782,17 @@ export default function DashboardPage() {
               <p className="text-sm text-white/60 mt-3">
                 {pace === 'complete'
                   ? "You did it: 1776 push-ups in July."
-                  : requiredPerDay !== null
-                    ? `Target: ${requiredPerDay} push-ups per day from today to hit 1776 by July 31.`
-                    : `Target: ${dailyTarget} push-ups per day to hit 1776 by July 31.`}
+                  : phase === 'grace'
+                    ? 'The challenge window is over — log any missed July reps before midnight tonight.'
+                    : requiredPerDay !== null
+                      ? `Target: ${requiredPerDay} push-ups per day from today to hit 1776 by July 31.`
+                      : `Target: ${dailyTarget} push-ups per day to hit 1776 by July 31.`}
               </p>
             </div>
           )}
 
-          {/* Log Push-ups Card */}
+          {/* Log Push-ups Card (hidden once the books are closed) */}
+          {phase !== 'ended' && (
           <div className="card p-8 mb-8">
             <h2 className="font-bebas text-3xl text-liberty-red mb-5 text-center">
               LOG YOUR PUSH-UPS
@@ -798,6 +887,7 @@ export default function DashboardPage() {
               </div>
             )}
           </div>
+          )}
 
           {/* Nationwide count + milestone celebration. Keyed to the user's
               total so it refetches right after a log — if that rep rang the
@@ -1074,8 +1164,9 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* Clear day button */}
-            {dailyLogs[logDate] > 0 && (
+            {/* Clear day button (retired with the rest of the editing UI once
+                the books are closed — the database freeze would reject it) */}
+            {phase !== 'ended' && dailyLogs[logDate] > 0 && (
               <button
                 onClick={clearLogsForDay}
                 className="mt-4 w-full py-2 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors"

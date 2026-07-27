@@ -1,11 +1,13 @@
-// Email cron (see vercel.json). The cron runs daily during July 2026, but it
-// only actually sends on these days:
+// Email cron (see vercel.json). The cron runs daily during the challenge
+// window, but it only actually sends on these days:
 // - July 1: launch announcement to the pre-launch email list
 // - Each Monday (Jul 6, 13, 20, 27): weekly pace/streak reminder to
 //   participants who haven't logged that day
+// - August 2 (through Aug 4 for retry headroom): one-time finale blast with
+//   final stats and the Hall of Honor, once the books are closed
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase-admin'
-import { buildLaunchEmail, buildReminderEmail, sendEmailBatch } from '@/lib/email'
+import { buildFinaleEmail, buildLaunchEmail, buildReminderEmail, sendEmailBatch } from '@/lib/email'
 import { liveStreak } from '@/lib/dates'
 
 export const dynamic = 'force-dynamic'
@@ -48,12 +50,12 @@ export async function GET(request: NextRequest) {
   }
 
   const today = todayInChallengeTz()
-  if (today < '2026-07-01' || today > '2026-07-31') {
+  if (today < '2026-07-01' || today > '2026-08-04') {
     return NextResponse.json({ skipped: 'outside challenge window', today })
   }
 
   const dayOfJuly = parseInt(today.split('-')[2], 10)
-  const result: Record<string, number> = { launchEmails: 0, reminders: 0 }
+  const result: Record<string, number> = { launchEmails: 0, reminders: 0, finaleEmails: 0 }
 
   // --- Launch-day blast to registered participants ---
   if (today === '2026-07-01') {
@@ -82,7 +84,8 @@ export async function GET(request: NextRequest) {
 
   // --- Weekly reminders to participants who haven't logged today ---
   // Only send on the configured weekday so participants get one nudge a week.
-  if (weekdayOf(today) === REMINDER_WEEKDAY) {
+  // July only: August 3 is also a Monday, but the contest is over by then.
+  if (today <= '2026-07-31' && weekdayOf(today) === REMINDER_WEEKDAY) {
     const { data: profiles } = await supabase
       .from('profiles')
       .select('id, email, display_name, email_opt_out, last_reminder_at')
@@ -146,6 +149,63 @@ export async function GET(request: NextRequest) {
             .update({ last_reminder_at: new Date().toISOString() })
             .in('id', sentKeys)
         }
+      }
+    }
+  }
+
+  // --- One-time finale blast once the books are closed (Aug 2) ---
+  // finale_emailed_at makes this idempotent, so the cron can retry on
+  // Aug 3-4 for anyone a failed batch left behind.
+  if (today >= '2026-08-02') {
+    const { data: recipients } = await supabase
+      .from('profiles')
+      .select('id, email, display_name')
+      .eq('email_opt_out', false)
+      .not('email', 'is', null)
+      .is('finale_emailed_at', null)
+      .limit(MAX_REMINDERS_PER_RUN)
+
+    if (recipients && recipients.length > 0) {
+      const ids = recipients.map((p) => p.id)
+
+      const [{ data: stats }, { data: pledges }, { data: community }] = await Promise.all([
+        supabase
+          .from('user_stats')
+          .select('user_id, total_pushups, best_day, longest_streak')
+          .in('user_id', ids),
+        supabase.from('pledges').select('user_id').eq('is_active', true).in('user_id', ids),
+        supabase.rpc('get_community_progress'),
+      ])
+
+      const statsByUser = new Map((stats || []).map((s) => [s.user_id, s]))
+      const pledgedUsers = new Set((pledges || []).map((p) => p.user_id))
+      const communityTotal = (community as { total_pushups?: number } | null)?.total_pushups || 0
+
+      const messages = recipients.map((p) => {
+        const s = statsByUser.get(p.id)
+        return {
+          key: p.id,
+          to: p.email as string,
+          ...buildFinaleEmail({
+            profileId: p.id,
+            displayName: p.display_name,
+            totalPushups: s?.total_pushups || 0,
+            bestDay: s?.best_day || 0,
+            longestStreak: s?.longest_streak || 0,
+            hasPledge: pledgedUsers.has(p.id),
+            communityTotal,
+          }),
+        }
+      })
+
+      const { sentKeys } = await sendEmailBatch(messages)
+      result.finaleEmails = sentKeys.length
+
+      if (sentKeys.length > 0) {
+        await supabase
+          .from('profiles')
+          .update({ finale_emailed_at: new Date().toISOString() })
+          .in('id', sentKeys)
       }
     }
   }
