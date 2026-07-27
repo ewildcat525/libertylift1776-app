@@ -101,9 +101,6 @@ export default function FinalPushBanner({ userId, refreshKey, className = '' }: 
           permanent spot in the Hall of Honor. Every rep still counts for your state, your
           1,776, and the national total.
         </p>
-        <p className="text-white/40 text-xs mt-3">
-          Rest up. Daily cap is 3,000 — nobody said it would be easy.
-        </p>
       </div>
     )
   }
