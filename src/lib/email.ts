@@ -167,7 +167,7 @@ export function buildFinalPushEmail({ profileId, displayName, totalPushups, dayO
   const hook =
     totalPushups >= 1776
       ? `You've already pressed all 1,776 — now put an exclamation point on it and defend your state's total.`
-      : remaining <= 3000
+      : remaining <= 5000
         ? `You're ${remaining.toLocaleString()} away from 1,776 — a monster final day gets you there and onto the finishers' roll.`
         : `Every rep still counts for your state and the national total — go out swinging.`
 
@@ -183,7 +183,7 @@ export function buildFinalPushEmail({ profileId, displayName, totalPushups, dayO
         <strong style="color:#FFD700;">Final Push Champion</strong>, honored forever in the
         Hall of Honor. The live board runs all day on the leaderboard.
         <br/><br/>${hook}
-        <br/><br/><span style="color:#9A9AA5;font-size:13px;">House rules: reps must be logged on July 31, daily cap is 3,000, and pace yourself — form counts, ego doesn't.</span>`,
+        <br/><br/><span style="color:#9A9AA5;font-size:13px;">House rules: reps must be logged on July 31, daily cap is 5,000, and pace yourself — form counts, ego doesn't.</span>`,
       ctaLabel: isToday ? 'Log your reps' : 'See the board',
       ctaUrl: `${siteUrl}/dashboard`,
       unsubscribe: unsubscribeUrl('profile', profileId),
