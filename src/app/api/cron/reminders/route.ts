@@ -3,11 +3,19 @@
 // - July 1: launch announcement to the pre-launch email list
 // - Each Monday (Jul 6, 13, 20, 27): weekly pace/streak reminder to
 //   participants who haven't logged that day
+// - July 30 (day-of retry on the 31st): one-time Final Push announcement —
+//   the last-day blitz where the biggest July 31 total takes the crown
 // - August 2 (through Aug 4 for retry headroom): one-time finale blast with
 //   final stats and the Hall of Honor, once the books are closed
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase-admin'
-import { buildFinaleEmail, buildLaunchEmail, buildReminderEmail, sendEmailBatch } from '@/lib/email'
+import {
+  buildFinaleEmail,
+  buildFinalPushEmail,
+  buildLaunchEmail,
+  buildReminderEmail,
+  sendEmailBatch,
+} from '@/lib/email'
 import { liveStreak } from '@/lib/dates'
 
 export const dynamic = 'force-dynamic'
@@ -55,7 +63,12 @@ export async function GET(request: NextRequest) {
   }
 
   const dayOfJuly = parseInt(today.split('-')[2], 10)
-  const result: Record<string, number> = { launchEmails: 0, reminders: 0, finaleEmails: 0 }
+  const result: Record<string, number> = {
+    launchEmails: 0,
+    reminders: 0,
+    finalPushEmails: 0,
+    finaleEmails: 0,
+  }
 
   // --- Launch-day blast to registered participants ---
   if (today === '2026-07-01') {
@@ -149,6 +162,49 @@ export async function GET(request: NextRequest) {
             .update({ last_reminder_at: new Date().toISOString() })
             .in('id', sentKeys)
         }
+      }
+    }
+  }
+
+  // --- One-time Final Push announcement (July 30, retry on the 31st) ---
+  // final_push_emailed_at makes this idempotent; anyone missed on the 30th
+  // gets day-of copy on the 31st (13:00 UTC = 9am ET, still actionable).
+  if (today === '2026-07-30' || today === '2026-07-31') {
+    const { data: recipients } = await supabase
+      .from('profiles')
+      .select('id, email, display_name')
+      .eq('email_opt_out', false)
+      .not('email', 'is', null)
+      .is('final_push_emailed_at', null)
+      .limit(MAX_REMINDERS_PER_RUN)
+
+    if (recipients && recipients.length > 0) {
+      const ids = recipients.map((p) => p.id)
+      const { data: stats } = await supabase
+        .from('user_stats')
+        .select('user_id, total_pushups')
+        .in('user_id', ids)
+      const statsByUser = new Map((stats || []).map((s) => [s.user_id, s]))
+
+      const messages = recipients.map((p) => ({
+        key: p.id,
+        to: p.email as string,
+        ...buildFinalPushEmail({
+          profileId: p.id,
+          displayName: p.display_name,
+          totalPushups: statsByUser.get(p.id)?.total_pushups || 0,
+          dayOfJuly,
+        }),
+      }))
+
+      const { sentKeys } = await sendEmailBatch(messages)
+      result.finalPushEmails = sentKeys.length
+
+      if (sentKeys.length > 0) {
+        await supabase
+          .from('profiles')
+          .update({ final_push_emailed_at: new Date().toISOString() })
+          .in('id', sentKeys)
       }
     }
   }

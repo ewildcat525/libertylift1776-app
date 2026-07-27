@@ -25,6 +25,7 @@ Liberty Lift 1776 is a Next.js campaign app for a July 1-31, 2026 push-up challe
 - Spread-the-word page (`/spread-the-word`) with copy-paste captions and the #LibertyLift1776 hashtag
 - Landing page state board flips from preview data to live totals once reps are logged
 - Nationwide push-up counter with community milestones (50k, 100k, 177,600, 239,000, 252,757): the patriot whose rep crosses the line earns a one-of-a-kind badge, and everyone gets a shared celebration banner on the dashboard and leaderboard. The 50k and 100k milestones fire fireworks; the 177,600 summit (1,776 × 100) plays an animated Iwo Jima-style flag raising; 239,000 (one push-up per mile to the moon) plays a lunar flag plant beside the Eagle; 252,757 (one mile farther than Artemis II flew from Earth in April 2026, past the farthest any human has ever traveled) plays an animated Orion "Earthset," the crescent Earth setting behind the Moon's far-side limb
+- The Final Push: a last-day blitz on July 31 — the biggest single-day total logged on the 31st crowns the Final Push Champion, honored in the Hall of Honor. A banner on the dashboard and leaderboard hypes it during July, becomes a live top-10 day board on the 31st (`final_push_board` view, bucketed to US Eastern), and shows results on August 1; a one-time announcement email goes out July 30 (idempotent via `profiles.final_push_emailed_at`, day-of retry on the 31st)
 - Post-contest finale, phase-gated by `challengePhase()` in `src/lib/dates.ts`: August 1 is a one-day grace period ("last call" banners; July reps can still be logged), after which a database trigger freezes all `pushup_logs` writes (2026-08-02T10:00:00Z — midnight Hawaii) so the live views become the certified final standings. From August 1 the Hall of Honor (`/finale`) opens: final nationwide count, champions' podium (national top 3, longest streak, best day, top recruiter, with ties as co-champions), state battle results with a pound-for-pound award, the one-of-a-kind milestone wall with replayable celebration animations, the 1,776 finishers' roll, total pledged to Wounded Warrior Project with a fulfillment CTA, the "earned, not given" merch CTA, a thank-you message, and a "see you in 2027" email list (reuses `email_subscribers` with `source: finale_2027`). The dashboard swaps the logging card for a personal after-action report (final rank, share buttons, merch CTA), the leaderboard gets a FINAL seal and ranks longest streak once current streaks expire, and the landing page and nav flip to results mode
 
 ## Email Reminders
@@ -32,7 +33,8 @@ Liberty Lift 1776 is a Next.js campaign app for a July 1-31, 2026 push-up challe
 A Vercel Cron job (`vercel.json`) hits `/api/cron/reminders` daily at 13:00 UTC. During
 July 2026 it sends a launch announcement to the pre-launch email list (July 1) and a
 weekly (Mondays, July only) personalized pace/streak reminder to participants who have
-not logged that day. On August 2 it sends a one-time finale blast — personal after-action
+not logged that day. On July 30 it sends the one-time Final Push announcement (with
+day-of copy for anyone retried on the 31st). On August 2 it sends a one-time finale blast — personal after-action
 stats, the final national count, the Hall of Honor link, plus the merch CTA for finishers
 and a pledge-fulfillment nudge for pledgers — idempotent via `profiles.finale_emailed_at`,
 with retry headroom through August 4. Every email carries an HMAC-signed one-click

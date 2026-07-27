@@ -147,6 +147,50 @@ export function buildReminderEmail({
   }
 }
 
+interface FinalPushArgs {
+  profileId: string
+  displayName: string | null
+  totalPushups: number
+  // 30 = eve-of announcement, 31 = day-of ("today") for stragglers.
+  dayOfJuly: number
+}
+
+// One-time blast announcing the Final Push: a last-day blitz on July 31 —
+// most reps logged that day crowns the Final Push Champion in the Hall of
+// Honor. Sent July 30, with day-of copy for anyone a failed batch left to
+// July 31.
+export function buildFinalPushEmail({ profileId, displayName, totalPushups, dayOfJuly }: FinalPushArgs) {
+  const name = displayName || 'Patriot'
+  const isToday = dayOfJuly >= 31
+  const remaining = Math.max(0, 1776 - totalPushups)
+
+  const hook =
+    totalPushups >= 1776
+      ? `You've already pressed all 1,776 — now put an exclamation point on it and defend your state's total.`
+      : remaining <= 3000
+        ? `You're ${remaining.toLocaleString()} away from 1,776 — a monster final day gets you there and onto the finishers' roll.`
+        : `Every rep still counts for your state and the national total — go out swinging.`
+
+  return {
+    subject: isToday
+      ? 'TODAY: the Final Push — one day, as many as you can 🔥'
+      : 'Tomorrow: the Final Push — one day, as many as you can 🔥',
+    html: emailShell({
+      heading: isToday ? `The Final Push is ON, ${name}.` : `One last battle, ${name}.`,
+      body: `${isToday ? 'Today, July 31' : 'Tomorrow, July 31'} — the last day of the contest — is
+        <strong>the Final Push</strong>: log as many push-ups as you can in one day.
+        The biggest single-day total on the 31st crowns the
+        <strong style="color:#FFD700;">Final Push Champion</strong>, honored forever in the
+        Hall of Honor. The live board runs all day on the leaderboard.
+        <br/><br/>${hook}
+        <br/><br/><span style="color:#9A9AA5;font-size:13px;">House rules: reps must be logged on July 31, daily cap is 3,000, and pace yourself — form counts, ego doesn't.</span>`,
+      ctaLabel: isToday ? 'Log your reps' : 'See the board',
+      ctaUrl: `${siteUrl}/dashboard`,
+      unsubscribe: unsubscribeUrl('profile', profileId),
+    }),
+  }
+}
+
 interface FinaleArgs {
   profileId: string
   displayName: string | null

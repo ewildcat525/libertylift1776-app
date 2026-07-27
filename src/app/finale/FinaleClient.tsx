@@ -79,6 +79,15 @@ interface FinisherRow {
   total_pushups: number
 }
 
+// The Final Push: most reps logged on July 31 (see final_push_board).
+interface FinalPushRow {
+  id: string
+  display_name: string | null
+  state_code: string | null
+  final_day_pushups: number
+  final_push_rank: number
+}
+
 // A replay in progress: which scene to mount and the overlay copy.
 interface Replay {
   scene: Scene
@@ -169,6 +178,7 @@ export default function FinaleClient() {
   const [streakChamps, setStreakChamps] = useState<LeaderboardEntry[]>([])
   const [dayChamps, setDayChamps] = useState<LeaderboardEntry[]>([])
   const [recruitChamps, setRecruitChamps] = useState<LeaderboardEntry[]>([])
+  const [finalPushChamps, setFinalPushChamps] = useState<FinalPushRow[]>([])
   const [states, setStates] = useState<StateRow[]>([])
   const [finishers, setFinishers] = useState<FinisherRow[]>([])
   const [finisherCount, setFinisherCount] = useState(0)
@@ -228,6 +238,16 @@ export default function FinaleClient() {
       .order('recruits', { ascending: false })
       .limit(5)
       .then(({ data }) => setRecruitChamps(topTied(data || [], 'recruits')))
+
+    supabase
+      .from('final_push_board')
+      .select('*')
+      .order('final_push_rank', { ascending: true })
+      .limit(5)
+      .then(({ data }) => {
+        const rows = (data as FinalPushRow[]) || []
+        setFinalPushChamps(rows.filter((r) => r.final_push_rank === 1))
+      })
 
     supabase
       .from('state_leaderboard')
@@ -545,7 +565,25 @@ export default function FinaleClient() {
               </div>
             )}
 
-            <div className="grid sm:grid-cols-3 gap-4">
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {finalPushChamps.length > 0 && (
+                <ChampionCard
+                  label="Final Push champion"
+                  icon="🏁"
+                  name={finalPushChamps.map((r) => r.display_name || 'A patriot').join(' & ')}
+                  detail={
+                    Array.from(
+                      new Set(
+                        finalPushChamps
+                          .map((r) => (r.state_code ? US_STATES[r.state_code] : null))
+                          .filter(Boolean)
+                      )
+                    ).join(' & ') || null
+                  }
+                  value={finalPushChamps[0].final_day_pushups.toLocaleString()}
+                  unit="on July 31 alone"
+                />
+              )}
               {streakChamps.length > 0 && (
                 <ChampionCard
                   label="Iron streak"

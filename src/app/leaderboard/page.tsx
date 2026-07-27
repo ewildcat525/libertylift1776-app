@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { createClient, LeaderboardEntry, US_STATES } from '@/lib/supabase'
 import { challengePhase, ChallengePhase } from '@/lib/dates'
 import CommunityMilestoneBanner from '@/components/CommunityMilestoneBanner'
+import FinalPushBanner from '@/components/FinalPushBanner'
 import Navigation from '@/components/Navigation'
 import ClickableName from '@/components/UserPushupChartModal'
 import Link from 'next/link'
@@ -97,6 +98,9 @@ export default function LeaderboardPage() {
 
           {/* Nationwide count + milestone celebration */}
           <CommunityMilestoneBanner userId={userId} className="mb-8" />
+
+          {/* The Final Push: last-day blitz hype, live board, then results */}
+          <FinalPushBanner userId={userId} className="mb-8" />
 
           {/* Filter Tabs */}
           <div className="flex justify-center gap-2 mb-8">

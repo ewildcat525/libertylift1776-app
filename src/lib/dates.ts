@@ -12,6 +12,8 @@ export function localDateString(date: Date = new Date()): string {
 
 // Challenge window: July 1-31, 2026.
 export const CHALLENGE_TOTAL = 1776
+// The Final Push: last-day blitz — most reps logged on July 31 wins.
+export const FINAL_PUSH_DATE = '2026-07-31'
 const CHALLENGE_YEAR = 2026
 const JULY = 6 // Date.getMonth() is 0-indexed
 const DAYS_IN_JULY = 31

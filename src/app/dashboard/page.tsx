@@ -10,6 +10,7 @@ import { clearReferral } from '@/lib/referral'
 import BadgeCase from '@/components/BadgeCase'
 import CommunityMilestoneBanner from '@/components/CommunityMilestoneBanner'
 import Countdown from '@/components/Countdown'
+import FinalPushBanner from '@/components/FinalPushBanner'
 import Fireworks from '@/components/Fireworks'
 import Navigation from '@/components/Navigation'
 import PledgeWidget from '@/components/PledgeWidget'
@@ -790,6 +791,14 @@ export default function DashboardPage() {
               </p>
             </div>
           )}
+
+          {/* The Final Push: last-day blitz. Keyed to the user's total so the
+              day board moves the moment their reps land. */}
+          <FinalPushBanner
+            userId={user.id}
+            refreshKey={stats?.total_pushups ?? 0}
+            className="mb-8"
+          />
 
           {/* Log Push-ups Card (hidden once the books are closed) */}
           {phase !== 'ended' && (
