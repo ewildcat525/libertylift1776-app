@@ -1,6 +1,7 @@
 // Server-only email helpers for the reminder cron and unsubscribe flow.
 import { createHmac, timingSafeEqual } from 'node:crypto'
 import { siteUrl } from '@/lib/site'
+import { CHARITY_DONATE_URLS } from '@/lib/charities'
 
 export function getSiteUrl() {
   return siteUrl
@@ -141,6 +142,113 @@ export function buildReminderEmail({
         <br/><br/>${streakLine}${nudge}`,
       ctaLabel: 'Log today’s push-ups',
       ctaUrl: `${siteUrl}/dashboard`,
+      unsubscribe: unsubscribeUrl('profile', profileId),
+    }),
+  }
+}
+
+interface FinalPushArgs {
+  profileId: string
+  displayName: string | null
+  totalPushups: number
+  // 30 = eve-of announcement, 31 = day-of ("today") for stragglers.
+  dayOfJuly: number
+}
+
+// One-time blast announcing the Final Push: a last-day blitz on July 31 —
+// most reps logged that day crowns the Final Push Champion in the Hall of
+// Honor. Sent July 30, with day-of copy for anyone a failed batch left to
+// July 31.
+export function buildFinalPushEmail({ profileId, displayName, totalPushups, dayOfJuly }: FinalPushArgs) {
+  const name = displayName || 'Patriot'
+  const isToday = dayOfJuly >= 31
+  const remaining = Math.max(0, 1776 - totalPushups)
+
+  const hook =
+    totalPushups >= 1776
+      ? `You've already pressed all 1,776 — now put an exclamation point on it and defend your state's total.`
+      : remaining <= 3000
+        ? `You're ${remaining.toLocaleString()} away from 1,776 — a monster final day gets you there and onto the finishers' roll.`
+        : `Every rep still counts for your state and the national total — go out swinging.`
+
+  return {
+    subject: isToday
+      ? 'TODAY: the Final Push — one day, as many as you can 🔥'
+      : 'Tomorrow: the Final Push — one day, as many as you can 🔥',
+    html: emailShell({
+      heading: isToday ? `The Final Push is ON, ${name}.` : `One last battle, ${name}.`,
+      body: `${isToday ? 'Today, July 31' : 'Tomorrow, July 31'} — the last day of the contest — is
+        <strong>the Final Push</strong>: log as many push-ups as you can in one day.
+        The biggest single-day total on the 31st crowns the
+        <strong style="color:#FFD700;">Final Push Champion</strong>, honored forever in the
+        Hall of Honor. The live board runs all day on the leaderboard.
+        <br/><br/>${hook}
+        <br/><br/><span style="color:#9A9AA5;font-size:13px;">House rules: reps must be logged on July 31, daily cap is 3,000, and pace yourself — form counts, ego doesn't.</span>`,
+      ctaLabel: isToday ? 'Log your reps' : 'See the board',
+      ctaUrl: `${siteUrl}/dashboard`,
+      unsubscribe: unsubscribeUrl('profile', profileId),
+    }),
+  }
+}
+
+interface FinaleArgs {
+  profileId: string
+  displayName: string | null
+  totalPushups: number
+  bestDay: number
+  longestStreak: number
+  hasPledge: boolean
+  // Final nationwide count, shared by every message in the blast.
+  communityTotal: number
+}
+
+// One-time blast on August 2, once the books are closed: personal after-action
+// stats, the final national count, and the Hall of Honor. Finishers get the
+// merch call to action; pledgers get the fulfillment nudge.
+export function buildFinaleEmail({
+  profileId,
+  displayName,
+  totalPushups,
+  bestDay,
+  longestStreak,
+  hasPledge,
+  communityTotal,
+}: FinaleArgs) {
+  const name = displayName || 'Patriot'
+  const finisher = totalPushups >= 1776
+
+  const statsLine =
+    totalPushups > 0
+      ? `Your campaign: <strong style="color:#FFD700;">${totalPushups.toLocaleString()}</strong> push-ups,
+        best day ${bestDay.toLocaleString()}, longest streak ${longestStreak} ${longestStreak === 1 ? 'day' : 'days'}.
+        Every rep is in that number above.`
+      : `You enlisted, and the door's open for 2027 — same month, same 1,776.`
+
+  const shirtLine = finisher
+    ? `<br/><br/>You finished all 1,776, which means the <strong>Reps for the Republic tee</strong> is
+      unlocked for you — made in USA, screen printed, $44 all-in.
+      <a href="${siteUrl}/merch" style="color:#C9A227;">Claim your tee →</a>`
+    : ''
+
+  const pledgeLine = hasPledge
+    ? `<br/><br/>One mission left: you made an honor-system pledge to the Wounded Warrior Project.
+      Now's the time to make good.
+      <a href="${CHARITY_DONATE_URLS.wounded_warrior}" style="color:#C9A227;">Fulfill your pledge →</a>`
+    : ''
+
+  return {
+    subject: finisher
+      ? 'The books are closed — and you finished all 1,776. 🇺🇸'
+      : `The books are closed: ${communityTotal.toLocaleString()} push-ups, together 🎆`,
+    html: emailShell({
+      heading: finisher ? `Liberty achieved, ${name}.` : `It's in the books, ${name}.`,
+      body: `America pressed <strong style="color:#FFD700;">${communityTotal.toLocaleString()}</strong> push-ups
+        in 31 days. The Hall of Honor is open: champions, the state battle, and the
+        one-of-a-kind moments — replayable any time.
+        <br/><br/>${statsLine}${shirtLine}${pledgeLine}
+        <br/><br/>Thank you for answering the call. See you in July 2027.`,
+      ctaLabel: 'Enter the Hall of Honor',
+      ctaUrl: `${siteUrl}/finale`,
       unsubscribe: unsubscribeUrl('profile', profileId),
     }),
   }

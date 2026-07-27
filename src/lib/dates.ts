@@ -12,12 +12,35 @@ export function localDateString(date: Date = new Date()): string {
 
 // Challenge window: July 1-31, 2026.
 export const CHALLENGE_TOTAL = 1776
+// The Final Push: last-day blitz — most reps logged on July 31 wins.
+export const FINAL_PUSH_DATE = '2026-07-31'
 const CHALLENGE_YEAR = 2026
 const JULY = 6 // Date.getMonth() is 0-indexed
 const DAYS_IN_JULY = 31
 
 export function isChallengeLive(date: Date = new Date()): boolean {
   return date.getFullYear() === CHALLENGE_YEAR && date.getMonth() === JULY
+}
+
+// Lifecycle of the challenge, on the viewer's local calendar (same convention
+// as isChallengeLive — the challenge day is the user's local day):
+// - 'before': any day up to June 30, 2026
+// - 'live':   July 1-31, 2026 — the contest
+// - 'grace':  August 1, 2026 — the books are still open for July reps that
+//             didn't get logged in time (the database freezes writes at
+//             2026-08-02T10:00:00Z, after Aug 1 has ended in every US zone)
+// - 'ended':  August 2, 2026 onward — standings are final
+export type ChallengePhase = 'before' | 'live' | 'grace' | 'ended'
+
+const AUGUST = 7 // Date.getMonth() is 0-indexed
+
+export function challengePhase(date: Date = new Date()): ChallengePhase {
+  const year = date.getFullYear()
+  const month = date.getMonth()
+  if (year < CHALLENGE_YEAR || (year === CHALLENGE_YEAR && month < JULY)) return 'before'
+  if (year === CHALLENGE_YEAR && month === JULY) return 'live'
+  if (year === CHALLENGE_YEAR && month === AUGUST && date.getDate() === 1) return 'grace'
+  return 'ended'
 }
 
 // Days of July 2026 still available to log, counting today.

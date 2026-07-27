@@ -2,7 +2,9 @@
 
 import { useState, useEffect } from 'react'
 import { createClient, LeaderboardEntry, US_STATES } from '@/lib/supabase'
+import { challengePhase, ChallengePhase } from '@/lib/dates'
 import CommunityMilestoneBanner from '@/components/CommunityMilestoneBanner'
+import FinalPushBanner from '@/components/FinalPushBanner'
 import Navigation from '@/components/Navigation'
 import ClickableName from '@/components/UserPushupChartModal'
 import Link from 'next/link'
@@ -14,6 +16,12 @@ export default function LeaderboardPage() {
   const [filter, setFilter] = useState<'all' | 'streak' | 'daily' | 'recruits'>('all')
   const [userId, setUserId] = useState<string | null>(null)
   const [showChat, setShowChat] = useState(false)
+  // Resolved after mount so the prerendered HTML matches the first render.
+  const [phase, setPhase] = useState<ChallengePhase | null>(null)
+
+  useEffect(() => {
+    setPhase(challengePhase())
+  }, [])
 
   useEffect(() => {
     const supabase = createClient()
@@ -46,8 +54,13 @@ export default function LeaderboardPage() {
     loadLeaderboard()
   }, [])
 
+  // Once the contest ends every current streak has expired to 0 (the view
+  // applies the live-streak rule), so the final board ranks longest streak.
+  const ended = phase === 'ended'
+  const streakOf = (e: LeaderboardEntry) => (ended ? e.longest_streak : e.current_streak)
+
   const sortedLeaderboard = [...leaderboard].sort((a, b) => {
-    if (filter === 'streak') return b.current_streak - a.current_streak
+    if (filter === 'streak') return streakOf(b) - streakOf(a)
     if (filter === 'daily') return b.best_day - a.best_day
     if (filter === 'recruits') return (b.recruits || 0) - (a.recruits || 0)
     return b.total_pushups - a.total_pushups
@@ -61,12 +74,33 @@ export default function LeaderboardPage() {
           {/* Header */}
           <div className="mb-8">
             <div className="app-eyebrow mb-3">National board</div>
-            <h1 className="app-title text-6xl sm:text-7xl">Leaderboard</h1>
-            <p className="text-white/60 mt-3">The people putting in the work.</p>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+              <h1 className="app-title text-6xl sm:text-7xl">Leaderboard</h1>
+              {ended && (
+                <span className="inline-flex items-center gap-1 px-3 py-1 border-2 border-liberty-gold text-liberty-gold text-xs font-extrabold uppercase tracking-[0.2em] -rotate-2">
+                  🇺🇸 Final
+                </span>
+              )}
+            </div>
+            <p className="text-white/60 mt-3">
+              {ended
+                ? 'The 2026 books are closed. These standings are permanent.'
+                : phase === 'grace'
+                  ? 'Last call — standings are certified after tonight.'
+                  : 'The people putting in the work.'}
+            </p>
+            {ended && (
+              <Link href="/finale" className="inline-block mt-3 text-sm text-liberty-gold hover:underline">
+                See the champions in the Hall of Honor →
+              </Link>
+            )}
           </div>
 
           {/* Nationwide count + milestone celebration */}
           <CommunityMilestoneBanner userId={userId} className="mb-8" />
+
+          {/* The Final Push: last-day blitz hype, live board, then results */}
+          <FinalPushBanner userId={userId} className="mb-8" />
 
           {/* Filter Tabs */}
           <div className="flex justify-center gap-2 mb-8">
@@ -121,12 +155,14 @@ export default function LeaderboardPage() {
                     </div>
                     <div className="text-sm text-white/50">
                       {entry.state_code ? US_STATES[entry.state_code] : 'No state'}
-                      {entry.current_streak > 0 && ` / ${entry.current_streak} day streak`}
+                      {ended
+                        ? entry.longest_streak > 0 && ` / best streak ${entry.longest_streak} days`
+                        : entry.current_streak > 0 && ` / ${entry.current_streak} day streak`}
                     </div>
                   </div>
                   <div className="text-right">
                     <div className="font-bebas text-2xl text-white">
-                      {filter === 'streak' ? entry.current_streak :
+                      {filter === 'streak' ? streakOf(entry) :
                        filter === 'daily' ? entry.best_day :
                        filter === 'recruits' ? (entry.recruits || 0) :
                        entry.total_pushups.toLocaleString()}
