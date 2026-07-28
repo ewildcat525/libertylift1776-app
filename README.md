@@ -46,7 +46,8 @@ they are configured, and outside the July 1 – August 4, 2026 window.
 
 Set `EMAIL_TEST_RECIPIENT` to a single address to enable a protected delivery check at
 `POST /api/email/test`. It requires `Authorization: Bearer <CRON_SECRET>` and never
-sends to the campaign mailing list.
+sends to the campaign mailing list. Add `?type=final-push` or `?type=finale` to send
+the corresponding production template with representative test stats.
 
 ## Tech Stack
 
