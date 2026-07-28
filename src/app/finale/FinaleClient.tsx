@@ -185,7 +185,6 @@ export default function FinaleClient() {
   const [pledged, setPledged] = useState<{ total: number; pledgers: number } | null>(null)
   const [participants, setParticipants] = useState<number | null>(null)
   const [replaying, setReplaying] = useState<Replay | null>(null)
-  const [entranceShow, setEntranceShow] = useState(false)
   const [nextYearEmail, setNextYearEmail] = useState('')
   const [nextYearBusy, setNextYearBusy] = useState(false)
   const [nextYearDone, setNextYearDone] = useState(false)
@@ -281,15 +280,6 @@ export default function FinaleClient() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase])
 
-  // One entrance fireworks show per device, once the results are final.
-  useEffect(() => {
-    if (phase !== 'ended' || typeof window === 'undefined') return
-    if (!localStorage.getItem('ll-finale-entrance-seen')) {
-      localStorage.setItem('ll-finale-entrance-seen', '1')
-      setEntranceShow(true)
-    }
-  }, [phase])
-
   const total = progress?.total_pushups ?? null
   const shownTotal = useCountUp(total)
 
@@ -364,15 +354,6 @@ export default function FinaleClient() {
     })
   }
 
-  const replayGrandFinale = () => {
-    track('finale_replay', { threshold: 0 })
-    setReplaying({
-      scene: 'fireworks',
-      title: '🎆 THE 2026 LIBERTY LIFT 🎆',
-      subtitle: total ? `${total.toLocaleString()} push-ups strong` : 'One nation, one count',
-    })
-  }
-
   const joinNextYear = async (email: string) => {
     const clean = email.trim().toLowerCase()
     if (!clean || !clean.includes('@')) {
@@ -436,14 +417,6 @@ export default function FinaleClient() {
   return (
     <>
       <Navigation />
-
-      {entranceShow && (
-        <Fireworks
-          onDone={() => setEntranceShow(false)}
-          title="🎆 THE 2026 LIBERTY LIFT 🎆"
-          subtitle="It's in the books, patriot"
-        />
-      )}
 
       {replaying &&
         (replaying.scene === 'summit' ? (
@@ -728,11 +701,6 @@ export default function FinaleClient() {
                     </div>
                   )
                 })}
-              </div>
-              <div className="text-center mt-4">
-                <button onClick={replayGrandFinale} className="btn-gold px-6 py-2.5 text-sm">
-                  🎆 Play the grand finale
-                </button>
               </div>
             </section>
           )}
