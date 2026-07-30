@@ -8,11 +8,17 @@
 // under you, and a log box so you never have to leave to answer someone
 // passing you.
 //
-// Four looks, keyed to the viewer's local calendar day (see finalPushPhase):
+// Four looks (see finalPushPhase), re-derived every second so a room left
+// open closes itself rather than sitting there wearing live badges:
 // - before:  the eve — countdown to the blitz and the standard to beat
-// - live:    July 31 — the war room proper
-// - results: August 1 — the champion, still provisional through the grace day
+// - live:    the viewer's July 31 has opened and the bell has not rung
+// - results: the bell has rung, the board is frozen, the champion stands
 // - over:    August 2 onward — the Hall of Honor owns it; we point there
+//
+// The bell is a single national instant — midnight ending July 31 in Hawaii,
+// the last US timezone to get there (see FINAL_PUSH_DEADLINE). Everyone
+// watches the same clock hit zero, and the crown does not wait for the grace
+// day: past the bell the views ignore anything logged after it.
 //
 // Liveness comes from a realtime subscription to pushup_logs inserts
 // (20260730120000_final_push_war_room.sql). Every insert nudges a debounced
@@ -165,6 +171,9 @@ export default function WarRoomClient() {
   const [moves, setMoves] = useState<Record<string, number>>({})
   const [passedAlert, setPassedAlert] = useState(false)
   const [bellShow, setBellShow] = useState(false)
+  // Resolved from the frozen board after the bell, never from whatever the
+  // board happened to be showing a second earlier.
+  const [bellChampions, setBellChampions] = useState<BoardRow[]>([])
 
   const [amount, setAmount] = useState('')
   const [logging, setLogging] = useState(false)
@@ -175,6 +184,9 @@ export default function WarRoomClient() {
   const prevRanks = useRef<Record<string, number>>({})
   const myRankRef = useRef<number | null>(null)
   const bellFiredRef = useRef(false)
+  // The bell only tolls for a room that was actually open and live when the
+  // deadline passed — not for someone arriving afterwards.
+  const wasLiveRef = useRef(false)
   // Read inside the realtime callback, which must not be torn down and
   // resubscribed just because auth resolved.
   const userIdRef = useRef<string | null>(null)
@@ -186,26 +198,30 @@ export default function WarRoomClient() {
   // empty boards until reps actually land on the 31st.
   const [previewMode, setPreviewMode] = useState(false)
 
+  // --- The clock -------------------------------------------------------
+  // One ticking effect owns both the clock and the phase. Deriving the phase
+  // once at mount left a room open past the bell still wearing its live
+  // badges, subscription and log box until someone reloaded; re-deriving it
+  // every second means the room closes itself. Re-setting the same phase
+  // value is free — React bails out on an unchanged state value, so the
+  // effects keyed to it do not re-run.
   useEffect(() => {
     const preview = new URLSearchParams(window.location.search).get('preview') === 'war-room'
     setPreviewMode(preview)
-    setPhase(preview ? 'live' : finalPushPhase())
+
+    const tick = () => {
+      const next = preview ? 'live' : finalPushPhase()
+      setPhase(next)
+      setMsLeft(next === 'before' ? msUntilFinalPush() : msUntilClosingBell())
+    }
+    tick()
+    const id = setInterval(tick, 1000)
+    return () => clearInterval(id)
   }, [])
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUser(data.user ?? null))
   }, [supabase])
-
-  // --- The clock -------------------------------------------------------
-  // Before the day it counts down to the blitz opening; on the day, to the
-  // closing bell.
-  useEffect(() => {
-    if (phase === null) return
-    const read = () => (phase === 'before' ? msUntilFinalPush() : msUntilClosingBell())
-    setMsLeft(read())
-    const id = setInterval(() => setMsLeft(read()), 1000)
-    return () => clearInterval(id)
-  }, [phase])
 
   // Only the live day escalates. On the eve the same clock is counting down
   // to the blitz *opening*, and dressing that in last-hour red would spend
@@ -213,14 +229,9 @@ export default function WarRoomClient() {
   const intensity: Intensity =
     phase === 'live' && msLeft !== null ? intensityOf(msLeft) : 'steady'
 
-  // The bell tolls once, for whoever is still in the room when it does.
   useEffect(() => {
-    if (phase !== 'live' || msLeft === null || bellFiredRef.current) return
-    if (msLeft > 0) return
-    bellFiredRef.current = true
-    setBellShow(true)
-    track('final_push_closing_bell')
-  }, [phase, msLeft])
+    if (phase === 'live') wasLiveRef.current = true
+  }, [phase])
 
   // --- Data ------------------------------------------------------------
   const loadBoard = useCallback(async () => {
@@ -296,6 +307,28 @@ export default function WarRoomClient() {
     if (phase === null || phase === 'before') return
     refresh()
   }, [phase, refresh])
+
+  // The bell tolls once, for whoever is still in the room when it does.
+  //
+  // Nothing is crowned from the board on screen. Realtime can be a beat
+  // behind and the last refetch may predate reps logged at 09:59, so we let
+  // the deadline pass, give in-flight inserts a moment to land, then read the
+  // board once more. Past the deadline the views exclude anything logged
+  // after the bell, so that read is the frozen, final standing — and ties
+  // share the crown.
+  useEffect(() => {
+    if (bellFiredRef.current || !wasLiveRef.current) return
+    if (msLeft === null || msLeft > 0) return
+    bellFiredRef.current = true
+
+    const id = setTimeout(async () => {
+      const rows = await loadBoard()
+      setBellChampions(rows.filter((r) => r.final_push_rank === 1))
+      setBellShow(true)
+      track('final_push_closing_bell')
+    }, 3000)
+    return () => clearTimeout(id)
+  }, [msLeft, loadBoard])
 
   // The standard to beat on the eve: the biggest single day anyone has put
   // up all month. best_day already lives on the leaderboard view.
@@ -399,18 +432,25 @@ export default function WarRoomClient() {
   const myTotal = myRow?.final_day_pushups ?? 0
   const capLeft = Math.max(0, DAILY_CAP - myTotal)
 
-  // The single most motivating number in the room: what it costs to take
-  // the next spot. Ranks tie, so the target is the best total still above
-  // yours, not simply the row above you on screen.
+  // The single most motivating number in the room: what it costs to take the
+  // next spot. Ranks tie, so the target is the best total still above yours,
+  // not simply the row above you on screen.
+  //
+  // Only the top BOARD_SIZE are loaded, so someone sitting at #100 has no
+  // rival on screen — the nearest person above them is #99, who is not here.
+  // Rather than quietly point them at #25 as if it were the next rung, name
+  // what that number actually buys: the cut line into the board.
   const chase = useMemo(() => {
-    if (!board || !myRow) return null
-    const above = board.filter((r) => r.final_day_pushups > myRow.final_day_pushups)
+    if (!board || board.length === 0 || !myRow) return null
+    const above = board.filter((r) => r.final_day_pushups > myTotal)
     if (above.length === 0) return null
     const target = above[above.length - 1]
-    return { name: target.display_name || 'A patriot', gap: target.final_day_pushups - myTotal + 1 }
+    const gap = target.final_day_pushups - myTotal + 1
+    return myRow.final_push_rank > board.length
+      ? { gap, kind: 'cutline' as const, name: '', size: board.length }
+      : { gap, kind: 'pass' as const, name: target.display_name || 'A patriot', size: board.length }
   }, [board, myRow, myTotal])
 
-  const leader = board?.[0] ?? null
   const clock = clockParts(msLeft ?? 0)
 
   if (phase === null) {
@@ -430,8 +470,10 @@ export default function WarRoomClient() {
           onDone={() => setBellShow(false)}
           title="🔔 THE BELL 🔔"
           subtitle={
-            leader
-              ? `${leader.display_name || 'A patriot'} — ${leader.final_day_pushups.toLocaleString()} on the last day`
+            bellChampions.length > 0
+              ? `${bellChampions
+                  .map((c) => c.display_name || 'A patriot')
+                  .join(' & ')} — ${bellChampions[0].final_day_pushups.toLocaleString()} on the last day`
               : 'The 2026 Liberty Lift is complete'
           }
         />
@@ -493,11 +535,15 @@ export default function WarRoomClient() {
                   </div>
                 )}
                 {phase === 'live' && intensity !== 'bell' && (
-                  <p className="warroom-clock-note">Midnight on your clock. Log it before then.</p>
+                  <p className="warroom-clock-note">
+                    One clock for the whole country: midnight in Hawaii, the last time zone
+                    standing. 6:00am ET on August 1. Log it before then.
+                  </p>
                 )}
                 {intensity === 'bell' && (
                   <p className="warroom-clock-note">
-                    Reps you already did today can still be logged through the grace day.
+                    The day board is frozen. Reps logged from here still count toward your
+                    1,776, your state and the national total.
                   </p>
                 )}
               </div>
@@ -530,6 +576,11 @@ export default function WarRoomClient() {
                   <li>Biggest day total in the country takes the crown.</li>
                   <li>They still count for your 1,776, your state, and the national total.</li>
                   <li>The board is live — you will see the country move all day.</li>
+                  <li>
+                    One deadline for everyone: the closing bell at midnight in Hawaii, the last
+                    time zone standing — 6:00am ET on August 1. Reps logged after it still count
+                    toward your 1,776, but not toward the crown.
+                  </li>
                   <li>Cap is {DAILY_CAP.toLocaleString()} in a day. Log in sets as you go.</li>
                 </ul>
               </section>
@@ -581,7 +632,15 @@ export default function WarRoomClient() {
                                 {chase.gap.toLocaleString()}
                               </span>
                               <span className="warroom-chase-copy">
-                                more to pass <strong>{chase.name}</strong>
+                                {chase.kind === 'pass' ? (
+                                  <>
+                                    more to pass <strong>{chase.name}</strong>
+                                  </>
+                                ) : (
+                                  <>
+                                    more to crack the <strong>top {chase.size}</strong>
+                                  </>
+                                )}
                               </span>
                             </>
                           ) : myRow ? (
@@ -796,8 +855,8 @@ export default function WarRoomClient() {
                 <div className="warroom-outro">
                   {phase === 'results' && (
                     <p className="warroom-outro-note">
-                      Provisional until the books close: reps done on the 31st can still be logged
-                      through the grace day.
+                      Frozen at the closing bell. Reps logged after it still count toward 1,776,
+                      your state and the national total — they cannot change who won the last day.
                     </p>
                   )}
                   <Link href="/finale" className="btn-primary">

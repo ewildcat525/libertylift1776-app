@@ -184,7 +184,9 @@ export function buildFinalPushEmail({ profileId, displayName, totalPushups, dayO
         Hall of Honor. The war room runs live all day: the national count, the board moving
         under you, every rep in the country landing on the tape, and a clock to the closing bell.
         <br/><br/>${hook}
-        <br/><br/><span style="color:#9A9AA5;font-size:13px;">House rules: reps must be logged on July 31, daily cap is 5,000, and pace yourself — form counts, ego doesn't.</span>`,
+        <br/><br/><span style="color:#9A9AA5;font-size:13px;">House rules: reps must be dated July 31 and logged before the closing bell —
+        midnight in Hawaii, the last time zone standing, which is 6:00am ET on August 1. Daily cap is 5,000. Pace
+        yourself — form counts, ego doesn't.</span>`,
       ctaLabel: isToday ? 'Enter the war room' : 'See the standard to beat',
       ctaUrl: `${siteUrl}/final-push`,
       unsubscribe: unsubscribeUrl('profile', profileId),

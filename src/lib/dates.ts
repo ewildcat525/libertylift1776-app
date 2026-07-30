@@ -68,29 +68,44 @@ export function easternNow(): Date {
   return new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }))
 }
 
-// The Final Push, on the viewer's local calendar:
-// - 'before':  any day up to July 30 — the blitz is still ahead
-// - 'live':    July 31 — the war room is open
-// - 'results': August 1 — the grace day, results still provisional because
-//              late July 31 entries can land until the books freeze
+// The closing bell: ONE national instant, not each viewer's own midnight.
+//
+// Midnight ending July 31 in the last US timezone to reach it. Hawaii
+// (UTC-10, never on DST) gets there at 2026-08-01T10:00Z; Alaska, on AKDT
+// (UTC-8) in July, gets there two hours earlier at 08:00Z — so Hawaii is the
+// one that decides it. Every patriot's July 31 is over at that instant, and
+// that is when the Final Push Champion is crowned.
+//
+// The crown deliberately does NOT wait for the grace day. The books stay open
+// until 2026-08-02T10:00Z (see 20260727120000_close_the_books.sql — the same
+// midnight-in-Hawaii convention, one day later) so late July reps still count
+// toward 1,776, your state, and the national total. They just cannot change
+// who won the last day: the Final Push is a live contest, and it closes at
+// the bell.
+export const FINAL_PUSH_DEADLINE = '2026-08-01T10:00:00Z'
+export const FINAL_PUSH_DEADLINE_MS = Date.parse(FINAL_PUSH_DEADLINE)
+
+// The Final Push, keyed to the bell above and the viewer's local calendar:
+// - 'before':  the blitz has not opened on the viewer's clock yet
+// - 'live':    the viewer's July 31 has started and the bell has not rung —
+//              which keeps a stateside viewer live into the small hours of
+//              August 1, because they can still log July 31 reps until it does
+// - 'results': the bell has rung, the day board is frozen, the champion stands
 // - 'over':    August 2 onward — the Hall of Honor owns the story
 export type FinalPushPhase = 'before' | 'live' | 'results' | 'over'
 
 export function finalPushPhase(date: Date = new Date()): FinalPushPhase {
-  const today = localDateString(date)
-  if (today < FINAL_PUSH_DATE) return 'before'
-  if (today === FINAL_PUSH_DATE) return 'live'
-  if (today === '2026-08-01') return 'results'
-  return 'over'
+  if (date.getTime() >= FINAL_PUSH_DEADLINE_MS) {
+    return localDateString(date) >= '2026-08-02' ? 'over' : 'results'
+  }
+  return localDateString(date) < FINAL_PUSH_DATE ? 'before' : 'live'
 }
 
-// Milliseconds until the closing bell: midnight at the end of July 31 on the
-// viewer's own clock. That is the real deadline they experience — the
-// dashboard stamps a log at noon local for the chosen day, so a July 31 log
-// from any US timezone still lands on the Eastern July 31 the day board
-// buckets by. Negative once the bell has rung.
+// Milliseconds until the closing bell. The same countdown for everyone in the
+// country, so the bell is a single shared moment rather than six staggered
+// ones. Negative once it has rung.
 export function msUntilClosingBell(date: Date = new Date()): number {
-  return new Date(CHALLENGE_YEAR, JULY, DAYS_IN_JULY + 1, 0, 0, 0, 0).getTime() - date.getTime()
+  return FINAL_PUSH_DEADLINE_MS - date.getTime()
 }
 
 // Milliseconds until the Final Push opens: midnight at the start of July 31,

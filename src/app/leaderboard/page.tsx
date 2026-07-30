@@ -2,7 +2,13 @@
 
 import { useState, useEffect } from 'react'
 import { createClient, LeaderboardEntry, US_STATES } from '@/lib/supabase'
-import { challengePhase, ChallengePhase, FINAL_PUSH_DATE, localDateString } from '@/lib/dates'
+import {
+  challengePhase,
+  ChallengePhase,
+  FINAL_PUSH_DATE,
+  finalPushPhase,
+  localDateString,
+} from '@/lib/dates'
 import CommunityMilestoneBanner from '@/components/CommunityMilestoneBanner'
 import FinalPushBanner, { FinalPushRow } from '@/components/FinalPushBanner'
 import Navigation from '@/components/Navigation'
@@ -25,8 +31,10 @@ export default function LeaderboardPage() {
     setPhase(challengePhase())
     const t = localDateString()
     setToday(t)
-    // On the day itself, the Final Push board is the main event.
-    if (t === FINAL_PUSH_DATE) setFilter('finalpush')
+    // While the blitz is running, the Final Push board is the main event.
+    // Keyed to the phase, not the date, so it stays the default tab through
+    // the small hours of August 1 — the bell is midnight in Hawaii.
+    if (finalPushPhase() === 'live') setFilter('finalpush')
   }, [])
 
   // Fetched on every switch to the tab (not cached) so re-tabbing on the
