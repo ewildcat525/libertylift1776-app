@@ -181,11 +181,12 @@ export function buildFinalPushEmail({ profileId, displayName, totalPushups, dayO
         <strong>the Final Push</strong>: log as many push-ups as you can in one day.
         The biggest single-day total on the 31st crowns the
         <strong style="color:#FFD700;">Final Push Champion</strong>, honored forever in the
-        Hall of Honor. The live board runs all day on the leaderboard.
+        Hall of Honor. The war room runs live all day: the national count, the board moving
+        under you, every rep in the country landing on the tape, and a clock to the closing bell.
         <br/><br/>${hook}
         <br/><br/><span style="color:#9A9AA5;font-size:13px;">House rules: reps must be logged on July 31, daily cap is 5,000, and pace yourself — form counts, ego doesn't.</span>`,
-      ctaLabel: isToday ? 'Log your reps' : 'See the board',
-      ctaUrl: `${siteUrl}/dashboard`,
+      ctaLabel: isToday ? 'Enter the war room' : 'See the standard to beat',
+      ctaUrl: `${siteUrl}/final-push`,
       unsubscribe: unsubscribeUrl('profile', profileId),
     }),
   }

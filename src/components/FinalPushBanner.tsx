@@ -101,6 +101,9 @@ export default function FinalPushBanner({ userId, refreshKey, className = '' }: 
           permanent spot in the Hall of Honor. Every rep still counts for your state, your
           1,776, and the national total.
         </p>
+        <Link href="/final-push" className="btn-primary mt-5">
+          {daysLeft === 1 ? 'See the standard to beat' : 'Inside the Final Push'}
+        </Link>
       </div>
     )
   }
@@ -170,8 +173,23 @@ export default function FinalPushBanner({ userId, refreshKey, className = '' }: 
         </p>
       )}
 
+      {/* The banner is the teaser; the war room is where the day is lived. */}
+      {mode === 'live' && (
+        <div className="text-center mt-5">
+          <Link href="/final-push" className="btn-primary">
+            Enter the war room
+          </Link>
+          <p className="text-white/40 text-xs mt-2">
+            The live national count, the tape, and the clock to the closing bell.
+          </p>
+        </div>
+      )}
+
       {mode === 'results' && (
-        <div className="text-center mt-4">
+        <div className="text-center mt-4 flex flex-col gap-2">
+          <Link href="/final-push" className="text-sm text-liberty-gold hover:underline">
+            Replay the last day →
+          </Link>
           <Link href="/finale" className="text-sm text-liberty-gold hover:underline">
             The champion takes their place in the Hall of Honor →
           </Link>

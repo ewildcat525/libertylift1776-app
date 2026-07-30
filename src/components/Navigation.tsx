@@ -5,7 +5,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase'
 import { canUseChat } from '@/lib/flags'
-import { challengePhase } from '@/lib/dates'
+import { challengePhase, finalPushPhase, FinalPushPhase } from '@/lib/dates'
 import NotificationBell from '@/components/NotificationBell'
 import type { User } from '@supabase/supabase-js'
 
@@ -17,11 +17,13 @@ export default function Navigation() {
   const [menuOpen, setMenuOpen] = useState(false)
   // Resolved after mount so the prerendered HTML matches the first render.
   const [postContest, setPostContest] = useState(false)
+  const [finalPush, setFinalPush] = useState<FinalPushPhase | null>(null)
   const supabase = createClient()
 
   useEffect(() => {
     const phase = challengePhase()
     setPostContest(phase === 'grace' || phase === 'ended')
+    setFinalPush(finalPushPhase())
   }, [])
 
   const handleSignOut = async () => {
@@ -73,6 +75,12 @@ export default function Navigation() {
 
   if (showChat) {
     navLinks.push({ href: '/chat', label: 'Chat' })
+  }
+
+  // On the last day the war room leads the nav; on the grace day it stays up
+  // one more day for the results, behind the Hall of Honor.
+  if (finalPush === 'live' || finalPush === 'results') {
+    navLinks.unshift({ href: '/final-push', label: '🔥 Final Push' })
   }
 
   // Once the contest wraps, the Hall of Honor leads the nav.
