@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import type { User } from '@supabase/supabase-js'
 import { track } from '@vercel/analytics'
 import {
@@ -95,6 +96,18 @@ interface Replay {
   subtitle: string
 }
 
+interface Trophy {
+  id: string
+  eyebrow: string
+  title: string
+  name: string
+  place: string | null
+  value: string
+  unit: string
+  story: string
+  tone: 'gold' | 'silver' | 'bronze' | 'crimson'
+}
+
 // Ease-out count-up for the hero number.
 function useCountUp(target: number | null, durationMs = 2200) {
   const [value, setValue] = useState(0)
@@ -137,41 +150,127 @@ function championStates(rows: LeaderboardEntry[]) {
   return states.join(' & ') || null
 }
 
-function ChampionCard({
-  label,
-  icon,
-  name,
-  detail,
-  value,
-  unit,
+function TrophySculpture({ tone = 'gold' }: { tone?: Trophy['tone'] }) {
+  return (
+    <div className={`finale-trophy finale-trophy--${tone}`} aria-hidden="true">
+      <Image
+        src="/finale-trophy.jpg"
+        alt=""
+        fill
+        sizes="(max-width: 640px) 82vw, (max-width: 1024px) 42vw, 360px"
+        className="finale-trophy-image"
+      />
+      <div className="finale-trophy-grade" />
+    </div>
+  )
+}
+
+function TrophyCard({
+  trophy,
+  onOpen,
+  featured = false,
 }: {
-  label: string
-  icon: string
-  name: string
-  detail: string | null
-  value: string
-  unit: string
+  trophy: Trophy
+  onOpen: () => void
+  featured?: boolean
 }) {
   return (
-    <div className="card p-6 text-center border-liberty-gold/30 hover:border-liberty-gold/60 transition-colors">
-      <div className="text-3xl mb-2" aria-hidden="true">
-        {icon}
+    <button
+      type="button"
+      onClick={onOpen}
+      className={`finale-trophy-card ${featured ? 'finale-trophy-card--featured' : ''}`}
+      aria-label={`Open ${trophy.title}: ${trophy.name}`}
+    >
+      <div className="finale-trophy-beam" />
+      <TrophySculpture tone={trophy.tone} />
+      <div className="finale-trophy-plaque">
+        <span>{trophy.eyebrow}</span>
+        <strong>{trophy.title}</strong>
       </div>
-      <div className="text-[10px] text-liberty-gold font-bold uppercase tracking-[0.25em] mb-2">
-        {label}
+      <span className="finale-trophy-prompt">
+        Reveal winner <span aria-hidden="true">↗</span>
+      </span>
+    </button>
+  )
+}
+
+function TrophyReveal({ trophy, onClose }: { trophy: Trophy; onClose: () => void }) {
+  const panelRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose()
+      if (event.key !== 'Tab') return
+
+      const controls = panelRef.current?.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])'
+      )
+      if (!controls?.length) return
+      const first = controls[0]
+      const last = controls[controls.length - 1]
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
+    document.addEventListener('keydown', onKeyDown)
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.removeEventListener('keydown', onKeyDown)
+      document.body.style.overflow = ''
+    }
+  }, [onClose])
+
+  return (
+    <div className="finale-reveal" role="dialog" aria-modal="true" aria-labelledby="trophy-title">
+      <button
+        type="button"
+        className="finale-reveal-backdrop"
+        onClick={onClose}
+        aria-label="Close winner reveal"
+      />
+      <div className="finale-reveal-panel" ref={panelRef}>
+        <button type="button" className="finale-reveal-close" onClick={onClose} autoFocus>
+          Close <span aria-hidden="true">×</span>
+        </button>
+        <div className="finale-reveal-rays" aria-hidden="true" />
+        <div className="finale-reveal-sculpture">
+          <TrophySculpture tone={trophy.tone} />
+        </div>
+        <div className="finale-reveal-copy">
+          <div className="finale-kicker">{trophy.eyebrow}</div>
+          <h2 id="trophy-title">{trophy.title}</h2>
+          <div className="finale-reveal-rule" />
+          <div
+            className={`finale-reveal-name ${
+              trophy.name.replace(/\s/g, '').length > 13 ? 'finale-reveal-name--long' : ''
+            }`}
+          >
+            {trophy.name}
+          </div>
+          {trophy.place && <div className="finale-reveal-place">{trophy.place}</div>}
+          <div className="finale-reveal-record">
+            <strong>{trophy.value}</strong>
+            <span>{trophy.unit}</span>
+          </div>
+          <p>{trophy.story}</p>
+          <button type="button" className="finale-reveal-done" onClick={onClose}>
+            Return to the trophy room
+          </button>
+        </div>
       </div>
-      <div className="font-bebas text-2xl text-white truncate" title={name}>
-        {name}
-      </div>
-      {detail && <div className="text-xs text-white/50 truncate">{detail}</div>}
-      <div className="font-bebas text-4xl text-liberty-gold mt-3">{value}</div>
-      <div className="text-xs text-white/50 uppercase tracking-wider">{unit}</div>
     </div>
   )
 }
 
 export default function FinaleClient() {
   const [phase, setPhase] = useState<ChallengePhase | null>(null)
+  const [previewMode, setPreviewMode] = useState(false)
+  const [ceremony, setCeremony] = useState<'closed' | 'opening' | 'open'>('closed')
+  const [activeTrophy, setActiveTrophy] = useState<Trophy | null>(null)
   const [user, setUser] = useState<User | null>(null)
   const [progress, setProgress] = useState<CommunityProgress | null>(null)
   const [podium, setPodium] = useState<LeaderboardEntry[]>([])
@@ -190,11 +289,37 @@ export default function FinaleClient() {
   const [nextYearDone, setNextYearDone] = useState(false)
   const [nextYearError, setNextYearError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+  const trophyShelfRef = useRef<HTMLDivElement>(null)
   const supabase = createClient()
 
   useEffect(() => {
-    setPhase(challengePhase())
+    const preview = new URLSearchParams(window.location.search).get('preview') === 'grand-finale'
+    setPreviewMode(preview)
+    setPhase(preview ? 'ended' : challengePhase())
   }, [])
+
+  useEffect(() => {
+    if (phase !== 'grace' && phase !== 'ended') return
+    const navigation = document.querySelector('nav')
+    if (ceremony !== 'open') {
+      document.body.style.overflow = 'hidden'
+      navigation?.setAttribute('inert', '')
+    } else {
+      document.body.style.overflow = ''
+      navigation?.removeAttribute('inert')
+    }
+    return () => {
+      document.body.style.overflow = ''
+      navigation?.removeAttribute('inert')
+    }
+  }, [ceremony, phase])
+
+  const openCeremony = () => {
+    track('finale_doors_opened', { preview: previewMode })
+    setCeremony('opening')
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    window.setTimeout(() => setCeremony('open'), reducedMotion ? 250 : 2200)
+  }
 
   useEffect(() => {
     if (phase !== 'grace' && phase !== 'ended') return
@@ -296,6 +421,118 @@ export default function FinaleClient() {
         : null,
     [states]
   )
+
+  const trophies = useMemo<Trophy[]>(() => {
+    const awards: Trophy[] = []
+    const nationalChampion = podium[0]
+
+    if (nationalChampion) {
+      awards.push({
+        id: 'national-champion',
+        eyebrow: 'The 2026 crown',
+        title: 'National Champion',
+        name: nationalChampion.display_name || 'A patriot',
+        place: nationalChampion.state_code ? US_STATES[nationalChampion.state_code] : null,
+        value: nationalChampion.total_pushups.toLocaleString(),
+        unit: 'push-ups across 31 days',
+        story:
+          'The highest total in the nation. Thirty-one days of showing up, pushing past the burn, and putting every rep on the board.',
+        tone: 'gold',
+      })
+    }
+
+    if (finalPushChamps.length > 0) {
+      awards.push({
+        id: 'final-push',
+        eyebrow: 'July 31',
+        title: 'Final Push',
+        name: finalPushChamps.map((row) => row.display_name || 'A patriot').join(' & '),
+        place:
+          Array.from(
+            new Set(
+              finalPushChamps
+                .map((row) => (row.state_code ? US_STATES[row.state_code] : null))
+                .filter(Boolean)
+            )
+          ).join(' & ') || null,
+        value: finalPushChamps[0].final_day_pushups.toLocaleString(),
+        unit: 'push-ups on the final day',
+        story:
+          'When the clock was running out, this was the biggest closing charge in America—the last-day performance that left nothing in reserve.',
+        tone: 'crimson',
+      })
+    }
+
+    if (streakChamps.length > 0) {
+      awards.push({
+        id: 'iron-streak',
+        eyebrow: 'Every day matters',
+        title: 'Iron Streak',
+        name: championNames(streakChamps),
+        place: championStates(streakChamps),
+        value: String(streakChamps[0].longest_streak),
+        unit: 'days in an unbroken streak',
+        story:
+          'No disappearing when motivation dipped. No waiting for the perfect day. This award belongs to the relentless.',
+        tone: 'silver',
+      })
+    }
+
+    if (dayChamps.length > 0) {
+      awards.push({
+        id: 'single-day',
+        eyebrow: 'One legendary session',
+        title: 'Single-Day Record',
+        name: championNames(dayChamps),
+        place: championStates(dayChamps),
+        value: dayChamps[0].best_day.toLocaleString(),
+        unit: 'push-ups in one day',
+        story:
+          'One calendar day. One extraordinary number. The biggest single-day performance of the 2026 Liberty Lift.',
+        tone: 'bronze',
+      })
+    }
+
+    if (recruitChamps.length > 0) {
+      awards.push({
+        id: 'recruiter',
+        eyebrow: 'Strength in numbers',
+        title: 'The Rally Cry',
+        name: championNames(recruitChamps),
+        place: championStates(recruitChamps),
+        value: String(recruitChamps[0].recruits ?? 0),
+        unit: 'patriots brought into the challenge',
+        story:
+          'A movement grows because someone asks another person to join. This champion made the circle bigger.',
+        tone: 'gold',
+      })
+    }
+
+    if (topStates[0]) {
+      awards.push({
+        id: 'champion-state',
+        eyebrow: 'The state battle',
+        title: 'Champion State',
+        name: US_STATES[topStates[0].state_code] || topStates[0].state_code,
+        place: `${topStates[0].participants.toLocaleString()} patriots on the roster`,
+        value: topStates[0].total_pushups.toLocaleString(),
+        unit: 'push-ups pressed together',
+        story:
+          'The state that climbed to the top of the national board—one community total, built rep by rep.',
+        tone: 'crimson',
+      })
+    }
+
+    return awards
+  }, [podium, finalPushChamps, streakChamps, dayChamps, recruitChamps, topStates])
+
+  useEffect(() => {
+    if (!trophies.length) return
+    const frame = requestAnimationFrame(() => {
+      trophyShelfRef.current?.scrollTo({ left: 0, behavior: 'auto' })
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [trophies.length])
 
   const shareText = total
     ? `America pressed ${total.toLocaleString()} push-ups in the Liberty Lift 1776 challenge. The books are closed — see the Hall of Honor: 🇺🇸`
@@ -418,6 +655,79 @@ export default function FinaleClient() {
     <>
       <Navigation />
 
+      {ceremony !== 'open' && (
+        <div className={`finale-ceremony finale-ceremony--${ceremony}`}>
+          <div className="finale-ceremony-stars" aria-hidden="true" />
+          <div className="finale-door finale-door--left" aria-hidden="true">
+            <Image
+              src="/finale-hall-entrance-v2.jpg"
+              alt=""
+              fill
+              priority
+              sizes="100vw"
+              className="finale-door-image"
+            />
+            <span className="finale-door-shade" />
+          </div>
+          <div className="finale-door finale-door--right" aria-hidden="true">
+            <Image
+              src="/finale-hall-entrance-v2.jpg"
+              alt=""
+              fill
+              priority
+              sizes="100vw"
+              className="finale-door-image"
+            />
+            <span className="finale-door-shade" />
+          </div>
+
+          <div className="finale-ceremony-topline">
+            <span>Liberty Lift</span>
+            <b>1776</b>
+            <span>Final record</span>
+          </div>
+
+          <div className="finale-ceremony-content">
+            <div className="finale-ceremony-seal" aria-hidden="true">
+              <span>LL</span>
+              <small>MMXXVI</small>
+            </div>
+            <div className="finale-kicker">Class of 2026</div>
+            <h1>The Hall <span>of Honor</span></h1>
+            <p>
+              The final rep is in. The records are sealed.
+              <br />
+              Step inside and meet the names that made history.
+            </p>
+            <button type="button" onClick={openCeremony} disabled={ceremony === 'opening'}>
+              <span className="finale-ceremony-button-icon" aria-hidden="true">
+                {ceremony === 'opening' ? '•••' : '✦'}
+              </span>
+              <span>{ceremony === 'opening' ? 'Doors opening' : 'Enter the Hall'}</span>
+              <span aria-hidden="true">→</span>
+            </button>
+            <div className="finale-ceremony-index" aria-hidden="true">
+              <span>Champions</span>
+              <i />
+              <span>Records</span>
+              <i />
+              <span>Finishers</span>
+            </div>
+          </div>
+          <button
+            type="button"
+            className="finale-ceremony-skip"
+            onClick={() => setCeremony('open')}
+          >
+            Skip ceremony
+          </button>
+        </div>
+      )}
+
+      {activeTrophy && (
+        <TrophyReveal trophy={activeTrophy} onClose={() => setActiveTrophy(null)} />
+      )}
+
       {replaying &&
         (replaying.scene === 'summit' ? (
           <IwoJimaFlagRaising
@@ -445,8 +755,18 @@ export default function FinaleClient() {
           />
         ))}
 
-      <div className="min-h-screen pt-24 pb-12 px-4 app-surface">
-        <div className="max-w-4xl mx-auto">
+      <div
+        className={`finale-page min-h-screen pt-24 pb-12 px-4 app-surface ${
+          ceremony === 'open' ? 'finale-page--revealed' : ''
+        }`}
+        aria-hidden={ceremony !== 'open'}
+      >
+        <div className="max-w-6xl mx-auto">
+          {previewMode && (
+            <div className="finale-preview-note" role="status">
+              Private grand-finale preview · Live standings are shown until the books close.
+            </div>
+          )}
           {phase === 'grace' && (
             <div
               className="mb-8 p-4 bg-yellow-500/15 border border-yellow-500/40 text-center text-yellow-200 text-sm"
@@ -459,134 +779,166 @@ export default function FinaleClient() {
           )}
 
           {/* ============ The Final Number ============ */}
-          <div className="text-center mb-12">
-            <div className="app-eyebrow mb-3 justify-center">
+          <header className="finale-hero text-center">
+            <div className="finale-kicker">
               {phase === 'ended' ? 'Final — certified' : 'Hall of Honor'}
             </div>
-            <h1 className="app-title text-6xl sm:text-8xl">The Hall of Honor</h1>
-            <p className="text-white/60 mt-3">July 1–31, 2026. One nation, one count.</p>
+            <h1>The Hall <em>of Honor</em></h1>
+            <p className="finale-hero-subtitle">July 1–31, 2026 · One nation · One count</p>
 
-            <div className="card p-8 sm:p-10 mt-8">
-              <div className="font-bebas text-7xl sm:text-9xl text-white leading-none tabular-nums">
+            <div className="finale-total">
+              <div className="finale-total-label">Together, America pressed</div>
+              <div className="finale-total-number">
                 {total !== null ? shownTotal.toLocaleString() : '—'}
               </div>
-              <div className="text-liberty-gold text-sm uppercase tracking-[0.25em] mt-2 font-bold">
-                Push-ups, pressed together
+              <div className="finale-total-unit">
+                push-ups
               </div>
-              <div className="flex flex-wrap justify-center gap-x-8 gap-y-2 mt-6 text-sm text-white/60">
+              <div className="finale-total-stats">
                 {participants !== null && (
                   <span>
-                    <strong className="text-white">{participants.toLocaleString()}</strong> patriots
-                    enlisted
+                    <strong>{participants.toLocaleString()}</strong>
+                    <small>patriots enlisted</small>
                   </span>
                 )}
                 <span>
-                  <strong className="text-white">{states.length}</strong> states on the board
+                  <strong>{states.length}</strong>
+                  <small>states on the board</small>
                 </span>
                 <span>
-                  <strong className="text-white">{finisherCount.toLocaleString()}</strong> finished
-                  all 1,776
+                  <strong>{finisherCount.toLocaleString()}</strong>
+                  <small>finished all 1,776</small>
                 </span>
               </div>
-              <div className="flex flex-wrap items-center justify-center gap-2 mt-6">
+              <div className="finale-share-actions">
                 {canNativeShare && (
-                  <button onClick={nativeShare} className="btn-gold px-5 py-2 text-sm">
+                  <button onClick={nativeShare} className="finale-share-primary">
                     Share the finale
                   </button>
                 )}
                 <button
                   onClick={shareOnX}
-                  className={canNativeShare ? 'btn-secondary px-5 py-2 text-sm' : 'btn-gold px-5 py-2 text-sm'}
+                  className={canNativeShare ? '' : 'finale-share-primary'}
                 >
                   Post on X
                 </button>
-                <button onClick={copyShare} className="btn-secondary px-5 py-2 text-sm">
+                <button onClick={copyShare}>
                   {copied ? 'Copied!' : 'Copy link'}
                 </button>
               </div>
             </div>
-          </div>
+          </header>
 
-          {/* ============ Champions' Podium ============ */}
-          <section className="mb-12" aria-label="Champions">
-            <div className="app-eyebrow mb-4">Champions&apos; podium</div>
+          {/* ============ Interactive Trophy Room ============ */}
+          <section className="finale-trophy-room" aria-labelledby="trophy-room-title">
+            <div className="finale-section-heading">
+              <div>
+                <div className="finale-kicker">The trophy room</div>
+                <h2 id="trophy-room-title">Choose an award. Meet a legend.</h2>
+              </div>
+              <p>Every trophy holds a story. Browse the shelf and tap one to reveal its champion.</p>
+            </div>
 
-            {podium.length > 0 && (
-              <div className="card overflow-hidden divide-y divide-white/10 mb-4">
+            {trophies.length > 0 ? (
+              <div className="finale-trophy-grid" ref={trophyShelfRef}>
+                {trophies.map((trophy, index) => (
+                  <TrophyCard
+                    key={trophy.id}
+                    trophy={trophy}
+                    featured={index === 0}
+                    onOpen={() => {
+                      track('finale_trophy_opened', { trophy: trophy.id })
+                      setActiveTrophy(trophy)
+                    }}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="finale-trophy-loading">The engraver is setting the final names…</div>
+            )}
+
+            {podium.length > 1 && (
+              <div className="finale-podium" aria-label="National podium">
                 {podium.map((entry, index) => (
-                  <div key={entry.id} className="flex items-center gap-4 p-5">
-                    <div className="text-3xl" aria-hidden="true">
-                      {index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉'}
+                  <div key={entry.id} className={`finale-podium-place finale-podium-place--${index + 1}`}>
+                    <span>{String(index + 1).padStart(2, '0')}</span>
+                    <div>
+                      <small>{index === 0 ? 'National champion' : `${index + 1}${index === 1 ? 'nd' : 'rd'} place`}</small>
+                      <strong>{entry.display_name || 'A patriot'}</strong>
+                      <em>{entry.state_code ? US_STATES[entry.state_code] : 'America'}</em>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="font-bebas text-2xl text-white truncate">
-                        {entry.display_name || 'A patriot'}
-                      </div>
-                      <div className="text-sm text-white/50">
-                        {entry.state_code ? US_STATES[entry.state_code] : 'No state'}
-                        {index === 0 && ' — National Champion'}
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="font-bebas text-3xl text-liberty-gold">
-                        {entry.total_pushups.toLocaleString()}
-                      </div>
-                      <div className="text-xs text-white/50 uppercase">push-ups</div>
-                    </div>
+                    <b>{entry.total_pushups.toLocaleString()}</b>
                   </div>
                 ))}
               </div>
             )}
+          </section>
 
-            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {finalPushChamps.length > 0 && (
-                <ChampionCard
-                  label="Final Push champion"
-                  icon="🏁"
-                  name={finalPushChamps.map((r) => r.display_name || 'A patriot').join(' & ')}
-                  detail={
-                    Array.from(
-                      new Set(
-                        finalPushChamps
-                          .map((r) => (r.state_code ? US_STATES[r.state_code] : null))
-                          .filter(Boolean)
-                      )
-                    ).join(' & ') || null
-                  }
-                  value={finalPushChamps[0].final_day_pushups.toLocaleString()}
-                  unit="on July 31 alone"
+          {/* ============ The Finisher's Case ============ */}
+          <section className="finale-merch-showcase" aria-labelledby="finisher-shirt-title">
+            <div className="finale-merch-heading">
+              <div className="finale-kicker">The finisher&apos;s case</div>
+              <span>Official issue · Class of 2026</span>
+            </div>
+
+            <div className="finale-merch-case">
+              <div className="finale-merch-visual">
+                <Image
+                  src="/merch/finale-shirt-case.png"
+                  alt="The Reps for the Republic finisher shirt mounted in a championship display case"
+                  fill
+                  sizes="(max-width: 850px) 100vw, 52vw"
+                  className="finale-merch-image"
                 />
-              )}
-              {streakChamps.length > 0 && (
-                <ChampionCard
-                  label="Iron streak"
-                  icon="🔥"
-                  name={championNames(streakChamps)}
-                  detail={championStates(streakChamps)}
-                  value={String(streakChamps[0].longest_streak)}
-                  unit="days straight"
-                />
-              )}
-              {dayChamps.length > 0 && (
-                <ChampionCard
-                  label="Single-day legend"
-                  icon="⚡"
-                  name={championNames(dayChamps)}
-                  detail={championStates(dayChamps)}
-                  value={dayChamps[0].best_day.toLocaleString()}
-                  unit="in one day"
-                />
-              )}
-              {recruitChamps.length > 0 && (
-                <ChampionCard
-                  label="Top recruiter"
-                  icon="📯"
-                  name={championNames(recruitChamps)}
-                  detail={championStates(recruitChamps)}
-                  value={String(recruitChamps[0].recruits ?? 0)}
-                  unit="patriots recruited"
-                />
-              )}
+                <div className="finale-merch-glass" aria-hidden="true" />
+                <div className="finale-merch-plaque" aria-hidden="true">
+                  <span>Liberty Lift 1776</span>
+                  <strong>Official Finisher Issue</strong>
+                  <small>Earned July 2026</small>
+                </div>
+              </div>
+
+              <div className="finale-merch-copy">
+                <div className="finale-merch-serial">No. 1776 · Authorized finisher gear</div>
+                <h2 id="finisher-shirt-title">
+                  The only shirt in the store <em>you can&apos;t simply buy.</em>
+                </h2>
+                <p>
+                  This is the uniform of the 1,776 Club. It unlocks only after the final rep is
+                  logged—a two-sided, American-made record that you finished what you started.
+                </p>
+
+                <div className="finale-merch-details" aria-label="Shirt details">
+                  <div>
+                    <span>Entry requirement</span>
+                    <strong>All 1,776 reps</strong>
+                  </div>
+                  <div>
+                    <span>Edition</span>
+                    <strong>2026 finisher issue</strong>
+                  </div>
+                  <div>
+                    <span>Made</span>
+                    <strong>Printed in the USA</strong>
+                  </div>
+                  <div>
+                    <span>Delivered</span>
+                    <strong>$44 · Shipping included</strong>
+                  </div>
+                </div>
+
+                <Link
+                  href="/merch"
+                  onClick={() => track('finale_merch_cta_clicked')}
+                  className="finale-merch-cta"
+                >
+                  <span>Claim the shirt you earned</span>
+                  <span aria-hidden="true">→</span>
+                </Link>
+                <small className="finale-merch-note">
+                  Finisher status is verified before ordering.
+                </small>
+              </div>
             </div>
           </section>
 
@@ -737,28 +1089,6 @@ export default function FinaleClient() {
                 The full 1,776 stood unconquered this year. 2027 is waiting.
               </p>
             )}
-          </section>
-
-          {/* ============ The Shirt ============ */}
-          <section className="mb-12" aria-label="Merch">
-            <div className="card p-8 text-center border-liberty-gold/40">
-              <div className="app-eyebrow mb-3 justify-center">Earned, not given</div>
-              <h2 className="font-bebas text-4xl text-white mb-3">
-                Finished all 1,776? You earned the shirt.
-              </h2>
-              <p className="text-white/60 text-sm max-w-lg mx-auto mb-6">
-                The Reps for the Republic tee — two-sided screen print, made and printed in the
-                USA — unlocks only for patriots who completed the challenge. $44 all-in, shipping
-                included. Wear the proof.
-              </p>
-              <a
-                href="/merch"
-                onClick={() => track('finale_merch_cta_clicked')}
-                className="btn-gold px-8 py-3 inline-block"
-              >
-                Claim your tee
-              </a>
-            </div>
           </section>
 
           {/* ============ For the Warriors ============ */}
