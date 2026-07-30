@@ -40,13 +40,16 @@ export async function POST(request: NextRequest) {
             html: '<p>Your Liberty Lift 1776 email delivery test succeeded.</p>',
           }
 
-  const { sentKeys } = await sendEmailBatch([
-    {
-      key: 'delivery-test',
-      to: recipient,
-      ...message,
-    },
-  ])
+  const { sentKeys } = await sendEmailBatch(
+    [
+      {
+        key: 'delivery-test',
+        to: recipient,
+        ...message,
+      },
+    ],
+    'test'
+  )
 
   if (sentKeys.length !== 1) {
     return NextResponse.json({ error: 'Resend did not accept the test email' }, { status: 502 })

@@ -2,6 +2,7 @@
 import { createHmac, timingSafeEqual } from 'node:crypto'
 import { siteUrl } from '@/lib/site'
 import { CHARITY_DONATE_URLS } from '@/lib/charities'
+import { createAdminClient } from '@/lib/supabase-admin'
 
 export function getSiteUrl() {
   return siteUrl
@@ -254,16 +255,58 @@ export function buildFinaleEmail({
   }
 }
 
-// Resend batch endpoint accepts up to 100 messages per call. Each message
-// carries a caller-supplied key (profile/subscriber id); only keys from
-// chunks Resend accepted are returned, so failed sends get retried on the
-// next run instead of being marked as delivered.
+export type EmailType = 'launch' | 'reminder' | 'final_push' | 'finale' | 'test'
+
+// The profiles column each blast stamps once Resend accepts the message.
+// Reconciliation clears it again when Resend reports the send failed, which
+// returns the recipient to the cron's retry pool. The delivery test writes no
+// profile state, so it has no column.
+export const EMAIL_TYPE_COLUMNS: Record<EmailType, string | null> = {
+  launch: 'launch_emailed_at',
+  reminder: 'last_reminder_at',
+  final_push: 'final_push_emailed_at',
+  finale: 'finale_emailed_at',
+  test: null,
+}
+
+interface LedgerRow {
+  email_type: EmailType
+  recipient_key: string
+  recipient_email: string
+  resend_id: string | null
+  status: 'queued' | 'failed'
+  error?: string
+}
+
+// The ledger is an audit trail, not part of the send path — a failure to
+// write it must never make a successful send look unsuccessful.
+async function recordSends(rows: LedgerRow[]) {
+  if (rows.length === 0) return
+  try {
+    const supabase = createAdminClient()
+    if (!supabase) return
+    const { error } = await supabase.from('email_sends').insert(rows)
+    if (error) console.error('email_sends insert failed:', error.message)
+  } catch (err) {
+    console.error('email_sends insert threw:', err)
+  }
+}
+
+// Resend's batch endpoint accepts up to 100 messages per call and answers 2xx
+// once the chunk is *queued*. That is not delivery: when the account is over
+// its daily quota Resend still queues the batch and fails the messages later.
+// So acceptance only gets the caller a `*_emailed_at` stamp (which stops an
+// immediate duplicate send), while the per-message ids returned here are
+// written to email_sends so /api/email/reconcile can find out what actually
+// happened and re-open the failures.
 export async function sendEmailBatch(
-  messages: { key: string; to: string; subject: string; html: string }[]
+  messages: { key: string; to: string; subject: string; html: string }[],
+  emailType: EmailType
 ) {
   const apiKey = process.env.RESEND_API_KEY
   const from = process.env.EMAIL_FROM
   const sentKeys: string[] = []
+  const ledger: LedgerRow[] = []
   if (!apiKey || !from || messages.length === 0) return { sentKeys }
 
   for (let i = 0; i < messages.length; i += 100) {
@@ -280,12 +323,48 @@ export async function sendEmailBatch(
       ),
     })
 
+    const body = await response.text()
+
     if (response.ok) {
+      // Resend answers { data: [{ id }, ...] } in request order.
+      let ids: (string | null)[] = chunk.map(() => null)
+      try {
+        const parsed = JSON.parse(body) as { data?: { id?: string }[] }
+        if (Array.isArray(parsed.data)) {
+          ids = chunk.map((_, idx) => parsed.data?.[idx]?.id ?? null)
+        }
+      } catch {
+        console.error('Resend batch returned unparseable body:', body.slice(0, 300))
+      }
+
       sentKeys.push(...chunk.map((m) => m.key))
+      ledger.push(
+        ...chunk.map((m, idx) => ({
+          email_type: emailType,
+          recipient_key: m.key,
+          recipient_email: m.to,
+          resend_id: ids[idx],
+          status: 'queued' as const,
+        }))
+      )
     } else {
-      console.error('Resend batch failed:', response.status, await response.text())
+      console.error('Resend batch failed:', response.status, body)
+      // Nothing was queued, so these are terminal and stay out of sentKeys —
+      // the cron retries them on its next run.
+      ledger.push(
+        ...chunk.map((m) => ({
+          email_type: emailType,
+          recipient_key: m.key,
+          recipient_email: m.to,
+          resend_id: null,
+          status: 'failed' as const,
+          error: `HTTP ${response.status}: ${body.slice(0, 300)}`,
+        }))
+      )
     }
   }
+
+  await recordSends(ledger)
 
   return { sentKeys }
 }

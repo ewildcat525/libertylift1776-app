@@ -82,7 +82,8 @@ export async function GET(request: NextRequest) {
 
     if (recipients && recipients.length > 0) {
       const { sentKeys } = await sendEmailBatch(
-        recipients.map((p) => ({ key: p.id, to: p.email as string, ...buildLaunchEmail(p.id) }))
+        recipients.map((p) => ({ key: p.id, to: p.email as string, ...buildLaunchEmail(p.id) })),
+        'launch'
       )
       result.launchEmails = sentKeys.length
 
@@ -153,7 +154,7 @@ export async function GET(request: NextRequest) {
         })
 
       if (messages.length > 0) {
-        const { sentKeys } = await sendEmailBatch(messages)
+        const { sentKeys } = await sendEmailBatch(messages, 'reminder')
         result.reminders = sentKeys.length
 
         if (sentKeys.length > 0) {
@@ -197,7 +198,7 @@ export async function GET(request: NextRequest) {
         }),
       }))
 
-      const { sentKeys } = await sendEmailBatch(messages)
+      const { sentKeys } = await sendEmailBatch(messages, 'final_push')
       result.finalPushEmails = sentKeys.length
 
       if (sentKeys.length > 0) {
@@ -254,7 +255,7 @@ export async function GET(request: NextRequest) {
         }
       })
 
-      const { sentKeys } = await sendEmailBatch(messages)
+      const { sentKeys } = await sendEmailBatch(messages, 'finale')
       result.finaleEmails = sentKeys.length
 
       if (sentKeys.length > 0) {
