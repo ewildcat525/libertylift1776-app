@@ -536,8 +536,7 @@ export default function WarRoomClient() {
                 )}
                 {phase === 'live' && intensity !== 'bell' && (
                   <p className="warroom-clock-note">
-                    One clock for the whole country: midnight in Hawaii, the last time zone
-                    standing. 6:00am ET on August 1. Log it before then.
+                    Closing bell: midnight in Hawaii · 6:00am ET on August 1.
                   </p>
                 )}
                 {intensity === 'bell' && (
@@ -601,9 +600,6 @@ export default function WarRoomClient() {
           {/* ---------------- Live + results ---------------- */}
           {(phase === 'live' || phase === 'results' || phase === 'over') && (
             <>
-              {/* National pulse */}
-              <NationalPulse pulse={pulse} live={phase === 'live'} />
-
               {/* Your standing + quick log */}
               {phase === 'live' && (
                 <section className="warroom-panel mt-6">
@@ -727,6 +723,9 @@ export default function WarRoomClient() {
                   )}
                 </section>
               )}
+
+              {/* National pulse */}
+              <NationalPulse pulse={pulse} live={phase === 'live'} />
 
               <div className="warroom-grid mt-6">
                 {/* The board */}

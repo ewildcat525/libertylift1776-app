@@ -3875,6 +3875,15 @@ body {
     grid-template-columns: 1fr;
   }
 
+  .warroom-clock {
+    margin-top: 1.5rem;
+    padding: 0.9rem 0.75rem 0.8rem;
+  }
+
+  .warroom-clock-units {
+    margin-top: 0.5rem;
+  }
+
   .warroom-chase {
     margin-left: 0;
     text-align: left;
@@ -3883,6 +3892,14 @@ body {
 
   .warroom-clock-unit {
     min-width: 3.75rem;
+  }
+
+  .warroom-clock-value {
+    font-size: 2.5rem;
+  }
+
+  .warroom-clock-note {
+    margin-top: 0.45rem;
   }
 }
 
