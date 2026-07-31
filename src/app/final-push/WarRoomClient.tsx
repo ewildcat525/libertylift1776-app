@@ -317,8 +317,8 @@ export default function WarRoomClient() {
   // after the bell, so that read is the frozen, final standing — and ties
   // share the crown.
   useEffect(() => {
+    if (phase !== 'results') return
     if (bellFiredRef.current || !wasLiveRef.current) return
-    if (msLeft === null || msLeft > 0) return
     bellFiredRef.current = true
 
     const id = setTimeout(async () => {
@@ -328,7 +328,7 @@ export default function WarRoomClient() {
       track('final_push_closing_bell')
     }, 3000)
     return () => clearTimeout(id)
-  }, [msLeft, loadBoard])
+  }, [phase, loadBoard])
 
   // The standard to beat on the eve: the biggest single day anyone has put
   // up all month. best_day already lives on the leaderboard view.
