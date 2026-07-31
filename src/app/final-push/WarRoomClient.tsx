@@ -660,7 +660,7 @@ export default function WarRoomClient() {
 
                       <div className="warroom-log">
                         <div className="warroom-log-presets">
-                          {[25, 50, 100].map((n) => (
+                          {[10, 25, 50, 100].map((n) => (
                             <button
                               key={n}
                               type="button"
