@@ -108,6 +108,29 @@ export function msUntilClosingBell(date: Date = new Date()): number {
   return FINAL_PUSH_DEADLINE_MS - date.getTime()
 }
 
+// The blitz opens at the first US midnight of July 31 — Eastern, UTC-4 in
+// July — and runs to the bell. Both ends are absolute instants, so this is
+// safe to evaluate on a server whose clock is UTC (Vercel's is).
+export const FINAL_PUSH_OPENS_MS = Date.parse('2026-07-31T04:00:00Z')
+
+export function isFinalPushWindow(date: Date = new Date()): boolean {
+  const t = date.getTime()
+  return t >= FINAL_PUSH_OPENS_MS && t < FINAL_PUSH_DEADLINE_MS
+}
+
+// Where a returning patriot lands after signing in. While the blitz is running
+// that is the war room: it carries its own log box, so nothing is lost by
+// skipping the dashboard, and the dashboard is still one nav click away. It
+// reverts on its own at the bell — no follow-up deploy.
+//
+// Deliberately NOT used by the signup flow. /dashboard is where the state and
+// handle chosen during signup get written to the profile (readPendingSignup),
+// so routing a brand-new patriot straight to the war room would strand them
+// without either.
+export function postAuthLanding(date: Date = new Date()): string {
+  return isFinalPushWindow(date) ? '/final-push' : '/dashboard'
+}
+
 // Milliseconds until the Final Push opens: midnight at the start of July 31,
 // local. Negative once the day is underway.
 export function msUntilFinalPush(date: Date = new Date()): number {
