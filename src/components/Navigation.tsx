@@ -5,7 +5,8 @@ import { usePathname, useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase'
 import { canUseChat } from '@/lib/flags'
-import { challengePhase, finalPushPhase, FinalPushPhase } from '@/lib/dates'
+import { finalPushPhase, FinalPushPhase } from '@/lib/dates'
+import { useHallOpen } from '@/lib/useHallOpen'
 import NotificationBell from '@/components/NotificationBell'
 import type { User } from '@supabase/supabase-js'
 
@@ -16,15 +17,15 @@ export default function Navigation() {
   const [user, setUser] = useState<User | null>(null)
   const [menuOpen, setMenuOpen] = useState(false)
   // Resolved after mount so the prerendered HTML matches the first render.
-  const [postContest, setPostContest] = useState(false)
+  const hallOpen = useHallOpen()
   const [finalPush, setFinalPush] = useState<FinalPushPhase | null>(null)
   const supabase = createClient()
 
   useEffect(() => {
-    const phase = challengePhase()
-    setPostContest(phase === 'grace' || phase === 'ended')
     setFinalPush(finalPushPhase())
   }, [])
+
+  const postContest = hallOpen === true
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()

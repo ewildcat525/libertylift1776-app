@@ -85,6 +85,13 @@ export function easternNow(): Date {
 export const FINAL_PUSH_DEADLINE = '2026-08-01T10:00:00Z'
 export const FINAL_PUSH_DEADLINE_MS = Date.parse(FINAL_PUSH_DEADLINE)
 
+// The Hall of Honor opens at the same national instant as the closing bell:
+// midnight in Hawaii, 6:00am Eastern on August 1. Keep this tied to the Final
+// Push deadline so the war room and finale can never disagree at handoff.
+export function isHallOpen(date: Date = new Date()): boolean {
+  return date.getTime() >= FINAL_PUSH_DEADLINE_MS
+}
+
 // The Final Push, keyed to the bell above and the viewer's local calendar:
 // - 'before':  the blitz has not opened on the viewer's clock yet
 // - 'live':    the viewer's July 31 has started and the bell has not rung —
@@ -120,14 +127,14 @@ export function isFinalPushWindow(date: Date = new Date()): boolean {
 
 // Where a returning patriot lands after signing in. While the blitz is running
 // that is the war room: it carries its own log box, so nothing is lost by
-// skipping the dashboard, and the dashboard is still one nav click away. It
-// reverts on its own at the bell — no follow-up deploy.
+// skipping the dashboard. At the closing bell, the Hall of Honor takes over.
 //
 // Deliberately NOT used by the signup flow. /dashboard is where the state and
 // handle chosen during signup get written to the profile (readPendingSignup),
 // so routing a brand-new patriot straight to the war room would strand them
 // without either.
 export function postAuthLanding(date: Date = new Date()): string {
+  if (isHallOpen(date)) return '/finale'
   return isFinalPushWindow(date) ? '/final-push' : '/dashboard'
 }
 

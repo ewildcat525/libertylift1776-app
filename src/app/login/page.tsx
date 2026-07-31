@@ -35,9 +35,11 @@ export default function LoginPage() {
 
   const getRedirectTo = () => {
     if (typeof window === 'undefined') return undefined
-    const safeNext =
-      getSafeNext(new URLSearchParams(window.location.search).get('next')) ?? postAuthLanding()
-    return `${window.location.origin}/auth/callback?next=${encodeURIComponent(safeNext)}`
+    const campaignLanding = postAuthLanding()
+    const safeNext = campaignLanding === '/finale'
+      ? campaignLanding
+      : getSafeNext(new URLSearchParams(window.location.search).get('next')) ?? campaignLanding
+    return `${window.location.origin}/auth/callback?intent=login&next=${encodeURIComponent(safeNext)}`
   }
 
   useEffect(() => {

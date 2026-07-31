@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import type { EmailOtpType } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase'
-import { postAuthLanding } from '@/lib/dates'
+import { isHallOpen, postAuthLanding } from '@/lib/dates'
 
 const EMAIL_OTP_TYPES: EmailOtpType[] = ['email', 'signup', 'magiclink', 'recovery', 'invite', 'email_change']
 
@@ -18,6 +18,10 @@ function getSafeNext(next: string | null) {
 }
 
 function getNextFromParams(searchParams: URLSearchParams) {
+  if (searchParams.get('intent') === 'login' && isHallOpen()) {
+    return '/finale'
+  }
+
   const directNext = searchParams.get('next')
   if (directNext) {
     return getSafeNext(directNext)
@@ -28,7 +32,11 @@ function getNextFromParams(searchParams: URLSearchParams) {
   const redirectTo = searchParams.get('redirect_to')
   if (redirectTo) {
     try {
-      return getSafeNext(new URL(redirectTo).searchParams.get('next'))
+      const redirectUrl = new URL(redirectTo)
+      if (redirectUrl.searchParams.get('intent') === 'login' && isHallOpen()) {
+        return '/finale'
+      }
+      return getSafeNext(redirectUrl.searchParams.get('next'))
     } catch {
       return postAuthLanding()
     }

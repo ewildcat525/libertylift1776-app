@@ -12,6 +12,7 @@ import {
   US_STATES,
 } from '@/lib/supabase'
 import { challengePhase, ChallengePhase } from '@/lib/dates'
+import { useHallOpen } from '@/lib/useHallOpen'
 import { CHARITY_DONATE_URLS } from '@/lib/charities'
 import Navigation from '@/components/Navigation'
 import Fireworks from '@/components/Fireworks'
@@ -291,6 +292,8 @@ export default function FinaleClient() {
   const [copied, setCopied] = useState(false)
   const trophyShelfRef = useRef<HTMLDivElement>(null)
   const supabase = createClient()
+  const clockHallOpen = useHallOpen()
+  const hallOpen = previewMode || clockHallOpen
 
   useEffect(() => {
     const preview = new URLSearchParams(window.location.search).get('preview') === 'grand-finale'
@@ -299,7 +302,11 @@ export default function FinaleClient() {
   }, [])
 
   useEffect(() => {
-    if (phase !== 'grace' && phase !== 'ended') return
+    if (clockHallOpen) setPhase(challengePhase())
+  }, [clockHallOpen])
+
+  useEffect(() => {
+    if (!hallOpen) return
     const navigation = document.querySelector('nav')
     if (ceremony !== 'open') {
       document.body.style.overflow = 'hidden'
@@ -312,7 +319,7 @@ export default function FinaleClient() {
       document.body.style.overflow = ''
       navigation?.removeAttribute('inert')
     }
-  }, [ceremony, phase])
+  }, [ceremony, hallOpen])
 
   const openCeremony = () => {
     track('finale_doors_opened', { preview: previewMode })
@@ -322,8 +329,8 @@ export default function FinaleClient() {
   }
 
   useEffect(() => {
-    if (phase !== 'grace' && phase !== 'ended') return
-    track('finale_viewed', { phase })
+    if (!hallOpen) return
+    track('finale_viewed', { phase: previewMode ? 'ended' : challengePhase() })
 
     supabase.auth.getUser().then(({ data: { user: current } }) => setUser(current))
 
@@ -403,7 +410,7 @@ export default function FinaleClient() {
         setPledged({ total, pledgers: data.length })
       })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase])
+  }, [hallOpen, previewMode])
 
   const total = progress?.total_pushups ?? null
   const shownTotal = useCountUp(total)
@@ -534,9 +541,14 @@ export default function FinaleClient() {
     return () => cancelAnimationFrame(frame)
   }, [trophies.length])
 
+  const certified = phase === 'ended'
   const shareText = total
-    ? `America pressed ${total.toLocaleString()} push-ups in the Liberty Lift 1776 challenge. The books are closed — see the Hall of Honor: 🇺🇸`
-    : 'The Liberty Lift 1776 challenge is in the books. See the Hall of Honor: 🇺🇸'
+    ? certified
+      ? `America pressed ${total.toLocaleString()} push-ups in the Liberty Lift 1776 challenge. The books are closed — see the Hall of Honor: 🇺🇸`
+      : `The closing bell has rung at ${total.toLocaleString()} push-ups. Enter the Liberty Lift 1776 Hall of Honor: 🇺🇸`
+    : certified
+      ? 'The Liberty Lift 1776 challenge is in the books. See the Hall of Honor: 🇺🇸'
+      : 'The closing bell has rung. Enter the Liberty Lift 1776 Hall of Honor: 🇺🇸'
   const shareUrl = typeof window !== 'undefined' ? `${window.location.origin}/finale` : ''
   const canNativeShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function'
 
@@ -613,7 +625,7 @@ export default function FinaleClient() {
   }
 
   // Server render and pre-mount: neutral shell, no phase-dependent content.
-  if (phase === null) {
+  if (phase === null || hallOpen === null) {
     return (
       <>
         <Navigation />
@@ -624,18 +636,20 @@ export default function FinaleClient() {
     )
   }
 
-  // Before the books close, the hall is still being built.
-  if (phase === 'before' || phase === 'live') {
+  // The Hall stays locked until the single national closing bell.
+  if (!hallOpen) {
     return (
       <>
         <Navigation />
         <div className="min-h-screen pt-24 pb-12 px-4 app-surface">
           <div className="max-w-2xl mx-auto text-center">
             <div className="app-eyebrow mb-3">Hall of Honor</div>
-            <h1 className="app-title text-6xl sm:text-7xl">The doors open August 1.</h1>
+            <h1 className="app-title text-6xl sm:text-7xl">
+              The doors open at 6:00 a.m. ET on August 1.
+            </h1>
             <p className="text-white/60 mt-4">
-              Champions, one-of-a-kind moments, and the final nationwide count — sealed when the
-              contest ends July 31. Until then, every rep still moves the board.
+              The Hall unlocks at the national closing bell—midnight in Hawaii, when every July 31
+              has ended. Until then, every rep still moves the board.
             </p>
             <div className="mt-8 flex flex-wrap justify-center gap-3">
               <Link href="/dashboard" className="btn-gold px-8 py-3">
@@ -684,7 +698,7 @@ export default function FinaleClient() {
           <div className="finale-ceremony-topline">
             <span>Liberty Lift</span>
             <b>1776</b>
-            <span>Final record</span>
+            <span>{certified ? 'Final record' : 'Closing bell'}</span>
           </div>
 
           <div className="finale-ceremony-content">
@@ -694,11 +708,19 @@ export default function FinaleClient() {
             </div>
             <div className="finale-kicker">Class of 2026</div>
             <h1>The Hall <span>of Honor</span></h1>
-            <p>
-              The final rep is in. The records are sealed.
-              <br />
-              Step inside and meet the names that made history.
-            </p>
+            {certified ? (
+              <p>
+                The final rep is in. The records are sealed.
+                <br />
+                Step inside and meet the names that made history.
+              </p>
+            ) : (
+              <p>
+                The closing bell has rung. The Final Push champion is crowned.
+                <br />
+                Step inside while the last July logs are recorded.
+              </p>
+            )}
             <button type="button" onClick={openCeremony} disabled={ceremony === 'opening'}>
               <span className="finale-ceremony-button-icon" aria-hidden="true">
                 {ceremony === 'opening' ? '•••' : '✦'}
