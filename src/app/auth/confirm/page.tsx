@@ -5,12 +5,13 @@ import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import type { EmailOtpType } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase'
+import { postAuthLanding } from '@/lib/dates'
 
 const EMAIL_OTP_TYPES: EmailOtpType[] = ['email', 'signup', 'magiclink', 'recovery', 'invite', 'email_change']
 
 function getSafeNext(next: string | null) {
   if (!next || !next.startsWith('/') || next.startsWith('//')) {
-    return '/dashboard'
+    return postAuthLanding()
   }
 
   return next
@@ -29,11 +30,11 @@ function getNextFromParams(searchParams: URLSearchParams) {
     try {
       return getSafeNext(new URL(redirectTo).searchParams.get('next'))
     } catch {
-      return '/dashboard'
+      return postAuthLanding()
     }
   }
 
-  return '/dashboard'
+  return postAuthLanding()
 }
 
 function getOtpType(searchParams: URLSearchParams): EmailOtpType {

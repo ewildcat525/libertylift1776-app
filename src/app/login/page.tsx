@@ -3,10 +3,15 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase'
+import { postAuthLanding } from '@/lib/dates'
 
+// An explicit ?next, or null when there isn't a usable one. Callers decide
+// what to fall back to: signing in falls back to the war room while the blitz
+// is on, but the "join instead" link below must keep pointing new patriots at
+// /dashboard, which is where signup writes their state and handle.
 function getSafeNext(next: string | null) {
   if (!next || !next.startsWith('/') || next.startsWith('//')) {
-    return '/dashboard'
+    return null
   }
 
   return next
@@ -30,13 +35,14 @@ export default function LoginPage() {
 
   const getRedirectTo = () => {
     if (typeof window === 'undefined') return undefined
-    const safeNext = getSafeNext(new URLSearchParams(window.location.search).get('next'))
+    const safeNext =
+      getSafeNext(new URLSearchParams(window.location.search).get('next')) ?? postAuthLanding()
     return `${window.location.origin}/auth/callback?next=${encodeURIComponent(safeNext)}`
   }
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
-    setNextPath(getSafeNext(params.get('next')))
+    setNextPath(getSafeNext(params.get('next')) ?? '/dashboard')
 
     const errorParam = params.get('error')
     if (errorParam === 'otp_expired') {

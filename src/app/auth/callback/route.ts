@@ -1,10 +1,13 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
+import { postAuthLanding } from '@/lib/dates'
 
+// postAuthLanding compares absolute instants, so it is correct here even
+// though this runs on a UTC server.
 function getSafeNext(next: string | null) {
   if (!next || !next.startsWith('/') || next.startsWith('//')) {
-    return '/dashboard'
+    return postAuthLanding()
   }
 
   return next
