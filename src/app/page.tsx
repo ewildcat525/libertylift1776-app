@@ -6,7 +6,8 @@ import type { User } from '@supabase/supabase-js'
 import { track } from '@vercel/analytics'
 import { createClient, US_STATES } from '@/lib/supabase'
 import { captureReferralFromUrl } from '@/lib/referral'
-import { catchUpPace, challengeDaysRemaining, challengePhase, ChallengePhase, isChallengeLive } from '@/lib/dates'
+import { catchUpPace, challengeDaysRemaining, isChallengeLive } from '@/lib/dates'
+import { useHallOpen } from '@/lib/useHallOpen'
 import Countdown from '@/components/Countdown'
 
 // Hide the live counter until there is enough signal to be social proof.
@@ -61,23 +62,19 @@ export default function Home() {
   const [showVideo, setShowVideo] = useState(false)
   const [liveBoard, setLiveBoard] = useState<BoardRow[] | null>(null)
   const [pace, setPace] = useState<PaceInfo | null>(null)
-  // Post-contest state, resolved after mount so the prerendered HTML (which
-  // has no clock) matches the first client render.
-  const [phase, setPhase] = useState<ChallengePhase | null>(null)
+  const hallOpen = useHallOpen()
   const [finalCount, setFinalCount] = useState<number | null>(null)
   const supabase = createClient()
 
   useEffect(() => {
-    const p = challengePhase()
-    setPhase(p)
     // Once the contest wraps, the hero leads with the final nationwide count.
-    if (p === 'grace' || p === 'ended') {
+    if (hallOpen === true) {
       supabase.rpc('get_community_progress').then(({ data }) => {
         if (data?.total_pushups) setFinalCount(data.total_pushups as number)
       })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [hallOpen])
 
   useEffect(() => {
     // Defer the 1.7MB hero video until after first paint; the poster carries the hero.
@@ -125,7 +122,7 @@ export default function Home() {
       })
   }, [])
 
-  const postContest = phase === 'grace' || phase === 'ended'
+  const postContest = hallOpen === true
   const primaryHref = postContest ? '/finale' : user ? '/dashboard' : '/signup'
   const primaryLabel = postContest
     ? 'Enter the Hall of Honor'

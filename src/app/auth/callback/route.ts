@@ -1,7 +1,7 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
-import { postAuthLanding } from '@/lib/dates'
+import { isHallOpen, postAuthLanding } from '@/lib/dates'
 
 // postAuthLanding compares absolute instants, so it is correct here even
 // though this runs on a UTC server.
@@ -16,7 +16,15 @@ function getSafeNext(next: string | null) {
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
-  const next = getSafeNext(searchParams.get('next'))
+  // intent=login marks a link whose ?next is only the campaign landing that /login
+  // guessed when the link was minted — never a destination the patriot picked. That
+  // is the one case safe to re-resolve here, so a magic link requested minutes before
+  // the closing bell and opened after it still lands in the Hall. Sign-ins carrying
+  // their own ?next (a squad invite, a contest) omit intent and are honored verbatim.
+  const returningLogin = searchParams.get('intent') === 'login'
+  const next = returningLogin && isHallOpen()
+    ? '/finale'
+    : getSafeNext(searchParams.get('next'))
 
   if (code) {
     const cookieStore = await cookies()
