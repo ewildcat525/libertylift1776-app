@@ -301,9 +301,11 @@ export default function FinaleClient() {
     setPhase(preview ? 'ended' : challengePhase())
   }, [])
 
+  // The bell can ring on a tab that was already open, so re-read the phase.
+  // Never in preview, which pins itself to 'ended' to show the certified Hall.
   useEffect(() => {
-    if (clockHallOpen) setPhase(challengePhase())
-  }, [clockHallOpen])
+    if (clockHallOpen && !previewMode) setPhase(challengePhase())
+  }, [clockHallOpen, previewMode])
 
   useEffect(() => {
     if (!hallOpen) return

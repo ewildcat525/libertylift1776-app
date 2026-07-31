@@ -35,11 +35,20 @@ export default function LoginPage() {
 
   const getRedirectTo = () => {
     if (typeof window === 'undefined') return undefined
-    const campaignLanding = postAuthLanding()
-    const safeNext = campaignLanding === '/finale'
-      ? campaignLanding
-      : getSafeNext(new URLSearchParams(window.location.search).get('next')) ?? campaignLanding
-    return `${window.location.origin}/auth/callback?intent=login&next=${encodeURIComponent(safeNext)}`
+
+    // An explicit ?next — a squad invite, a contest link — is the page this
+    // patriot was already trying to reach, so it wins and is passed through
+    // untouched. Sending it without intent=login is what tells the callback to
+    // honor it verbatim rather than substituting the campaign landing.
+    const explicitNext = getSafeNext(new URLSearchParams(window.location.search).get('next'))
+    if (explicitNext) {
+      return `${window.location.origin}/auth/callback?next=${encodeURIComponent(explicitNext)}`
+    }
+
+    // No destination of their own: send the campaign landing, tagged so the
+    // callback can re-resolve it if the closing bell rings between requesting
+    // a magic link and opening it.
+    return `${window.location.origin}/auth/callback?intent=login&next=${encodeURIComponent(postAuthLanding())}`
   }
 
   useEffect(() => {
