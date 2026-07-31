@@ -2,7 +2,13 @@
 
 import { useState, useEffect } from 'react'
 import { createClient, LeaderboardEntry, US_STATES } from '@/lib/supabase'
-import { challengePhase, ChallengePhase, FINAL_PUSH_DATE, localDateString } from '@/lib/dates'
+import {
+  challengePhase,
+  ChallengePhase,
+  FINAL_PUSH_DATE,
+  finalPushPhase,
+  localDateString,
+} from '@/lib/dates'
 import CommunityMilestoneBanner from '@/components/CommunityMilestoneBanner'
 import FinalPushBanner, { FinalPushRow } from '@/components/FinalPushBanner'
 import Navigation from '@/components/Navigation'
@@ -25,8 +31,10 @@ export default function LeaderboardPage() {
     setPhase(challengePhase())
     const t = localDateString()
     setToday(t)
-    // On the day itself, the Final Push board is the main event.
-    if (t === FINAL_PUSH_DATE) setFilter('finalpush')
+    // While the blitz is running, the Final Push board is the main event.
+    // Keyed to the phase, not the date, so it stays the default tab through
+    // the small hours of August 1 — the bell is midnight in Hawaii.
+    if (finalPushPhase() === 'live') setFilter('finalpush')
   }, [])
 
   // Fetched on every switch to the tab (not cached) so re-tabbing on the
@@ -171,8 +179,12 @@ export default function LeaderboardPage() {
                     </p>
                   </>
                 )}
+                <Link href="/final-push" className="inline-block mt-4 text-sm text-liberty-gold hover:underline">
+                  Go to the war room →
+                </Link>
               </div>
             ) : (
+              <>
               <div className="card overflow-hidden divide-y divide-white/10">
                 {finalPushRows.map((row) => (
                   <div key={row.id} className="flex items-center gap-4 p-4 hover:bg-white/5 transition-colors">
@@ -206,6 +218,12 @@ export default function LeaderboardPage() {
                   </div>
                 ))}
               </div>
+              <div className="text-center mt-4">
+                <Link href="/final-push" className="text-sm text-liberty-gold hover:underline">
+                  Watch the day live in the war room →
+                </Link>
+              </div>
+              </>
             )
           ) : loading ? (
             <div className="text-center text-white/50 py-12">Loading leaderboard...</div>

@@ -3277,3 +3277,624 @@ body {
     animation: none;
   }
 }
+
+/* ============================================================
+   The Final Push War Room (/final-push)
+   The last day, live. Everything escalates off .warroom--<intensity>,
+   set from the time left on the clock, so the room tightens as a whole.
+   ============================================================ */
+
+.warroom {
+  position: relative;
+}
+
+/* A crimson wash that deepens as the closing bell approaches. */
+.warroom::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(circle at 50% 0%, rgba(211, 35, 49, 0.16), transparent 60%);
+  opacity: 0;
+  transition: opacity 1.2s ease;
+}
+
+.warroom--closing::after { opacity: 0.6; }
+.warroom--final-hour::after { opacity: 1; }
+.warroom--bell::after { opacity: 0.35; }
+
+.warroom-kicker {
+  color: var(--campaign-red);
+  font-size: 0.65rem;
+  font-weight: 900;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+}
+
+.warroom-title {
+  margin: 0.6rem 0 0;
+  color: var(--campaign-paper);
+  font-size: clamp(3.5rem, 12vw, 8rem);
+  font-weight: 400;
+  letter-spacing: -0.015em;
+  line-height: 0.82;
+  text-transform: uppercase;
+}
+
+.warroom-lede {
+  max-width: 40rem;
+  margin: 1rem auto 0;
+  color: rgba(235, 231, 220, 0.62);
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+/* ---------- The clock ---------- */
+
+.warroom-clock {
+  max-width: 34rem;
+  margin: 2.5rem auto 0;
+  padding: 1.5rem 1rem 1.25rem;
+  border: 1px solid rgba(211, 35, 49, 0.45);
+  background: rgba(211, 35, 49, 0.05);
+}
+
+.warroom--final-hour .warroom-clock {
+  border-color: var(--campaign-red);
+  animation: warroomPulse 2s ease-in-out infinite;
+}
+
+@keyframes warroomPulse {
+  0%, 100% { background: rgba(211, 35, 49, 0.05); }
+  50% { background: rgba(211, 35, 49, 0.16); }
+}
+
+.warroom-clock-label {
+  color: rgba(235, 231, 220, 0.55);
+  font-size: 0.62rem;
+  font-weight: 900;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.warroom--final-hour .warroom-clock-label {
+  color: var(--campaign-red);
+}
+
+.warroom-clock-units {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 0.9rem;
+}
+
+.warroom-clock-unit {
+  min-width: 4.5rem;
+}
+
+.warroom-clock-value {
+  color: var(--campaign-paper);
+  font-size: clamp(2.5rem, 9vw, 3.75rem);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.warroom-clock-unit-label {
+  margin-top: 0.15rem;
+  color: rgba(235, 231, 220, 0.42);
+  font-size: 0.55rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.warroom-clock-done {
+  margin-top: 0.6rem;
+  color: var(--campaign-red);
+  font-size: clamp(2.5rem, 9vw, 3.75rem);
+  line-height: 1;
+}
+
+.warroom-clock-note {
+  margin-top: 0.75rem;
+  color: rgba(235, 231, 220, 0.42);
+  font-size: 0.72rem;
+}
+
+/* ---------- Layout ---------- */
+
+.warroom-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.warroom-heading {
+  margin-bottom: 1rem;
+  color: var(--campaign-paper);
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.warroom-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.warroom-live-dot {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--campaign-red);
+  font-size: 0.55rem;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.warroom-live-dot::before {
+  content: '';
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 50%;
+  background: var(--campaign-red);
+  animation: warroomBlink 1.6s ease-in-out infinite;
+}
+
+@keyframes warroomBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.2; }
+}
+
+.warroom-standard {
+  color: var(--campaign-paper);
+  font-size: clamp(3rem, 9vw, 4.5rem);
+  line-height: 1;
+}
+
+.warroom-rules {
+  display: grid;
+  gap: 0.6rem;
+  color: rgba(235, 231, 220, 0.66);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.warroom-rules li {
+  padding-left: 1.1rem;
+  position: relative;
+}
+
+.warroom-rules li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.55em;
+  width: 0.45rem;
+  height: 1px;
+  background: var(--campaign-red);
+}
+
+/* ---------- The national pulse ---------- */
+
+.warroom-pulse {
+  padding: 2rem 1.5rem;
+  border: 1px solid rgba(235, 231, 220, 0.14);
+  background:
+    linear-gradient(135deg, rgba(211, 35, 49, 0.08), transparent 40%),
+    rgba(255, 255, 255, 0.02);
+  text-align: center;
+}
+
+.warroom-pulse-label {
+  color: rgba(235, 231, 220, 0.48);
+  font-size: 0.6rem;
+  font-weight: 900;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+.warroom-pulse-number {
+  margin-top: 0.35rem;
+  color: var(--campaign-paper);
+  font-size: clamp(3.5rem, 13vw, 7rem);
+  line-height: 0.92;
+  font-variant-numeric: tabular-nums;
+}
+
+.warroom-pulse-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  margin-top: 1.5rem;
+  border-top: 1px solid rgba(235, 231, 220, 0.1);
+}
+
+.warroom-pulse-stats span {
+  padding: 0.9rem 0.5rem 0;
+  color: rgba(235, 231, 220, 0.45);
+  font-size: 0.65rem;
+  line-height: 1.4;
+}
+
+.warroom-pulse-stats span + span {
+  border-left: 1px solid rgba(235, 231, 220, 0.1);
+}
+
+.warroom-pulse-stats strong {
+  display: block;
+  color: var(--campaign-paper);
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.5rem;
+  font-weight: 400;
+}
+
+/* ---------- Your standing + logging ---------- */
+
+.warroom-panel {
+  padding: 1.5rem;
+  border: 1px solid rgba(211, 35, 49, 0.4);
+  background: rgba(211, 35, 49, 0.04);
+}
+
+.warroom-standing {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.25rem;
+}
+
+.warroom-standing-label {
+  color: rgba(235, 231, 220, 0.45);
+  font-size: 0.58rem;
+  font-weight: 900;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.warroom-standing-value {
+  color: var(--campaign-paper);
+  font-size: 3rem;
+  line-height: 1;
+}
+
+.warroom-standing-sub {
+  color: rgba(235, 231, 220, 0.55);
+  font-size: 0.78rem;
+}
+
+.warroom-chase {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  max-width: 20rem;
+  text-align: right;
+  margin-left: auto;
+}
+
+.warroom-chase-number {
+  color: var(--campaign-red);
+  font-size: 2.5rem;
+  line-height: 1;
+}
+
+.warroom-chase-copy {
+  color: rgba(235, 231, 220, 0.62);
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.warroom-chase-copy strong {
+  color: var(--campaign-paper);
+}
+
+.warroom-chase-alert {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--campaign-red);
+  background: rgba(211, 35, 49, 0.18);
+  color: var(--campaign-paper);
+  font-size: 0.78rem;
+  font-weight: 700;
+  animation: warroomBlink 1.4s ease-in-out 3;
+}
+
+.warroom-log {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid rgba(235, 231, 220, 0.12);
+}
+
+.warroom-log-presets {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.warroom-preset {
+  min-width: 4.25rem;
+  padding: 0.7rem 0.5rem;
+  border: 1px solid rgba(235, 231, 220, 0.28);
+  background: transparent;
+  color: var(--campaign-paper);
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.35rem;
+  line-height: 1;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.warroom-preset:hover:not(:disabled) {
+  background: var(--campaign-paper);
+  border-color: var(--campaign-paper);
+  color: var(--campaign-ink);
+}
+
+.warroom-preset:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.warroom-log-form {
+  display: flex;
+  gap: 0.5rem;
+  flex: 1;
+  min-width: 13rem;
+}
+
+.warroom-log-input {
+  flex: 1;
+  min-width: 5rem;
+  padding-top: 0.6rem;
+  padding-bottom: 0.6rem;
+}
+
+.warroom-log-submit {
+  padding-top: 0.6rem;
+  padding-bottom: 0.6rem;
+  white-space: nowrap;
+}
+
+.warroom-log-flash,
+.warroom-log-error,
+.warroom-log-note {
+  margin-top: 0.85rem;
+  font-size: 0.8rem;
+}
+
+.warroom-log-flash { color: var(--campaign-paper); font-weight: 700; }
+.warroom-log-error { color: #ff8b96; }
+.warroom-log-note { color: rgba(235, 231, 220, 0.5); }
+
+/* ---------- The board ---------- */
+
+.warroom-board {
+  margin-top: 0.25rem;
+  border-top: 1px solid rgba(235, 231, 220, 0.1);
+}
+
+.warroom-board-row {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.55rem 0.25rem;
+  border-bottom: 1px solid rgba(235, 231, 220, 0.08);
+  transition: background-color 0.6s ease;
+}
+
+.warroom-board-row--me {
+  background: rgba(211, 35, 49, 0.14);
+  box-shadow: inset 2px 0 0 var(--campaign-red);
+}
+
+.warroom-board-row--up { background: rgba(120, 200, 140, 0.12); }
+.warroom-board-row--down { background: rgba(235, 231, 220, 0.05); }
+
+.warroom-rank {
+  width: 1.85rem;
+  height: 1.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 0.78rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.warroom-rank--1 { background: var(--campaign-red); color: #fff; }
+.warroom-rank--2 { background: var(--campaign-paper); color: var(--campaign-ink); }
+.warroom-rank--3 { background: rgba(235, 231, 220, 0.7); color: var(--campaign-ink); }
+.warroom-rank--default { background: rgba(235, 231, 220, 0.1); color: rgba(235, 231, 220, 0.7); }
+
+.warroom-board-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--campaign-paper);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.warroom-board-state {
+  color: rgba(235, 231, 220, 0.4);
+  font-weight: 400;
+}
+
+.warroom-move {
+  flex-shrink: 0;
+  font-size: 0.62rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+}
+
+.warroom-move.is-up { color: #7fd39a; }
+.warroom-move.is-down { color: rgba(235, 231, 220, 0.4); }
+
+.warroom-board-total {
+  flex-shrink: 0;
+  color: var(--campaign-paper);
+  font-size: 1.35rem;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.warroom-board-you {
+  margin-top: 0.9rem;
+  color: rgba(235, 231, 220, 0.62);
+  font-size: 0.8rem;
+}
+
+.warroom-board-you strong {
+  color: var(--campaign-paper);
+}
+
+.warroom-link {
+  display: inline-block;
+  margin-top: 1rem;
+  color: var(--campaign-red);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.warroom-link:hover {
+  color: var(--campaign-paper);
+}
+
+/* ---------- The tape ---------- */
+
+/* No max-height: a fixed cap would slice the last row through the middle
+   once the feed fills up. The board column is the taller one anyway. */
+.warroom-tape {
+  margin-top: 0.25rem;
+  border-top: 1px solid rgba(235, 231, 220, 0.1);
+}
+
+.warroom-tape-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.7rem;
+  padding: 0.5rem 0.25rem;
+  border-bottom: 1px solid rgba(235, 231, 220, 0.08);
+  animation: warroomTapeIn 0.5s ease;
+}
+
+@keyframes warroomTapeIn {
+  from { opacity: 0; transform: translateY(-0.4rem); }
+  to { opacity: 1; transform: none; }
+}
+
+.warroom-tape-count {
+  min-width: 3rem;
+  color: var(--campaign-red);
+  font-size: 1.25rem;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.warroom-tape-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: rgba(235, 231, 220, 0.8);
+  font-size: 0.82rem;
+}
+
+.warroom-tape-state {
+  color: rgba(235, 231, 220, 0.4);
+}
+
+/* ---------- State battle ---------- */
+
+.warroom-states {
+  border-top: 1px solid rgba(235, 231, 220, 0.1);
+}
+
+.warroom-state-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  padding: 0.7rem 0.25rem;
+  border-bottom: 1px solid rgba(235, 231, 220, 0.08);
+}
+
+.warroom-state-rank {
+  width: 1.5rem;
+  flex-shrink: 0;
+  color: rgba(235, 231, 220, 0.4);
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.warroom-state-name {
+  color: var(--campaign-paper);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.warroom-state-avg {
+  flex: 1;
+  color: rgba(235, 231, 220, 0.42);
+  font-size: 0.7rem;
+}
+
+.warroom-state-total {
+  color: var(--campaign-paper);
+  font-size: 1.35rem;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Outro ---------- */
+
+.warroom-outro {
+  margin-top: 2.5rem;
+  text-align: center;
+}
+
+.warroom-outro-note {
+  margin-bottom: 1rem;
+  color: rgba(235, 231, 220, 0.45);
+  font-size: 0.78rem;
+}
+
+@media (max-width: 767px) {
+  .warroom-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .warroom-chase {
+    margin-left: 0;
+    text-align: left;
+    max-width: none;
+  }
+
+  .warroom-clock-unit {
+    min-width: 3.75rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .warroom-clock,
+  .warroom-live-dot::before,
+  .warroom-chase-alert,
+  .warroom-tape-row {
+    animation: none;
+  }
+
+  .warroom::after {
+    transition: none;
+  }
+}

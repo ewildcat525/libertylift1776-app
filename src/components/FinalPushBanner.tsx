@@ -11,7 +11,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { createClient, US_STATES } from '@/lib/supabase'
-import { FINAL_PUSH_DATE, localDateString } from '@/lib/dates'
+import { FINAL_PUSH_DATE, FinalPushPhase, finalPushPhase, localDateString } from '@/lib/dates'
 
 export interface FinalPushRow {
   id: string
@@ -35,22 +35,29 @@ export default function FinalPushBanner({ userId, refreshKey, className = '' }: 
   // Resolved after mount so the prerendered HTML (no clock) matches the
   // first client render.
   const [today, setToday] = useState<string | null>(null)
+  const [phase, setPhase] = useState<FinalPushPhase | null>(null)
   const [board, setBoard] = useState<FinalPushRow[]>([])
   const [myRow, setMyRow] = useState<FinalPushRow | null>(null)
   const supabase = createClient()
 
   useEffect(() => {
     setToday(localDateString())
+    setPhase(finalPushPhase())
   }, [])
 
+  // Keyed to the same phase the war room uses, so the two never disagree —
+  // the bell is a national instant, not the viewer's local midnight, which
+  // leaves a stateside patriot still live in the small hours of August 1.
   const mode: Mode | null =
-    today === null
+    phase === null || today === null
       ? null
-      : today >= '2026-07-01' && today < FINAL_PUSH_DATE
-        ? 'hype'
-        : today === FINAL_PUSH_DATE
+      : phase === 'before'
+        ? today >= '2026-07-01'
+          ? 'hype'
+          : null
+        : phase === 'live'
           ? 'live'
-          : today === '2026-08-01'
+          : phase === 'results'
             ? 'results'
             : null
 
@@ -101,6 +108,9 @@ export default function FinalPushBanner({ userId, refreshKey, className = '' }: 
           permanent spot in the Hall of Honor. Every rep still counts for your state, your
           1,776, and the national total.
         </p>
+        <Link href="/final-push" className="btn-primary mt-5">
+          {daysLeft === 1 ? 'See the standard to beat' : 'Inside the Final Push'}
+        </Link>
       </div>
     )
   }
@@ -170,8 +180,23 @@ export default function FinalPushBanner({ userId, refreshKey, className = '' }: 
         </p>
       )}
 
+      {/* The banner is the teaser; the war room is where the day is lived. */}
+      {mode === 'live' && (
+        <div className="text-center mt-5">
+          <Link href="/final-push" className="btn-primary">
+            Enter the war room
+          </Link>
+          <p className="text-white/40 text-xs mt-2">
+            The live national count, the tape, and the clock to the closing bell.
+          </p>
+        </div>
+      )}
+
       {mode === 'results' && (
-        <div className="text-center mt-4">
+        <div className="text-center mt-4 flex flex-col gap-2">
+          <Link href="/final-push" className="text-sm text-liberty-gold hover:underline">
+            Replay the last day →
+          </Link>
           <Link href="/finale" className="text-sm text-liberty-gold hover:underline">
             The champion takes their place in the Hall of Honor →
           </Link>
