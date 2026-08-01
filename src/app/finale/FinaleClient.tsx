@@ -271,6 +271,7 @@ export default function FinaleClient() {
   const [phase, setPhase] = useState<ChallengePhase | null>(null)
   const [previewMode, setPreviewMode] = useState(false)
   const [ceremony, setCeremony] = useState<'closed' | 'opening' | 'open'>('closed')
+  const [deepLinkHash, setDeepLinkHash] = useState<string | null>(null)
   const [activeTrophy, setActiveTrophy] = useState<Trophy | null>(null)
   const [user, setUser] = useState<User | null>(null)
   const [progress, setProgress] = useState<CommunityProgress | null>(null)
@@ -299,7 +300,25 @@ export default function FinaleClient() {
     const preview = new URLSearchParams(window.location.search).get('preview') === 'grand-finale'
     setPreviewMode(preview)
     setPhase(preview ? 'ended' : challengePhase())
+    // A deep link asks for one section, not the ceremony. Offseason /signup
+    // traffic lands on #next-year wanting the 2027 form, so open the doors
+    // for them the same way "Skip ceremony" does.
+    if (window.location.hash) {
+      setDeepLinkHash(window.location.hash.slice(1))
+      setCeremony('open')
+    }
   }, [])
+
+  // The browser gives up on the fragment long before the Hall replaces its
+  // pre-mount shell, so the scroll has to be re-run once the target exists.
+  useEffect(() => {
+    if (!deepLinkHash || !hallOpen || ceremony !== 'open') return
+    const frame = requestAnimationFrame(() => {
+      document.getElementById(deepLinkHash)?.scrollIntoView({ block: 'start' })
+      setDeepLinkHash(null)
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [deepLinkHash, hallOpen, ceremony])
 
   // The bell can ring on a tab that was already open, so re-read the phase.
   // Never in preview, which pins itself to 'ended' to show the certified Hall.
