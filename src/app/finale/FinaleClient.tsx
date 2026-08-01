@@ -614,8 +614,13 @@ export default function FinaleClient() {
     setNextYearBusy(true)
     setNextYearError(null)
     const { error } = await supabase
-      .from('email_subscribers')
-      .insert({ email: clean, source: 'finale_2027' })
+      .from('season_interests')
+      .insert({
+        season_year: 2027,
+        email: clean,
+        user_id: user?.id ?? null,
+        source: 'finale',
+      })
     setNextYearBusy(false)
     // A duplicate means they're already on the list — that's a success.
     if (error && error.code !== '23505') {
@@ -1179,7 +1184,7 @@ export default function FinaleClient() {
           </section>
 
           {/* ============ See You in 2027 ============ */}
-          <section aria-label="2027 signup">
+          <section id="next-year" className="scroll-mt-24" aria-label="2027 interest list">
             <div className="card p-8 text-center border-liberty-red/40">
               <div className="app-eyebrow mb-3 justify-center">The sequel</div>
               <h2 className="font-bebas text-4xl sm:text-5xl text-white mb-3">

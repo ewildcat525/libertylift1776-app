@@ -2,11 +2,12 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 import { track } from '@vercel/analytics'
 import { createClient, US_STATES } from '@/lib/supabase'
 import { generateDisplayName, savePendingSignup } from '@/lib/onboarding'
 import { captureReferralFromUrl, readReferral } from '@/lib/referral'
-import { catchUpPace, challengeDaysRemaining, isChallengeLive } from '@/lib/dates'
+import { catchUpPace, challengeDaysRemaining, isChallengeLive, isHallOpen } from '@/lib/dates'
 
 const STATE_OPTIONS = Object.entries(US_STATES)
 
@@ -23,6 +24,16 @@ function normalizeDisplayName(displayName: string) {
 }
 
 export default function SignupPage() {
+  // Once the closing bell rings, new accounts wait for the next season.
+  // This route-level guard also catches old bookmarks and stale external links.
+  if (isHallOpen()) {
+    redirect('/finale#next-year')
+  }
+
+  return <SignupForm />
+}
+
+function SignupForm() {
   const [email, setEmail] = useState('')
   const [stateCode, setStateCode] = useState('')
   const [displayName, setDisplayName] = useState('LibertyLifter1776')
