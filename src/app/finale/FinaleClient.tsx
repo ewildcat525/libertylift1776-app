@@ -271,6 +271,7 @@ export default function FinaleClient() {
   const [phase, setPhase] = useState<ChallengePhase | null>(null)
   const [previewMode, setPreviewMode] = useState(false)
   const [ceremony, setCeremony] = useState<'closed' | 'opening' | 'open'>('closed')
+  const [deepLinkHash, setDeepLinkHash] = useState<string | null>(null)
   const [activeTrophy, setActiveTrophy] = useState<Trophy | null>(null)
   const [user, setUser] = useState<User | null>(null)
   const [progress, setProgress] = useState<CommunityProgress | null>(null)
@@ -299,7 +300,25 @@ export default function FinaleClient() {
     const preview = new URLSearchParams(window.location.search).get('preview') === 'grand-finale'
     setPreviewMode(preview)
     setPhase(preview ? 'ended' : challengePhase())
+    // A deep link asks for one section, not the ceremony. Offseason /signup
+    // traffic lands on #next-year wanting the 2027 form, so open the doors
+    // for them the same way "Skip ceremony" does.
+    if (window.location.hash) {
+      setDeepLinkHash(window.location.hash.slice(1))
+      setCeremony('open')
+    }
   }, [])
+
+  // The browser gives up on the fragment long before the Hall replaces its
+  // pre-mount shell, so the scroll has to be re-run once the target exists.
+  useEffect(() => {
+    if (!deepLinkHash || !hallOpen || ceremony !== 'open') return
+    const frame = requestAnimationFrame(() => {
+      document.getElementById(deepLinkHash)?.scrollIntoView({ block: 'start' })
+      setDeepLinkHash(null)
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [deepLinkHash, hallOpen, ceremony])
 
   // The bell can ring on a tab that was already open, so re-read the phase.
   // Never in preview, which pins itself to 'ended' to show the certified Hall.
@@ -614,8 +633,13 @@ export default function FinaleClient() {
     setNextYearBusy(true)
     setNextYearError(null)
     const { error } = await supabase
-      .from('email_subscribers')
-      .insert({ email: clean, source: 'finale_2027' })
+      .from('season_interests')
+      .insert({
+        season_year: 2027,
+        email: clean,
+        user_id: user?.id ?? null,
+        source: 'finale',
+      })
     setNextYearBusy(false)
     // A duplicate means they're already on the list — that's a success.
     if (error && error.code !== '23505') {
@@ -1179,7 +1203,7 @@ export default function FinaleClient() {
           </section>
 
           {/* ============ See You in 2027 ============ */}
-          <section aria-label="2027 signup">
+          <section id="next-year" className="scroll-mt-24" aria-label="2027 interest list">
             <div className="card p-8 text-center border-liberty-red/40">
               <div className="app-eyebrow mb-3 justify-center">The sequel</div>
               <h2 className="font-bebas text-4xl sm:text-5xl text-white mb-3">
