@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { useEffect, useState } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { track } from '@vercel/analytics'
@@ -58,10 +59,15 @@ interface BoardRow {
 
 export default function Home() {
   const [user, setUser] = useState<User | null>(null)
+  const [authReady, setAuthReady] = useState(false)
   const [enlisted, setEnlisted] = useState<number | null>(null)
   const [showVideo, setShowVideo] = useState(false)
   const [liveBoard, setLiveBoard] = useState<BoardRow[] | null>(null)
   const [pace, setPace] = useState<PaceInfo | null>(null)
+  const [nextYearEmail, setNextYearEmail] = useState('')
+  const [nextYearBusy, setNextYearBusy] = useState(false)
+  const [nextYearDone, setNextYearDone] = useState(false)
+  const [nextYearError, setNextYearError] = useState<string | null>(null)
   const hallOpen = useHallOpen()
   const [finalCount, setFinalCount] = useState<number | null>(null)
   const supabase = createClient()
@@ -95,6 +101,7 @@ export default function Home() {
 
     supabase.auth.getUser().then(({ data: { user: currentUser } }) => {
       setUser(currentUser)
+      setAuthReady(true)
     })
 
     supabase.rpc('participant_count').then(({ data: count }) => {
@@ -130,6 +137,179 @@ export default function Home() {
       ? 'Open dashboard'
       : 'Join the challenge'
   const trackCta = (location: string) => track('cta_clicked', { location })
+
+  const joinNextYear = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    const email = nextYearEmail.trim().toLowerCase()
+
+    if (!email || !email.includes('@')) {
+      setNextYearError('Enter a valid email address.')
+      return
+    }
+
+    setNextYearBusy(true)
+    setNextYearError(null)
+    const { error } = await supabase.from('season_interests').insert({
+      season_year: 2027,
+      email,
+      user_id: null,
+      source: 'offseason_home',
+    })
+    setNextYearBusy(false)
+
+    // They may already be on the 2027 list through the Hall of Honor.
+    if (error && error.code !== '23505') {
+      setNextYearError('Something went wrong — try again in a minute.')
+      return
+    }
+
+    track('offseason_2027_signup', { already: Boolean(error) })
+    setNextYearDone(true)
+  }
+
+  if (postContest) {
+    const total = finalCount !== null ? finalCount.toLocaleString() : '357,879'
+
+    return (
+      <main className="campaign-page offseason-page">
+        <header className="conversion-nav">
+          <Link href="/" className="flex items-center gap-3 campaign-nav-mark">
+            <span className="campaign-nav-monogram">LL</span>
+            <span className="campaign-nav-name">Liberty Lift / 1776</span>
+          </Link>
+
+          <div className="conversion-nav-actions">
+            {user ? (
+              <Link href="/dashboard" className="conversion-signin">
+                Dashboard
+              </Link>
+            ) : (
+              <Link href="/login" className="conversion-signin">
+                Sign in
+              </Link>
+            )}
+            <Link
+              href={user ? '/finale' : '#next-year'}
+              className="campaign-nav-cta"
+            >
+              {user ? 'Hall of Honor' : 'Join the 2027 list'}
+            </Link>
+          </div>
+        </header>
+
+        <section className="offseason-hero">
+          <Image
+            src="/liberty-lift-hero-vintage.webp"
+            alt=""
+            fill
+            priority
+            sizes="100vw"
+            className="campaign-hero-video"
+            aria-hidden="true"
+          />
+          <div className="campaign-hero-wash" aria-hidden="true" />
+          <div className="film-grain" aria-hidden="true" />
+
+          <div className="offseason-content">
+            <div className="campaign-kicker">
+              <span>The first Liberty Lift</span>
+              <span className="campaign-kicker-line" />
+              <span>Returns July 2027</span>
+            </div>
+
+            <h1 className="offseason-title">
+              <span>2026</span>
+              <span>In the books.</span>
+            </h1>
+
+            <p className="offseason-declaration">
+              {authReady && user
+                ? 'Thank you for answering the call. We’ll see you again in July 2027.'
+                : 'America answered. We return in July 2027.'}
+            </p>
+
+            {authReady && user ? (
+              <div className="campaign-actions offseason-actions">
+                <Link
+                  href="/dashboard"
+                  className="campaign-button campaign-button-primary"
+                  onClick={() => trackCta('offseason_record')}
+                >
+                  View your 2026 record <span aria-hidden="true">→</span>
+                </Link>
+                <Link href="/finale" className="campaign-button campaign-button-quiet">
+                  Visit the Hall of Honor
+                </Link>
+              </div>
+            ) : authReady ? (
+              <div id="next-year" className="offseason-signup-shell">
+                {nextYearDone ? (
+                  <div className="offseason-success" role="status">
+                    <strong>You&apos;re on the 2027 list.</strong>
+                    <span>We&apos;ll send one message when enlistment opens.</span>
+                  </div>
+                ) : (
+                  <form onSubmit={joinNextYear} className="offseason-signup-form">
+                    <label htmlFor="offseason-email">Be first to know when enlistment opens.</label>
+                    <div className="offseason-signup-fields">
+                      <input
+                        id="offseason-email"
+                        type="email"
+                        value={nextYearEmail}
+                        onChange={(event) => {
+                          setNextYearEmail(event.target.value)
+                          setNextYearError(null)
+                        }}
+                        placeholder="you@example.com"
+                        autoComplete="email"
+                        required
+                      />
+                      <button type="submit" disabled={nextYearBusy}>
+                        {nextYearBusy ? 'Joining...' : 'Count me in for 2027'}
+                      </button>
+                    </div>
+                    <small>One message when 2027 registration opens. Nothing else.</small>
+                    {nextYearError && <p role="alert">{nextYearError}</p>}
+                  </form>
+                )}
+
+                <Link
+                  href="/finale"
+                  className="offseason-hall-link"
+                  onClick={() => trackCta('offseason_hall')}
+                >
+                  Explore the 2026 Hall of Honor <span aria-hidden="true">→</span>
+                </Link>
+              </div>
+            ) : (
+              <div className="offseason-auth-placeholder" aria-hidden="true" />
+            )}
+          </div>
+
+          <div className="offseason-proof" aria-label="2026 final results">
+            <div>
+              <span className="campaign-stat-value">{total}</span>
+              <span className="campaign-stat-label">push-ups together</span>
+            </div>
+            {enlisted !== null && (
+              <div>
+                <span className="campaign-stat-value">{enlisted.toLocaleString()}</span>
+                <span className="campaign-stat-label">participants in 2026</span>
+              </div>
+            )}
+          </div>
+        </section>
+
+        <footer className="offseason-footer">
+          <span>Liberty Lift / 1776</span>
+          <nav aria-label="Legal">
+            <Link href="/privacy">Privacy</Link>
+            <Link href="/terms">Terms</Link>
+          </nav>
+        </footer>
+      </main>
+    )
+  }
 
   return (
     <main className="campaign-page">
