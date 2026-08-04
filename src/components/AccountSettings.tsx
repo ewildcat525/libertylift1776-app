@@ -1,12 +1,17 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 export default function AccountSettings() {
   const [isOpen, setIsOpen] = useState(false)
   const [confirmation, setConfirmation] = useState('')
   const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const openButtonRef = useRef<HTMLButtonElement>(null)
+  const dialogRef = useRef<HTMLDivElement>(null)
+  const confirmationRef = useRef<HTMLInputElement>(null)
+  const deletingRef = useRef(false)
+  deletingRef.current = deleting
 
   const close = () => {
     if (deleting) return
@@ -14,6 +19,51 @@ export default function AccountSettings() {
     setConfirmation('')
     setError(null)
   }
+
+  useEffect(() => {
+    if (!isOpen) return
+
+    const opener = openButtonRef.current
+    const previousOverflow = document.body.style.overflow
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !deletingRef.current) {
+        event.preventDefault()
+        setIsOpen(false)
+        setConfirmation('')
+        setError(null)
+        return
+      }
+
+      if (event.key !== 'Tab') return
+      const focusable = Array.from(
+        dialogRef.current?.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ) ?? [],
+      )
+      if (focusable.length === 0) return
+
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
+
+    document.body.style.overflow = 'hidden'
+    document.addEventListener('keydown', handleKeyDown)
+    const focusTimer = window.setTimeout(() => confirmationRef.current?.focus(), 0)
+
+    return () => {
+      window.clearTimeout(focusTimer)
+      document.removeEventListener('keydown', handleKeyDown)
+      document.body.style.overflow = previousOverflow
+      opener?.focus()
+    }
+  }, [isOpen])
 
   const deleteAccount = async () => {
     if (confirmation !== 'DELETE' || deleting) return
@@ -51,6 +101,7 @@ export default function AccountSettings() {
         chat activity, and achievements.
       </p>
       <button
+        ref={openButtonRef}
         type="button"
         onClick={() => setIsOpen(true)}
         className="mt-4 min-h-11 px-4 text-sm font-semibold text-red-300 underline decoration-red-300/40 underline-offset-4 transition-colors hover:text-red-200"
@@ -61,12 +112,15 @@ export default function AccountSettings() {
       {isOpen && (
         <div
           className="fixed inset-0 z-[220] flex items-end justify-center bg-black/80 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))] backdrop-blur-sm sm:items-center"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="delete-account-title"
         >
-          <button type="button" className="absolute inset-0" onClick={close} aria-label="Close delete account dialog" />
-          <div className="card relative w-full max-w-md p-6 text-left sm:p-8">
+          <button type="button" className="absolute inset-0" onClick={close} aria-label="Close delete account dialog" tabIndex={-1} />
+          <div
+            ref={dialogRef}
+            className="card relative w-full max-w-md p-6 text-left sm:p-8"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-account-title"
+          >
             <div className="app-eyebrow mb-3">Permanent action</div>
             <h3 id="delete-account-title" className="font-bebas text-4xl text-white">
               Delete your account?
@@ -79,6 +133,7 @@ export default function AccountSettings() {
               Confirmation
             </label>
             <input
+              ref={confirmationRef}
               id="delete-confirmation"
               value={confirmation}
               onChange={(event) => {

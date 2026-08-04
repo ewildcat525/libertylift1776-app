@@ -112,6 +112,7 @@ export default function DashboardPage() {
   const [nativeMode, setNativeMode] = useState(false)
   const [nativeLoggerOpen, setNativeLoggerOpen] = useState(false)
   const nativeRepInputRef = useRef<HTMLInputElement>(null)
+  const nativeLoggerSheetRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
   const supabase = useMemo(() => createClient(), [])
 
@@ -141,12 +142,45 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (!nativeLoggerOpen) return
+
+    const previouslyFocused = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null
     const previousOverflow = document.body.style.overflow
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        setNativeLoggerOpen(false)
+        return
+      }
+
+      if (event.key !== 'Tab') return
+      const focusable = Array.from(
+        nativeLoggerSheetRef.current?.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])',
+        ) ?? [],
+      ).filter(element => !element.hasAttribute('hidden'))
+      if (focusable.length === 0) return
+
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
+
     document.body.style.overflow = 'hidden'
+    document.addEventListener('keydown', handleKeyDown)
     const focusTimer = window.setTimeout(() => nativeRepInputRef.current?.focus(), 280)
     return () => {
       window.clearTimeout(focusTimer)
+      document.removeEventListener('keydown', handleKeyDown)
       document.body.style.overflow = previousOverflow
+      previouslyFocused?.focus()
     }
   }, [nativeLoggerOpen])
 
@@ -892,20 +926,22 @@ export default function DashboardPage() {
               className="native-sheet-backdrop"
               onClick={() => setNativeLoggerOpen(false)}
               aria-label="Close rep logger"
+              tabIndex={-1}
             />
           )}
           <div
+            ref={nativeLoggerSheetRef}
             id="log-pushups"
             className={`card p-8 mb-8 ${nativeMode ? `native-log-sheet ${nativeLoggerOpen ? 'is-open' : ''}` : ''}`}
             role={nativeMode && nativeLoggerOpen ? 'dialog' : undefined}
             aria-modal={nativeMode && nativeLoggerOpen ? true : undefined}
-            aria-labelledby="log-pushups-title"
+            aria-labelledby={nativeMode && nativeLoggerOpen ? 'native-log-sheet-title' : 'log-pushups-title'}
           >
             {nativeMode && (
               <div className="native-sheet-header">
                 <div>
                   <span>Quick entry</span>
-                  <strong>Add push-ups</strong>
+                  <strong id="native-log-sheet-title">Add push-ups</strong>
                 </div>
                 <button type="button" onClick={() => setNativeLoggerOpen(false)} aria-label="Close rep logger">Done</button>
               </div>
