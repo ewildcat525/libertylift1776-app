@@ -7,10 +7,11 @@ export const alt = 'Liberty Lift 1776 personal progress'
 export const size = { width: 1200, height: 630 }
 export const contentType = 'image/png'
 
-export default async function Image({ params }: { params: { handle: string } }) {
-  let handle = params.handle
+export default async function Image({ params }: { params: Promise<{ handle: string }> }) {
+  const { handle: rawHandle } = await params
+  let handle = rawHandle
   try {
-    handle = decodeURIComponent(params.handle)
+    handle = decodeURIComponent(rawHandle)
   } catch {
     // keep raw value
   }

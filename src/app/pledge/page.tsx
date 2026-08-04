@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import { CHARITY_DONATE_URLS } from '@/lib/charities'
@@ -22,7 +22,7 @@ export default function PledgePage() {
   const [loading, setLoading] = useState(true)
   const [showSuccess, setShowSuccess] = useState(false)
   const router = useRouter()
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   useEffect(() => {
     const loadData = async () => {
@@ -45,7 +45,7 @@ export default function PledgePage() {
       setLoading(false)
     }
     loadData()
-  }, [router])
+  }, [router, supabase])
 
   const handleComplete = () => {
     setShowSuccess(true)

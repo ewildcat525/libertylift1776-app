@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { createClient, Contest, US_STATES, DAILY_PACE } from '@/lib/supabase'
 import Navigation from '@/components/Navigation'
@@ -62,7 +62,7 @@ export default function ContestDetailPage() {
   const [copied, setCopied] = useState(false)
   const [filter, setFilter] = useState<'all' | 'streak' | 'daily'>('all')
 
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   useEffect(() => {
     const loadContest = async () => {
@@ -100,14 +100,15 @@ export default function ContestDetailPage() {
           .select('user_id, total_pushups, current_streak, best_day, last_log_date')
           .in('user_id', userIds)
 
-        // Get daily pushup logs for chart (July 2026 only)
+        // Public contest charts use daily totals; raw activity rows are private
+        // to their owner and are never sent to other contest participants.
         const { data: logs } = await supabase
-          .from('pushup_logs')
-          .select('user_id, count, logged_at')
+          .from('public_user_daily_pushups')
+          .select('user_id, daily_pushups, log_date')
           .in('user_id', userIds)
-          .gte('logged_at', '2026-07-01')
-          .lte('logged_at', '2026-07-31T23:59:59')
-          .order('logged_at', { ascending: true })
+          .gte('log_date', '2026-07-01')
+          .lte('log_date', '2026-07-31')
+          .order('log_date', { ascending: true })
 
         const memberData: ContestMember[] = participants.map((p: any) => {
           const profile = profiles?.find(pr => pr.id === p.user_id)
@@ -137,11 +138,11 @@ export default function ContestDetailPage() {
           }
         })
 
-        // Aggregate logs by day
+        // Populate the already-aggregated daily totals.
         logs?.forEach(log => {
-          const day = new Date(log.logged_at).getDate()
+          const day = Number(log.log_date.slice(-2))
           if (day >= 1 && day <= 31) {
-            dailyTotals[log.user_id][day] += log.count
+            dailyTotals[log.user_id][day] = log.daily_pushups
           }
         })
 
@@ -176,7 +177,7 @@ export default function ContestDetailPage() {
     }
 
     loadContest()
-  }, [contestId])
+  }, [contestId, router, supabase])
 
   const joinContest = async () => {
     if (!user) {

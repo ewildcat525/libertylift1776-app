@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import Link from 'next/link'
 import { createClient, AppNotification } from '@/lib/supabase'
 
@@ -14,7 +14,7 @@ export default function NotificationBell({ userId }: NotificationBellProps) {
   const [open, setOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
 
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
   const unreadCount = notifications.filter(n => !n.read_at).length
 
   const resolveActorNames = useCallback(async (items: AppNotification[]) => {
@@ -84,7 +84,7 @@ export default function NotificationBell({ userId }: NotificationBellProps) {
       active = false
       if (channel) supabase.removeChannel(channel)
     }
-  }, [userId])
+  }, [resolveActorNames, supabase, userId])
 
   // Close on outside click
   useEffect(() => {

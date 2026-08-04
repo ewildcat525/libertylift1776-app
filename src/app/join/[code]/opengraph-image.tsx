@@ -6,10 +6,11 @@ export const alt = 'You have been challenged — Liberty Lift 1776'
 export const size = { width: 1200, height: 630 }
 export const contentType = 'image/png'
 
-export default async function Image({ params }: { params: { code: string } }) {
-  let code = params.code
+export default async function Image({ params }: { params: Promise<{ code: string }> }) {
+  const { code: rawCode } = await params
+  let code = rawCode
   try {
-    code = decodeURIComponent(params.code)
+    code = decodeURIComponent(rawCode)
   } catch {
     // keep raw value
   }

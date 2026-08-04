@@ -11,7 +11,7 @@ Liberty Lift 1776 is a Next.js campaign app for a July 1-31, 2026 push-up challe
 - Personal stats, calendar tracking, cumulative progress chart, and milestone messages
 - Global leaderboard with total, streak, and best-day rankings
 - Private and public contests with invite codes
-- Nationwide chat page (`/chat`) with live updates, @mentions with autocomplete, and a notification bell for call-outs (open to all signed-in participants; access is gated by `canUseChat` in `src/lib/flags.ts` and `public.can_use_chat()` if it ever needs to be re-limited)
+- Opt-in nationwide chat page (`/chat`) with live updates, @mentions, and notifications. Public user-generated content is disabled by default and requires both frontend and database release gates.
 - Charity pledge setup: donate a fixed rate per push-up completed to Wounded Warrior Project
 - Supabase-backed profiles, logs, stats, achievements, contests, pledges, and email subscribers
 - Public shareable profile pages (`/p/[handle]`) with dynamic Open Graph cards
@@ -53,7 +53,7 @@ the corresponding production template with representative test stats.
 
 ## Tech Stack
 
-- [Next.js](https://nextjs.org/) 14 App Router
+- [Next.js](https://nextjs.org/) 15 App Router
 - [React](https://react.dev/) 18
 - [TypeScript](https://www.typescriptlang.org/)
 - [Tailwind CSS](https://tailwindcss.com/)
@@ -65,9 +65,16 @@ the corresponding production template with representative test stats.
 
 ### Prerequisites
 
-- Node.js 18.17 or newer
+- Node.js 22 LTS
 - npm
 - A Supabase project
+
+### iOS App
+
+The App Store-ready Capacitor shell lives in `ios/`. Follow [`native/IOS.md`](native/IOS.md)
+for signing, associated-domain setup, native authentication redirects, device testing,
+and archive submission. Run `npm run ios:sync` whenever native dependencies or
+Capacitor configuration change.
 
 ### Install Dependencies
 
@@ -83,11 +90,36 @@ Create a `.env.local` file in the project root:
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
+NEXT_PUBLIC_ENABLE_COMMUNITY_CHAT=false
+NEXT_PUBLIC_ENABLE_PUBLIC_CONTESTS=false
 ```
 
 You can find the Supabase values in your Supabase project under **Project Settings > API**.
 Set `NEXT_PUBLIC_SITE_URL` to your production domain when deploying; it is used for
 canonical metadata, Open Graph URLs, and the sitemap.
+
+### Community Content Release Gate
+
+Public user-generated content is fail-closed for App Store releases. Leave
+`NEXT_PUBLIC_ENABLE_COMMUNITY_CHAT=false` and `NEXT_PUBLIC_ENABLE_PUBLIC_CONTESTS=false`
+unless moderation, reporting, and release readiness have been reviewed. To enable
+either feature, set its environment variable to `true` **and** explicitly enable
+the matching database gate after applying migrations:
+
+```sql
+update private.release_features
+set enabled = true, updated_at = now()
+where feature_key = 'community_chat';
+
+update private.release_features
+set enabled = true, updated_at = now()
+where feature_key = 'public_contests';
+```
+
+Setting only one gate is intentionally insufficient. Disable either gate to remove
+chat navigation and reject database reads/writes. Raw `pushup_logs` are owner-only;
+public profile and contest charts read `public_user_daily_pushups`, which exposes
+only user ID, calendar day, and that day's aggregate total.
 
 ### Set Up Supabase
 

@@ -6,29 +6,51 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "eslint src --ext .js,.jsx,.ts,.tsx --max-warnings=0",
+    "ios:sync": "cap sync ios",
+    "ios:open": "cap open ios",
+    "ios:run": "cap run ios",
+    "ios:assets": "capacitor-assets generate --ios --assetPath native/assets --iconBackgroundColor '#10100F' --iconBackgroundColorDark '#10100F' --splashBackgroundColor '#10100F' --splashBackgroundColorDark '#10100F'"
   },
   "dependencies": {
+    "@capacitor/app": "^8.1.1",
+    "@capacitor/browser": "^8.0.4",
+    "@capacitor/core": "^8.5.0",
+    "@capacitor/haptics": "^8.0.2",
+    "@capacitor/keyboard": "^8.0.5",
+    "@capacitor/share": "^8.0.1",
+    "@capacitor/splash-screen": "^8.0.2",
+    "@capacitor/status-bar": "^8.0.3",
     "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.108.0",
     "@vercel/analytics": "^2.0.1",
     "@vercel/speed-insights": "^2.0.0",
     "date-fns": "^3.3.0",
     "framer-motion": "^11.0.0",
-    "next": "^14.2.28",
+    "next": "15.5.22",
     "react": "^18",
     "react-dom": "^18",
     "recharts": "^2.15.4"
   },
   "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^8.5.0",
+    "@capacitor/ios": "^8.5.0",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "autoprefixer": "^10.0.1",
     "eslint": "^8",
-    "eslint-config-next": "14.1.0",
+    "eslint-config-next": "15.5.22",
     "postcss": "^8",
     "tailwindcss": "^3.3.0",
     "typescript": "^5"
+  },
+  "overrides": {
+    "lodash": "4.18.1",
+    "next": {
+      "postcss": "8.5.25",
+      "sharp": "0.35.0"
+    }
   }
 }

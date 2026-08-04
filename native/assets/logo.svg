@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <g fill="none" fill-rule="evenodd">
+    <path fill="#D32331" d="M184 232h656v74H184z"/>
+    <path fill="#EBE7DC" d="M184 326h656v34H184zm0 54h656v34H184z" opacity=".9"/>
+    <path fill="#D32331" d="M184 434h656v30H184z"/>
+    <path fill="#1F2538" d="M184 232h282v232H184z"/>
+    <g fill="#EBE7DC">
+      <path d="m229 274 7 14 16 2-12 11 3 16-14-8-14 8 3-16-12-11 16-2z"/>
+      <path d="m325 274 7 14 16 2-12 11 3 16-14-8-14 8 3-16-12-11 16-2z"/>
+      <path d="m421 274 7 14 16 2-12 11 3 16-14-8-14 8 3-16-12-11 16-2z"/>
+      <path d="m277 354 7 14 16 2-12 11 3 16-14-8-14 8 3-16-12-11 16-2z"/>
+      <path d="m373 354 7 14 16 2-12 11 3 16-14-8-14 8 3-16-12-11 16-2z"/>
+    </g>
+    <text x="512" y="650" fill="#EBE7DC" font-family="Arial,Helvetica,sans-serif" font-size="112" font-weight="700" letter-spacing="18" text-anchor="middle">LIBERTY</text>
+    <text x="512" y="810" fill="#D5A819" font-family="Arial,Helvetica,sans-serif" font-size="180" font-weight="800" letter-spacing="8" text-anchor="middle">1776</text>
+  </g>
+</svg>

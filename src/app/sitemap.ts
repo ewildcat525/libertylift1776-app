@@ -14,6 +14,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${siteUrl}/login`, changeFrequency: 'monthly', priority: 0.3 },
     { url: `${siteUrl}/privacy`, changeFrequency: 'yearly', priority: 0.1 },
     { url: `${siteUrl}/terms`, changeFrequency: 'yearly', priority: 0.1 },
+    { url: `${siteUrl}/support`, changeFrequency: 'monthly', priority: 0.2 },
   ]
 
   const stateRoutes: MetadataRoute.Sitemap = Object.keys(US_STATES).map((code) => ({

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { createClient, Pledge } from '@/lib/supabase'
 import { CHARITY_DONATE_URLS } from '@/lib/charities'
 import Link from 'next/link'
@@ -18,7 +18,7 @@ const CHARITY_INFO = {
 export default function PledgeWidget({ userId, totalPushups }: PledgeWidgetProps) {
   const [pledge, setPledge] = useState<Pledge | null>(null)
   const [loading, setLoading] = useState(true)
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   useEffect(() => {
     const loadPledge = async () => {
@@ -33,7 +33,7 @@ export default function PledgeWidget({ userId, totalPushups }: PledgeWidgetProps
       setLoading(false)
     }
     loadPledge()
-  }, [userId])
+  }, [supabase, userId])
 
   if (loading) {
     return (

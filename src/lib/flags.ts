@@ -1,10 +1,17 @@
 // Feature gates for staged rollouts.
 
-// Chat is now live for everyone. Kept as a gate (rather than deleting the
-// call sites) so it can be re-limited quickly if needed: return an allowlist
-// check here and update public.can_use_chat() in the database to match.
+// Community chat contains participant-created content, so release builds keep
+// it hidden unless an operator opts in. The database has an independent gate
+// in public.can_use_chat(); both gates must be enabled before chat is usable.
+const COMMUNITY_CHAT_ENABLED = process.env.NEXT_PUBLIC_ENABLE_COMMUNITY_CHAT === 'true'
+const PUBLIC_CONTESTS_ENABLED = process.env.NEXT_PUBLIC_ENABLE_PUBLIC_CONTESTS === 'true'
+
 export function canUseChat(_email?: string | null) {
-  return true
+  return COMMUNITY_CHAT_ENABLED
+}
+
+export function canUsePublicContests() {
+  return PUBLIC_CONTESTS_ENABLED
 }
 
 // Accounts allowed to summon @everyone in chat — a broadcast that notifies

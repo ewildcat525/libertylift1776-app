@@ -7,8 +7,9 @@ export const alt = 'Liberty Lift 1776 state board'
 export const size = { width: 1200, height: 630 }
 export const contentType = 'image/png'
 
-export default async function Image({ params }: { params: { code: string } }) {
-  const stateCode = params.code.toUpperCase()
+export default async function Image({ params }: { params: Promise<{ code: string }> }) {
+  const { code } = await params
+  const stateCode = code.toUpperCase()
   const stateName = US_STATES[stateCode] || stateCode
   const stats = await fetchStateStats(stateCode)
 

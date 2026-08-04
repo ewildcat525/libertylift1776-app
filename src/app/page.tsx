@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { track } from '@vercel/analytics'
 import { createClient, US_STATES } from '@/lib/supabase'
@@ -62,9 +62,10 @@ export default function Home() {
   const [showVideo, setShowVideo] = useState(false)
   const [liveBoard, setLiveBoard] = useState<BoardRow[] | null>(null)
   const [pace, setPace] = useState<PaceInfo | null>(null)
+  const [accountDeleted, setAccountDeleted] = useState(false)
   const hallOpen = useHallOpen()
   const [finalCount, setFinalCount] = useState<number | null>(null)
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   useEffect(() => {
     // Once the contest wraps, the hero leads with the final nationwide count.
@@ -73,10 +74,11 @@ export default function Home() {
         if (data?.total_pushups) setFinalCount(data.total_pushups as number)
       })
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hallOpen])
+  }, [hallOpen, supabase])
 
   useEffect(() => {
+    setAccountDeleted(new URLSearchParams(window.location.search).get('account') === 'deleted')
+
     // Defer the 1.7MB hero video until after first paint; the poster carries the hero.
     const timer = setTimeout(() => setShowVideo(true), 300)
     return () => clearTimeout(timer)
@@ -120,7 +122,7 @@ export default function Home() {
           }))
         )
       })
-  }, [])
+  }, [supabase])
 
   const postContest = hallOpen === true
   const primaryHref = postContest ? '/finale' : user ? '/dashboard' : '/signup'
@@ -133,6 +135,11 @@ export default function Home() {
 
   return (
     <main className="campaign-page">
+      {accountDeleted && (
+        <div className="fixed inset-x-3 top-[max(4.75rem,calc(env(safe-area-inset-top)+4.25rem))] z-[90] mx-auto max-w-lg border border-green-400/40 bg-[#10100f]/95 px-4 py-3 text-center text-sm font-semibold text-green-200 shadow-2xl backdrop-blur" role="status">
+          Your account and challenge data were permanently deleted.
+        </div>
+      )}
       <header className="conversion-nav">
         <Link href="/" className="flex items-center gap-3 campaign-nav-mark">
           <span className="campaign-nav-monogram">LL</span>
@@ -150,7 +157,7 @@ export default function Home() {
             </Link>
           )}
           <Link href={primaryHref} className="campaign-nav-cta">
-            {primaryLabel}
+            {postContest ? 'Finale' : user ? 'Dashboard' : 'Join now'}
           </Link>
         </div>
       </header>
