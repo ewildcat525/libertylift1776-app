@@ -127,7 +127,7 @@ export default function FinalPushBanner({ userId, refreshKey, className = '' }: 
         <p className="text-white/70 text-sm mt-2 max-w-xl mx-auto">
           {mode === 'live'
             ? 'Most reps logged today takes the crown. Log every set as it happens — the board moves with you.'
-            : 'The last day of the 2026 Liberty Lift, and the patriots who emptied the tank.'}
+            : 'The last day of the 2026 Liberty Lift, and the patriots who finished strong.'}
         </p>
       </div>
 

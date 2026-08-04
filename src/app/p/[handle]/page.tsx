@@ -6,7 +6,7 @@ import { US_STATES } from '@/lib/supabase'
 export const revalidate = 60
 
 interface PageProps {
-  params: { handle: string }
+  params: Promise<{ handle: string }>
 }
 
 function decodeHandle(handle: string) {
@@ -18,7 +18,8 @@ function decodeHandle(handle: string) {
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const handle = decodeHandle(params.handle)
+  const { handle: rawHandle } = await params
+  const handle = decodeHandle(rawHandle)
   const stats = await fetchProfileStatsByHandle(handle)
   const fallback = stats ? null : await fetchPublicProfileByHandle(handle)
 
@@ -52,7 +53,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function PublicProfilePage({ params }: PageProps) {
-  const handle = decodeHandle(params.handle)
+  const { handle: rawHandle } = await params
+  const handle = decodeHandle(rawHandle)
   const stats = await fetchProfileStatsByHandle(handle)
   const fallback = stats ? null : await fetchPublicProfileByHandle(handle)
   const badges = stats ? await fetchEarnedBadges(stats.id) : []

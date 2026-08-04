@@ -5,7 +5,7 @@ import JoinClient from './JoinClient'
 export const revalidate = 60
 
 interface PageProps {
-  params: { code: string }
+  params: Promise<{ code: string }>
 }
 
 function decodeCode(code: string) {
@@ -21,7 +21,9 @@ const fallbackDescription =
   'A friend challenged you to 1,776 push-ups in July. Join their contest, log your reps, and put your state on the board.'
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const preview = await fetchContestInvitePreview(decodeCode(params.code))
+  const { code } = await params
+  const decodedCode = decodeCode(code)
+  const preview = await fetchContestInvitePreview(decodedCode)
 
   const title = preview ? `Join ${preview.name} — Liberty Lift 1776` : fallbackTitle
   const description = preview
@@ -36,7 +38,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     openGraph: {
       title,
       description,
-      url: `/join/${encodeURIComponent(decodeCode(params.code))}`,
+      url: `/join/${encodeURIComponent(decodedCode)}`,
       type: 'website',
       siteName: 'Liberty Lift 1776',
     },
@@ -45,7 +47,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function ContestInvitePage({ params }: PageProps) {
-  const preview = await fetchContestInvitePreview(decodeCode(params.code))
+  const { code } = await params
+  const preview = await fetchContestInvitePreview(decodeCode(code))
 
   return (
     <JoinClient

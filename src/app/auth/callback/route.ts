@@ -3,6 +3,8 @@ import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { isHallOpen, postAuthLanding } from '@/lib/dates'
 
+const NATIVE_AUTH_CALLBACK = 'libertylift1776://auth/callback'
+
 // postAuthLanding compares absolute instants, so it is correct here even
 // though this runs on a UTC server.
 function getSafeNext(next: string | null) {
@@ -15,6 +17,19 @@ function getSafeNext(next: string | null) {
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
+
+  // The OAuth browser cannot access the PKCE verifier stored by the native
+  // WKWebView. Hand the untouched result back to the app before attempting a
+  // server-side exchange; NativeBridge completes it in the original context.
+  if (searchParams.get('native') === '1') {
+    const appUrl = new URL(NATIVE_AUTH_CALLBACK)
+    appUrl.search = searchParams.toString()
+    return NextResponse.redirect(appUrl, {
+      status: 302,
+      headers: { 'Cache-Control': 'no-store' },
+    })
+  }
+
   const code = searchParams.get('code')
   // intent=login marks a link whose ?next is only the campaign landing that /login
   // guessed when the link was minted — never a destination the patriot picked. That

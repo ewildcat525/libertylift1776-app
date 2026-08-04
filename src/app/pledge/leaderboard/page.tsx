@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { createClient } from '@/lib/supabase'
 import Navigation from '@/components/Navigation'
 import ClickableName from '@/components/UserPushupChartModal'
@@ -42,7 +42,7 @@ export default function PledgeLeaderboardPage() {
   const [entries, setEntries] = useState<PledgeLeaderEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [totalPledged, setTotalPledged] = useState(0)
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   useEffect(() => {
     const loadLeaderboard = async () => {
@@ -68,7 +68,7 @@ export default function PledgeLeaderboardPage() {
     }
 
     loadLeaderboard()
-  }, [])
+  }, [supabase])
 
   const filteredEntries = entries
 

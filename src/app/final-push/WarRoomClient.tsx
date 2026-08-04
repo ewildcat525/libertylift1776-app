@@ -5,8 +5,7 @@
 // Everywhere else in the app the Final Push is a board you refresh. Here it
 // is a room you sit in: a clock counting down to the closing bell, the
 // nation's reps landing on the tape as they happen, a board that reorders
-// under you, and a log box so you never have to leave to answer someone
-// passing you.
+// under you, and a log box for recording completed sets.
 //
 // Four looks (see finalPushPhase), re-derived every second so a room left
 // open closes itself rather than sitting there wearing live badges:
@@ -30,6 +29,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { track } from '@vercel/analytics'
+import { nativeRepLoggedFeedback } from '@/lib/native-auth'
 import type { User } from '@supabase/supabase-js'
 import { createClient, US_STATES } from '@/lib/supabase'
 import {
@@ -85,7 +85,7 @@ const FEED_SIZE = 18
 const REFRESH_DEBOUNCE_MS = 1200
 // Backstop for viewers whose realtime never connects (locked-down networks).
 const POLL_MS = 25000
-const DAILY_CAP = 5000
+const DAILY_CAP = 500
 
 // The Eastern calendar day a log belongs to — the same bucket the day board
 // uses in SQL. en-CA formats as YYYY-MM-DD, which compares lexically.
@@ -422,6 +422,7 @@ export default function WarRoomClient() {
     }
 
     track('pushups_logged', { count, source: 'final_push_war_room' })
+    void nativeRepLoggedFeedback()
     setAmount('')
     setLogFlash(count)
     setTimeout(() => setLogFlash(null), 4000)
@@ -500,11 +501,11 @@ export default function WarRoomClient() {
             <h1 className="warroom-title font-bebas">The Final Push</h1>
             <p className="warroom-lede">
               {phase === 'before'
-                ? 'One day. As many as you can. The biggest single-day total on July 31 crowns the Final Push Champion — a permanent place in the Hall of Honor.'
+                ? 'One final day to contribute safely. The biggest verified single-day total on July 31 crowns the Final Push Champion — a permanent place in the Hall of Honor.'
                 : phase === 'live'
                   ? 'Every rep in the country lands here as it happens. Log yours and watch the board move.'
                   : phase === 'results'
-                    ? 'The last day of the 2026 Liberty Lift, and the patriots who emptied the tank.'
+                    ? 'The last day of the 2026 Liberty Lift, and the patriots who finished strong.'
                     : 'The 2026 Liberty Lift is certified. The champion stands in the Hall of Honor.'}
             </p>
 
@@ -560,7 +561,7 @@ export default function WarRoomClient() {
                     <p className="text-white/60 text-sm">
                       The biggest single day anyone has put up all month —{' '}
                       <span className="text-white font-semibold">{standard.name}</span>. Tomorrow is
-                      your one shot to beat it.
+                      the mark that led the final day.
                     </p>
                   </>
                 ) : (
@@ -580,7 +581,7 @@ export default function WarRoomClient() {
                     time zone standing — 6:00am ET on August 1. Reps logged after it still count
                     toward your 1,776, but not toward the crown.
                   </li>
-                  <li>Cap is {DAILY_CAP.toLocaleString()} in a day. Log in sets as you go.</li>
+                  <li>Safety cap is {DAILY_CAP.toLocaleString()} in a day. Log only completed sets.</li>
                 </ul>
               </section>
             </div>
@@ -620,7 +621,7 @@ export default function WarRoomClient() {
                         <div className="warroom-chase">
                           {passedAlert ? (
                             <span className="warroom-chase-alert">
-                              You just got passed. Answer it.
+                              The board moved. Keep your own safe pace.
                             </span>
                           ) : chase ? (
                             <>
@@ -829,7 +830,7 @@ export default function WarRoomClient() {
               {states.length > 0 && (
                 <section className="card p-5 sm:p-6 mt-6">
                   <h2 className="warroom-heading">
-                    {phase === 'live' ? 'States emptying the tank' : 'The final day, by state'}
+                    {phase === 'live' ? 'States finishing strong' : 'The final day, by state'}
                   </h2>
                   <ul className="warroom-states">
                     {states.map((s) => (

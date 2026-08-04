@@ -7,6 +7,7 @@ import { createClient, US_STATES } from '@/lib/supabase'
 import { generateDisplayName, savePendingSignup } from '@/lib/onboarding'
 import { captureReferralFromUrl, readReferral } from '@/lib/referral'
 import { catchUpPace, challengeDaysRemaining, isChallengeLive } from '@/lib/dates'
+import { isNativeApp, nativeAuthRedirect, openNativeOAuth } from '@/lib/native-auth'
 
 const STATE_OPTIONS = Object.entries(US_STATES)
 
@@ -44,7 +45,7 @@ export default function SignupForm() {
   const getRedirectTo = () => {
     if (typeof window === 'undefined') return undefined
     const safeNext = getSafeNext(new URLSearchParams(window.location.search).get('next'))
-    return `${window.location.origin}/auth/callback?next=${encodeURIComponent(safeNext)}`
+    return nativeAuthRedirect(`${window.location.origin}/auth/callback?next=${encodeURIComponent(safeNext)}`)
   }
 
   useEffect(() => {
@@ -176,16 +177,25 @@ export default function SignupForm() {
     persistPendingSignup(nextDisplayName)
     track('signup_submitted', { method: 'google', referred: readReferral() ? 'yes' : 'no' })
 
-    const { error: oauthError } = await supabase.auth.signInWithOAuth({
+    const native = isNativeApp()
+    const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
         redirectTo: getRedirectTo(),
+        skipBrowserRedirect: native,
       },
     })
 
     if (oauthError) {
       setError(oauthError.message)
       setLoadingProvider(null)
+    } else if (native && data.url) {
+      try {
+        await openNativeOAuth(data.url)
+      } catch {
+        setError('Google sign-in could not be opened. Please try again or use email.')
+        setLoadingProvider(null)
+      }
     }
   }
 
@@ -228,6 +238,10 @@ export default function SignupForm() {
 
   return (
     <main className="auth-page">
+      <div className="native-auth-mark" aria-label="Liberty Lift 1776">
+        <span>LL</span>
+        <strong>Liberty Lift</strong>
+      </div>
       <header className="conversion-nav">
         <Link href="/" className="flex items-center gap-3 campaign-nav-mark">
           <span className="campaign-nav-monogram">LL</span>
@@ -402,6 +416,10 @@ export default function SignupForm() {
             <Link href={`/login?next=${encodeURIComponent(nextPath)}`} className="text-liberty-gold hover:underline">
               Sign in
             </Link>
+          </p>
+          <p className="mt-3 text-center text-xs leading-relaxed text-white/40">
+            By joining, you agree to the <Link href="/terms" className="text-white/65 underline hover:text-white">Terms of Use</Link>
+            {' '}and acknowledge the <Link href="/privacy" className="text-white/65 underline hover:text-white">Privacy Policy</Link>.
           </p>
         </div>
       </section>

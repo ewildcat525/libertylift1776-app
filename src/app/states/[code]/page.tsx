@@ -6,7 +6,7 @@ import StateBoardClient from './StateBoardClient'
 export const revalidate = 60
 
 interface PageProps {
-  params: { code: string }
+  params: Promise<{ code: string }>
 }
 
 export function generateStaticParams() {
@@ -14,7 +14,8 @@ export function generateStaticParams() {
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const stateCode = params.code.toUpperCase()
+  const { code } = await params
+  const stateCode = code.toUpperCase()
   const stateName = US_STATES[stateCode]
 
   if (!stateName) {

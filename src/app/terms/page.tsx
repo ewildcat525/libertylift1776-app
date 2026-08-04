@@ -15,7 +15,7 @@ export default function TermsPage() {
         </Link>
 
         <h1 className="app-title text-5xl mb-2">Terms of Use</h1>
-        <p className="text-white/50 text-sm mb-10">Last updated: June 9, 2026</p>
+        <p className="text-white/50 text-sm mb-10">Last updated: August 1, 2026</p>
 
         <div className="space-y-8 text-white/70 leading-relaxed">
           <section>
@@ -23,7 +23,7 @@ export default function TermsPage() {
             <p>
               Liberty Lift 1776 is a free community fitness challenge: 1,776 push-ups logged
               between July 1 and July 31, 2026. Progress is self-reported on the honor system.
-              Logging is limited to reasonable daily amounts to keep the boards fair.
+              Logging is limited to 500 push-ups per day to support safer participation and fair boards.
             </p>
           </section>
 
@@ -40,8 +40,17 @@ export default function TermsPage() {
             <h2 className="font-bebas text-2xl text-liberty-red mb-2">Health and safety</h2>
             <p>
               Push-ups are exercise, and exercise carries risk. Participate within your own
-              limits and consult a medical professional before starting any fitness program. You
-              participate at your own risk; the challenge organizers are not liable for injuries.
+              limits and consult a medical professional before starting any fitness program.
+              Use controlled form, take rest between sets, and stop for pain, dizziness, or unusual
+              shortness of breath. Never follow a leaderboard over your own health. You participate
+              at your own risk; the challenge organizers are not liable for injuries.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="font-bebas text-2xl text-liberty-red mb-2">Support</h2>
+            <p>
+              Report safety, account, or content concerns through our <Link href="/support" className="text-liberty-gold hover:underline">Support page</Link>.
             </p>
           </section>
 

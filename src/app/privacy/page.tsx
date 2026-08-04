@@ -15,25 +15,27 @@ export default function PrivacyPage() {
         </Link>
 
         <h1 className="app-title text-5xl mb-2">Privacy Policy</h1>
-        <p className="text-white/50 text-sm mb-10">Last updated: June 9, 2026</p>
+        <p className="text-white/50 text-sm mb-10">Last updated: August 1, 2026</p>
 
         <div className="space-y-8 text-white/70 leading-relaxed">
           <section>
             <h2 className="font-bebas text-2xl text-liberty-red mb-2">What we collect</h2>
             <p>
               When you create an account we store your email address, the public handle you
-              choose, your selected U.S. state, and the push-up counts you log. If you join the
-              email list, we store the email address you provide. If you sign in with Google, we
-              receive your email address from Google.
+              choose, your selected U.S. state, and the push-up counts and dates you log. Contest
+              membership, pledges, referral attribution, and content you submit to enabled
+              community features are also stored. If you join an interest list, we store the
+              email address you provide. Google sign-in supplies your email address.
             </p>
           </section>
 
           <section>
             <h2 className="font-bebas text-2xl text-liberty-red mb-2">What is public</h2>
             <p>
-              Your public handle, state, push-up totals, streaks, and rankings appear on public
-              leaderboards, state boards, your public profile page, and shareable images. Your
-              email address is never shown publicly.
+              Your public handle, state, daily aggregate progress, totals, streaks, rankings, and
+              public pledge total may appear on boards, your public profile, and shareable images.
+              During a live Final Push event, completed set size and timing may appear in the live
+              activity feed. Notes, log identifiers, and your email address are not public.
             </p>
           </section>
 
@@ -52,7 +54,8 @@ export default function PrivacyPage() {
             <p>
               Account data is stored with Supabase. The site is hosted on Vercel, and we use
               Vercel Analytics to understand aggregate site usage. These providers process data
-              on our behalf under their own privacy terms.
+              on our behalf. The iOS app uses the same hosted service and does not request access
+              to contacts, photos, precise location, or Health data.
             </p>
           </section>
 
@@ -65,11 +68,24 @@ export default function PrivacyPage() {
           </section>
 
           <section>
+            <h2 className="font-bebas text-2xl text-liberty-red mb-2">Retention and deletion</h2>
+            <p>
+              Challenge history remains available for campaign records until you delete your
+              account. Account deletion permanently removes your profile and associated activity
+              from our active database. Backup copies may remain temporarily until routine backup
+              retention expires.
+            </p>
+          </section>
+
+          <section>
             <h2 className="font-bebas text-2xl text-liberty-red mb-2">Your choices</h2>
             <p>
-              You can edit your public handle at any time from your dashboard. To delete your
-              account and associated data, or to unsubscribe from emails, contact us and we will
-              take care of it.
+              You can edit your public handle or permanently delete your account and associated
+              challenge data from your dashboard. Every campaign email includes an unsubscribe
+              link.
+            </p>
+            <p className="mt-3">
+              Questions or privacy requests? Visit <Link href="/support" className="text-liberty-gold hover:underline">Support</Link>.
             </p>
           </section>
         </div>
