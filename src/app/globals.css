@@ -4900,6 +4900,17 @@ html[data-app-environment='native'] .native-log-sheet .btn-gold {
   background: var(--campaign-ink);
 }
 
+html[data-app-environment='native'] .offseason-page .conversion-nav {
+  display: flex;
+}
+
+html[data-app-environment='native'] .offseason-page .conversion-signin {
+  min-height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
+  padding-inline: 0.35rem;
+}
+
 .offseason-hero {
   position: relative;
   min-height: 100svh;
