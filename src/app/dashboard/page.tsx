@@ -1,8 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { track } from '@vercel/analytics'
+import { isNativeApp, nativeRepLoggedFeedback } from '@/lib/native-auth'
 import { createClient, UserStats, Profile, AMERICAN_FACTS, DAILY_PACE, isValidStateCode, US_STATES } from '@/lib/supabase'
 import { clearPendingSignup, generateDisplayName, readPendingSignup } from '@/lib/onboarding'
 import { challengePhase, ChallengePhase, localDateString, liveStreak } from '@/lib/dates'
@@ -15,6 +17,7 @@ import Fireworks from '@/components/Fireworks'
 import Navigation from '@/components/Navigation'
 import PledgeWidget from '@/components/PledgeWidget'
 import ShareProgress from '@/components/ShareProgress'
+import AccountSettings from '@/components/AccountSettings'
 import {
   LineChart,
   Line,
@@ -106,12 +109,40 @@ export default function DashboardPage() {
   const [phase, setPhase] = useState<ChallengePhase | null>(null)
   const [finalRank, setFinalRank] = useState<number | null>(null)
   const [boardSize, setBoardSize] = useState<number | null>(null)
+  const [nativeMode, setNativeMode] = useState(false)
+  const [nativeLoggerOpen, setNativeLoggerOpen] = useState(false)
+  const nativeRepInputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   useEffect(() => {
     setPhase(challengePhase())
   }, [])
+
+  useEffect(() => {
+    if (!isNativeApp()) return
+    setNativeMode(true)
+
+    const openLogger = () => setNativeLoggerOpen(true)
+    window.addEventListener('libertylift:open-log', openLogger)
+    if (new URLSearchParams(window.location.search).get('log') === '1') {
+      setNativeLoggerOpen(true)
+      window.history.replaceState(window.history.state, '', '/dashboard')
+    }
+
+    return () => window.removeEventListener('libertylift:open-log', openLogger)
+  }, [])
+
+  useEffect(() => {
+    if (!nativeLoggerOpen) return
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    const focusTimer = window.setTimeout(() => nativeRepInputRef.current?.focus(), 280)
+    return () => {
+      window.clearTimeout(focusTimer)
+      document.body.style.overflow = previousOverflow
+    }
+  }, [nativeLoggerOpen])
 
   // Final standing for the after-action report, once the books are closed.
   useEffect(() => {
@@ -126,8 +157,7 @@ export default function DashboardPage() {
       .from('leaderboard')
       .select('id', { count: 'exact', head: true })
       .then(({ count }) => setBoardSize(count ?? null))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, user])
+  }, [phase, user, supabase])
 
   useEffect(() => {
     setProfileName(profile?.display_name || '')
@@ -266,7 +296,7 @@ export default function DashboardPage() {
     }
 
     loadData()
-  }, [router])
+  }, [router, supabase])
 
   const saveProfileName = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -398,6 +428,7 @@ export default function DashboardPage() {
       })
 
       track('pushups_logged', { count })
+      void nativeRepLoggedFeedback()
 
       // Crossing 1776 gets the full fireworks show; it outranks the
       // Independence Day easter egg for reps logged on July 4th.
@@ -608,8 +639,54 @@ export default function DashboardPage() {
       )}
       <div className="min-h-screen pt-24 pb-12 px-4 app-surface">
         <div className="max-w-4xl mx-auto">
+          <section className="native-today" aria-labelledby="native-today-title">
+            <header className="native-today-heading">
+              <div>
+                <div className="native-overline">Today</div>
+                <h1 id="native-today-title">Hey, {profile?.display_name?.split(' ')[0] || 'Patriot'}.</h1>
+              </div>
+              <Link href="/profile" className="native-avatar" aria-label="Open your profile">
+                {profile?.display_name
+                  ?.split(/\s+/)
+                  .slice(0, 2)
+                  .map(part => part[0])
+                  .join('')
+                  .toUpperCase() || 'LL'}
+              </Link>
+            </header>
+
+            <div className="native-progress-hero">
+              <div className="native-progress-copy">
+                <span>Your campaign</span>
+                <strong>{stats?.total_pushups.toLocaleString() || 0}</strong>
+                <small>of 1,776 push-ups</small>
+              </div>
+              <div
+                className="native-progress-ring"
+                style={{ '--native-progress': `${Math.min(progress, 100)}%` } as React.CSSProperties}
+                aria-label={`${progress.toFixed(1)} percent complete`}
+              >
+                <span>{Math.round(progress)}%</span>
+              </div>
+            </div>
+
+            <div className="native-today-stats">
+              <div><span>Today</span><strong>{dailyLogs[localDateString()] || 0}</strong><small>reps</small></div>
+              <div><span>Streak</span><strong>{liveStreak(stats?.current_streak, stats?.last_log_date)}</strong><small>days</small></div>
+              <div><span>Remaining</span><strong>{Math.max(0, 1776 - (stats?.total_pushups || 0))}</strong><small>reps</small></div>
+            </div>
+
+            {phase === 'ended' ? (
+              <Link href="/finale" className="native-primary-action">View your final result</Link>
+            ) : (
+              <button type="button" className="native-primary-action" onClick={() => setNativeLoggerOpen(true)}>
+                <span aria-hidden="true">＋</span> Log a set
+              </button>
+            )}
+          </section>
+
           {/* Header */}
-          <div className="mb-8">
+          <div id="profile-name" className="web-dashboard-header mb-8">
             <div className="flex flex-wrap items-center gap-3 mb-3">
               <div className="app-eyebrow">Personal board</div>
               {(stats?.total_pushups ?? 0) >= 1776 && (
@@ -707,7 +784,7 @@ export default function DashboardPage() {
           {/* Grace day: the books are still open for July reps. */}
           {phase === 'grace' && (
             <div
-              className="mb-8 p-4 bg-yellow-500/15 border border-yellow-500/40 text-center text-yellow-200 text-sm"
+              className="web-dashboard-status mb-8 p-4 bg-yellow-500/15 border border-yellow-500/40 text-center text-yellow-200 text-sm"
               role="status"
             >
               🔔 <strong>Last call.</strong> The contest ended July 31 — you have until midnight
@@ -717,7 +794,7 @@ export default function DashboardPage() {
 
           {/* After-action report replaces the pace card once standings are final. */}
           {phase === 'ended' ? (
-            <div className="card p-8 mb-8 text-center">
+            <div className="web-dashboard-status card p-8 mb-8 text-center">
               <div className="app-eyebrow mb-3 justify-center">After-action report</div>
               <h2 className="font-bebas text-4xl sm:text-5xl text-white mb-2">
                 {(stats?.total_pushups ?? 0) >= 1776 ? 'Liberty achieved.' : 'You answered the call.'}
@@ -765,9 +842,9 @@ export default function DashboardPage() {
               )}
             </div>
           ) : pace === 'before' ? (
-            <Countdown className="dashboard-countdown mb-8" hideWhenLive />
+            <Countdown className="web-dashboard-status dashboard-countdown mb-8" hideWhenLive />
           ) : (
-            <div className="card p-6 text-center mb-8">
+            <div className="web-dashboard-status card p-6 text-center mb-8">
               <div className={`inline-flex items-center gap-2 px-4 py-2 border ${
                 pace === 'ahead' ? 'bg-green-500/20 text-green-300 border-green-500/40' :
                 pace === 'ontrack' ? 'bg-blue-500/20 text-blue-300 border-blue-500/40' :
@@ -801,11 +878,41 @@ export default function DashboardPage() {
           />
 
           {/* Log Push-ups Card (hidden once the books are closed) */}
-          {phase !== 'ended' && (
-          <div className="card p-8 mb-8">
-            <h2 className="font-bebas text-3xl text-liberty-red mb-5 text-center">
+          {phase !== 'ended' && (!nativeMode || nativeLoggerOpen) && (
+          <>
+          {nativeMode && nativeLoggerOpen && (
+            <button
+              type="button"
+              className="native-sheet-backdrop"
+              onClick={() => setNativeLoggerOpen(false)}
+              aria-label="Close rep logger"
+            />
+          )}
+          <div
+            id="log-pushups"
+            className={`card p-8 mb-8 ${nativeMode ? `native-log-sheet ${nativeLoggerOpen ? 'is-open' : ''}` : ''}`}
+            role={nativeMode && nativeLoggerOpen ? 'dialog' : undefined}
+            aria-modal={nativeMode && nativeLoggerOpen ? true : undefined}
+            aria-labelledby="log-pushups-title"
+          >
+            {nativeMode && (
+              <div className="native-sheet-header">
+                <div>
+                  <span>Quick entry</span>
+                  <strong>Add push-ups</strong>
+                </div>
+                <button type="button" onClick={() => setNativeLoggerOpen(false)} aria-label="Close rep logger">Done</button>
+              </div>
+            )}
+            <h2 id="log-pushups-title" className="font-bebas text-3xl text-liberty-red mb-5 text-center">
               LOG YOUR PUSH-UPS
             </h2>
+
+            <div className="mb-5 border border-amber-300/25 bg-amber-300/[0.06] p-4 text-sm leading-relaxed text-amber-100/80" role="note">
+              <strong className="text-amber-100">Train safely.</strong> Use controlled form, rest
+              between sets, and follow your own ability—not the leaderboard. Stop if you feel
+              pain, dizziness, or unusual shortness of breath. The daily logging cap is 500.
+            </div>
 
             {/* Quick Add Buttons */}
             <div className="grid grid-cols-5 gap-2 mb-4">
@@ -823,12 +930,13 @@ export default function DashboardPage() {
             <div className="flex flex-col gap-3 items-center justify-center">
               <div className="flex flex-col sm:flex-row gap-3 items-center w-full max-w-xl">
                 <input
+                  ref={nativeRepInputRef}
                   type="number"
                   value={pushupCount}
                   onChange={(e) => setPushupCount(e.target.value)}
                   placeholder="0"
                   min="1"
-                  max="1000"
+                  max="500"
                   className="input text-center text-2xl font-bold flex-1"
                 />
                 <input
@@ -896,6 +1004,7 @@ export default function DashboardPage() {
               </div>
             )}
           </div>
+          </>
           )}
 
           {/* Nationwide count + milestone celebration. Keyed to the user's
@@ -908,7 +1017,7 @@ export default function DashboardPage() {
           />
 
           {/* Main Stats Card */}
-          <div className="card p-8 mb-8">
+          <div className="web-dashboard-detail card p-8 mb-8">
             <div className="text-center mb-6">
               <div className="font-bebas text-8xl text-white">
                 {stats?.total_pushups.toLocaleString() || 0}
@@ -965,11 +1074,11 @@ export default function DashboardPage() {
           </div>
 
           {/* Badge Case */}
-          <BadgeCase userId={user.id} stats={stats} />
+          <div className="web-dashboard-detail"><BadgeCase userId={user.id} stats={stats} /></div>
 
           {/* Recruit Card */}
           {profile?.display_name && (
-            <div className="card p-8 mb-8 text-center">
+            <div className="web-dashboard-detail card p-8 mb-8 text-center">
               <h2 className="font-bebas text-3xl text-liberty-red mb-2">
                 BRING YOUR PEOPLE
               </h2>
@@ -996,7 +1105,7 @@ export default function DashboardPage() {
           )}
 
           {/* Personal Progress Chart */}
-          <div className="card p-6 mb-8">
+          <div className="web-dashboard-detail card p-6 mb-8">
             <h2 className="font-bebas text-2xl text-liberty-red mb-4 text-center">
               YOUR PROGRESS TO 1776
             </h2>
@@ -1097,7 +1206,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Calendar */}
-          <div className="card p-6 mb-8">
+          <div className="web-dashboard-detail card p-6 mb-8">
             <h2 className="font-bebas text-3xl text-liberty-red text-center mb-4">
               JULY 2026
             </h2>
@@ -1129,9 +1238,12 @@ export default function DashboardPage() {
                   const isToday = dateStr === localDateString()
 
                   days.push(
-                    <div
+                    <button
                       key={day}
+                      type="button"
                       onClick={() => setLogDate(dateStr)}
+                      aria-label={`July ${day}: ${count > 0 ? `${count} push-ups logged` : 'no push-ups logged'}`}
+                      aria-pressed={logDate === dateStr}
                       className={`aspect-square flex flex-col items-center justify-center cursor-pointer transition-all text-xs
                         ${count > 0
                           ? count >= dailyTarget
@@ -1149,7 +1261,7 @@ export default function DashboardPage() {
                       {count > 0 && (
                         <span className="text-[10px] text-liberty-red font-bold">{count}</span>
                       )}
-                    </div>
+                    </button>
                   )
                 }
 
@@ -1186,9 +1298,11 @@ export default function DashboardPage() {
           </div>
 
           {/* Pledge Widget */}
-          <div>
+          <div className="web-dashboard-detail">
             <PledgeWidget userId={user.id} totalPushups={stats?.total_pushups || 0} />
           </div>
+
+          <div className="web-dashboard-detail"><AccountSettings /></div>
 
         </div>
       </div>

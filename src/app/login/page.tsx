@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase'
 import { postAuthLanding } from '@/lib/dates'
+import { isNativeApp, nativeAuthRedirect, openNativeOAuth } from '@/lib/native-auth'
 
 // An explicit ?next, or null when there isn't a usable one. Callers decide
 // what to fall back to: signing in falls back to the war room while the blitz
@@ -42,13 +43,13 @@ export default function LoginPage() {
     // honor it verbatim rather than substituting the campaign landing.
     const explicitNext = getSafeNext(new URLSearchParams(window.location.search).get('next'))
     if (explicitNext) {
-      return `${window.location.origin}/auth/callback?next=${encodeURIComponent(explicitNext)}`
+      return nativeAuthRedirect(`${window.location.origin}/auth/callback?next=${encodeURIComponent(explicitNext)}`)
     }
 
     // No destination of their own: send the campaign landing, tagged so the
     // callback can re-resolve it if the closing bell rings between requesting
     // a magic link and opening it.
-    return `${window.location.origin}/auth/callback?intent=login&next=${encodeURIComponent(postAuthLanding())}`
+    return nativeAuthRedirect(`${window.location.origin}/auth/callback?intent=login&next=${encodeURIComponent(postAuthLanding())}`)
   }
 
   useEffect(() => {
@@ -68,16 +69,25 @@ export default function LoginPage() {
     setEmailSent(false)
     setLoadingProvider('google')
 
-    const { error: oauthError } = await supabase.auth.signInWithOAuth({
+    const native = isNativeApp()
+    const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
         redirectTo: getRedirectTo(),
+        skipBrowserRedirect: native,
       },
     })
 
     if (oauthError) {
       setError(oauthError.message)
       setLoadingProvider(null)
+    } else if (native && data.url) {
+      try {
+        await openNativeOAuth(data.url)
+      } catch {
+        setError('Google sign-in could not be opened. Please try again or use email.')
+        setLoadingProvider(null)
+      }
     }
   }
 
@@ -107,6 +117,10 @@ export default function LoginPage() {
 
   return (
     <main className="auth-page">
+      <div className="native-auth-mark" aria-label="Liberty Lift 1776">
+        <span>LL</span>
+        <strong>Liberty Lift</strong>
+      </div>
       <header className="conversion-nav">
         <Link href="/" className="flex items-center gap-3 campaign-nav-mark">
           <span className="campaign-nav-monogram">LL</span>

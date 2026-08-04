@@ -1,11 +1,14 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient, Contest } from '@/lib/supabase'
 import { localDateString } from '@/lib/dates'
 import Navigation from '@/components/Navigation'
+import { canUsePublicContests } from '@/lib/flags'
+
+const publicContestsEnabled = canUsePublicContests()
 
 export default function ContestsPage() {
   const [user, setUser] = useState<any>(null)
@@ -24,21 +27,22 @@ export default function ContestsPage() {
   const [creating, setCreating] = useState(false)
   
   const router = useRouter()
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   useEffect(() => {
     const loadData = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       setUser(user)
 
-      // Load public contests
-      const { data: publicContests } = await supabase
-        .from('contests')
-        .select('*')
-        .eq('is_public', true)
-        .order('created_at', { ascending: false })
-      
-      setContests(publicContests || [])
+      if (publicContestsEnabled) {
+        const { data: publicContests } = await supabase
+          .from('contests')
+          .select('*')
+          .eq('is_public', true)
+          .order('created_at', { ascending: false })
+
+        setContests(publicContests || [])
+      }
 
       // Load my contests if logged in
       if (user) {
@@ -62,7 +66,7 @@ export default function ContestsPage() {
     }
 
     loadData()
-  }, [])
+  }, [supabase])
 
   const createContest = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -82,7 +86,7 @@ export default function ContestsPage() {
         description: contestDesc,
         creator_id: user.id,
         invite_code: inviteCode,
-        is_public: isPublic,
+        is_public: publicContestsEnabled && isPublic,
         start_date: localDateString(),
         end_date: '2026-07-31',
       })
@@ -206,7 +210,7 @@ export default function ContestsPage() {
                     rows={2}
                   />
                 </div>
-                <div className="flex items-center gap-2">
+                {publicContestsEnabled && <div className="flex items-center gap-2">
                   <input
                     type="checkbox"
                     id="isPublic"
@@ -217,7 +221,7 @@ export default function ContestsPage() {
                   <label htmlFor="isPublic" className="text-sm text-white/70">
                     Make this contest public (anyone can find and join)
                   </label>
-                </div>
+                </div>}
                 {createError && (
                   <div className="p-3 bg-liberty-red/20 border border-liberty-red/50 text-sm text-red-300">
                     {createError}
@@ -273,8 +277,8 @@ export default function ContestsPage() {
             </div>
           )}
 
-          {/* Public Contests */}
-          <div>
+          {/* Public discovery stays fail-closed until moderation is ready. */}
+          {publicContestsEnabled && <div>
               <h2 className="font-bebas text-3xl text-liberty-red mb-4">Public Contests</h2>
             {loading ? (
               <div className="text-center text-white/50 py-12">Loading contests...</div>
@@ -305,7 +309,7 @@ export default function ContestsPage() {
                 ))}
               </div>
             )}
-          </div>
+          </div>}
         </div>
       </div>
     </>

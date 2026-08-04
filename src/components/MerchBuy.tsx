@@ -48,7 +48,7 @@ export default function MerchBuy() {
       </div>
 
       {/* Sticky mobile bar: price + current gate state always in reach */}
-      <div className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-liberty-dark/95 backdrop-blur border-t border-white/15 px-4 py-3">
+      <div className="native-safe-bottom sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-liberty-dark/95 backdrop-blur border-t border-white/15 px-4 py-3">
         <div className="flex items-center justify-between gap-3">
           <div className="shrink-0">
             <div className="font-bebas text-2xl text-white leading-none">

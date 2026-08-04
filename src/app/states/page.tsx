@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { createClient, US_STATES } from '@/lib/supabase'
 import Navigation from '@/components/Navigation'
@@ -16,7 +16,7 @@ interface StateStats {
 export default function StatesPage() {
   const [stateStats, setStateStats] = useState<StateStats[]>([])
   const [loading, setLoading] = useState(true)
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   useEffect(() => {
     const loadStats = async () => {
@@ -30,7 +30,7 @@ export default function StatesPage() {
     }
 
     loadStats()
-  }, [])
+  }, [supabase])
 
   return (
     <>

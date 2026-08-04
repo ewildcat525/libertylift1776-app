@@ -28,9 +28,8 @@ interface ProfileSummary {
   daysLogged: number
 }
 
-// Aggregate a user's July 2026 push-up logs into one bar per calendar day.
-// pushup_logs is world-readable (RLS: "Users can view all logs"), so this runs
-// with the anon key from any visitor.
+// Read the deliberately public daily aggregate. Raw pushup_logs rows are
+// owner-only, so public charts never receive notes, IDs, or exact timestamps.
 function useUserDailyPushups(userId: string | null) {
   const [data, setData] = useState<DayBar[]>([])
   const [summary, setSummary] = useState<ProfileSummary>({ total: 0, bestDay: 0, daysLogged: 0 })
@@ -48,11 +47,11 @@ function useUserDailyPushups(userId: string | null) {
       try {
         const supabase = createClient()
         const { data: logs, error: logsError } = await supabase
-          .from('pushup_logs')
-          .select('count, logged_at')
+          .from('public_user_daily_pushups')
+          .select('daily_pushups, log_date')
           .eq('user_id', userId)
-          .gte('logged_at', '2026-07-01')
-          .lte('logged_at', '2026-07-31T23:59:59')
+          .gte('log_date', '2026-07-01')
+          .lte('log_date', '2026-07-31')
 
         if (cancelled) return
 
@@ -64,10 +63,10 @@ function useUserDailyPushups(userId: string | null) {
 
         // Seed every day so the axis always spans the full month.
         const totals: number[] = Array(DAYS_IN_JULY + 1).fill(0)
-        logs?.forEach((log: { count: number; logged_at: string }) => {
-          const day = new Date(log.logged_at).getDate()
+        logs?.forEach((log: { daily_pushups: number; log_date: string }) => {
+          const day = Number(log.log_date.slice(-2))
           if (day >= 1 && day <= DAYS_IN_JULY) {
-            totals[day] += log.count
+            totals[day] = log.daily_pushups
           }
         })
 
@@ -164,7 +163,7 @@ function ChartModal({ userId, displayName, stateCode, onClose }: ChartModalProps
           role="dialog"
           aria-modal="true"
           aria-label={`${displayName} — push-ups per day`}
-          className="card w-full sm:max-w-2xl max-h-[90vh] overflow-y-auto p-5 sm:p-7 rounded-t-2xl sm:rounded-none"
+          className="card native-safe-bottom w-full sm:max-w-2xl max-h-[90dvh] overflow-y-auto p-5 sm:p-7 rounded-t-2xl sm:rounded-none"
           initial={{ y: '100%', opacity: 0.6 }}
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: '100%', opacity: 0 }}

@@ -1,8 +1,20 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Analytics } from '@vercel/analytics/next'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 import { siteUrl } from '@/lib/site'
+import AppEnvironment from '@/components/AppEnvironment'
+import NativeBridge from '@/components/NativeBridge'
+import ConnectivityNotice from '@/components/ConnectivityNotice'
+import NativeAppNavigation from '@/components/NativeAppNavigation'
 import './globals.css'
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+  themeColor: '#10100f',
+  colorScheme: 'dark',
+}
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -11,7 +23,15 @@ export const metadata: Metadata = {
   keywords: ['push-up challenge', '1776 push-ups', 'July fitness challenge', 'state fitness competition'],
   icons: {
     icon: '/favicon.svg',
-    apple: '/favicon.svg',
+    apple: [{ url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'Liberty Lift',
+  },
+  formatDetection: {
+    telephone: false,
   },
   openGraph: {
     type: 'website',
@@ -44,7 +64,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="liberty-bg min-h-screen">
+        <AppEnvironment />
+        <NativeBridge />
+        <ConnectivityNotice />
         {children}
+        <NativeAppNavigation />
         <Analytics />
         <SpeedInsights />
       </body>

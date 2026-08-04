@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useId, useRef } from 'react'
 import { createClient } from '@/lib/supabase'
 import { canUseChat } from '@/lib/flags'
 import { finalPushPhase, FinalPushPhase } from '@/lib/dates'
@@ -16,10 +16,36 @@ export default function Navigation() {
   const router = useRouter()
   const [user, setUser] = useState<User | null>(null)
   const [menuOpen, setMenuOpen] = useState(false)
+  const menuId = useId()
+  const menuButtonRef = useRef<HTMLButtonElement>(null)
   // Resolved after mount so the prerendered HTML matches the first render.
   const hallOpen = useHallOpen()
   const [finalPush, setFinalPush] = useState<FinalPushPhase | null>(null)
-  const supabase = createClient()
+  const [supabase] = useState(() => createClient())
+
+  useEffect(() => {
+    setMenuOpen(false)
+  }, [pathname])
+
+  useEffect(() => {
+    if (!menuOpen) return
+
+    const previousOverflow = document.body.style.overflow
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setMenuOpen(false)
+        menuButtonRef.current?.focus()
+      }
+    }
+
+    document.body.style.overflow = 'hidden'
+    window.addEventListener('keydown', handleKeyDown)
+
+    return () => {
+      document.body.style.overflow = previousOverflow
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [menuOpen])
 
   useEffect(() => {
     setFinalPush(finalPushPhase())
@@ -43,7 +69,7 @@ export default function Navigation() {
     })
 
     return () => subscription.unsubscribe()
-  }, [])
+  }, [supabase.auth])
 
   // Different nav links for logged in vs logged out
   const showChat = canUseChat(user?.email)
@@ -94,14 +120,14 @@ export default function Navigation() {
   const homeLink = '/'
 
   return (
-    <nav className={`fixed top-0 left-0 right-0 z-50 ${
+    <nav aria-label="Primary navigation" className={`fixed top-0 left-0 right-0 z-50 ${
       isCampaignHome ? 'campaign-nav' : 'campaign-nav app-nav'
     }`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link href={homeLink} className="flex items-center gap-3 campaign-nav-mark">
-            <span className="campaign-nav-monogram">LL</span>
+          <Link href={homeLink} className="flex items-center gap-3 campaign-nav-mark" aria-label="Liberty Lift home">
+            <span className="campaign-nav-monogram" aria-hidden="true">LL</span>
             <span className="campaign-nav-name">Liberty Lift / 1776</span>
           </Link>
 
@@ -116,6 +142,7 @@ export default function Navigation() {
                     ? 'text-liberty-red'
                     : 'text-white/62 hover:text-white'
                 }`}
+                aria-current={isActive(link.href) ? 'page' : undefined}
               >
                 {link.label}
                 {link.href === '/chat' && (
@@ -154,10 +181,15 @@ export default function Navigation() {
 
           {/* Mobile Menu Button */}
           <button
-            onClick={() => setMenuOpen(!menuOpen)}
-            className="md:hidden p-2 text-white"
+            ref={menuButtonRef}
+            type="button"
+            onClick={() => setMenuOpen((open) => !open)}
+            className="mobile-menu-button md:hidden text-white"
+            aria-expanded={menuOpen}
+            aria-controls={menuId}
+            aria-label={menuOpen ? 'Close navigation menu' : 'Open navigation menu'}
           >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               {menuOpen ? (
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               ) : (
@@ -170,15 +202,16 @@ export default function Navigation() {
 
         {/* Mobile Menu */}
         {menuOpen && (
-          <div className="md:hidden py-4 border-t border-white/10">
+          <div id={menuId} className="mobile-nav-panel md:hidden">
             {navLinks.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
                 onClick={() => setMenuOpen(false)}
-                className={`flex items-center gap-1.5 py-2 text-sm font-medium ${
+                className={`mobile-nav-link flex items-center gap-1.5 text-sm font-medium ${
                   isActive(link.href) ? 'text-liberty-red' : 'text-white/70'
                 }`}
+                aria-current={isActive(link.href) ? 'page' : undefined}
               >
                 {link.label}
                 {link.href === '/chat' && (
@@ -188,20 +221,20 @@ export default function Navigation() {
                 )}
               </Link>
             ))}
-            <div className="mt-4 pt-4 border-t border-white/10 flex flex-col gap-2">
+            <div className="mobile-nav-auth border-t border-white/10 flex flex-col gap-2">
               {user ? (
                 <button
                   onClick={() => { handleSignOut(); setMenuOpen(false); }}
-                  className="text-sm font-bold uppercase tracking-[0.12em] text-white/70 py-2 text-left"
+                  className="mobile-nav-link text-sm font-bold uppercase tracking-[0.12em] text-white/70 text-left"
                 >
                   Sign Out
                 </button>
               ) : (
                 <>
-                  <Link href="/login" className="text-sm text-white/70 py-2">
+                  <Link href="/login" onClick={() => setMenuOpen(false)} className="mobile-nav-link text-sm text-white/70">
                     Sign In
                   </Link>
-                  <Link href={postContest ? '/finale' : '/signup'} className="campaign-nav-cta text-center">
+                  <Link onClick={() => setMenuOpen(false)} href={postContest ? '/finale' : '/signup'} className="campaign-nav-cta text-center">
                     {postContest ? 'See the finale' : 'Accept the challenge'}
                   </Link>
                 </>

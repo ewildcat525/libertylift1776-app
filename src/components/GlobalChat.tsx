@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import Link from 'next/link'
 import { createClient, ChatMessage } from '@/lib/supabase'
 
@@ -61,7 +61,7 @@ export default function GlobalChat({ userId, canBroadcast = false }: GlobalChatP
   // incoming chatter doesn't yank them away from older messages.
   const followBottomRef = useRef(true)
 
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   const scrollToBottom = () => {
     const el = scrollRef.current
@@ -209,7 +209,7 @@ export default function GlobalChat({ userId, canBroadcast = false }: GlobalChatP
       active = false
       if (channel) supabase.removeChannel(channel)
     }
-  }, [userId])
+  }, [loadReactions, resolveMissingSenders, supabase, userId])
 
   useEffect(() => {
     if (followBottomRef.current) scrollToBottom()

@@ -123,14 +123,16 @@ export default function LeaderboardPage() {
             )}
           </div>
 
-          {/* Nationwide count + milestone celebration */}
-          <CommunityMilestoneBanner userId={userId} className="mb-8" />
+          <div className="native-board-extras">
+            {/* Nationwide count + milestone celebration */}
+            <CommunityMilestoneBanner userId={userId} className="mb-8" />
 
-          {/* The Final Push: last-day blitz hype, live board, then results */}
-          <FinalPushBanner userId={userId} className="mb-8" />
+            {/* The Final Push: last-day blitz hype, live board, then results */}
+            <FinalPushBanner userId={userId} className="mb-8" />
+          </div>
 
           {/* Filter Tabs */}
-          <div className="flex justify-center gap-2 mb-8">
+          <div className="-mx-4 mb-8 flex gap-2 overflow-x-auto px-4 pb-2 sm:mx-0 sm:justify-center sm:px-0" role="tablist" aria-label="Leaderboard category">
             {[
               { key: 'all', label: 'Total Push-ups' },
               { key: 'streak', label: 'Best Streak' },
@@ -141,7 +143,9 @@ export default function LeaderboardPage() {
               <button
                 key={tab.key}
                 onClick={() => setFilter(tab.key as 'all' | 'streak' | 'daily' | 'recruits' | 'finalpush')}
-                className={`px-4 py-2 text-xs font-extrabold uppercase tracking-[0.1em] transition-colors border ${
+                role="tab"
+                aria-selected={filter === tab.key}
+                className={`min-h-11 shrink-0 px-4 py-2 text-xs font-extrabold uppercase tracking-[0.1em] transition-colors border ${
                   filter === tab.key
                     ? 'bg-liberty-red border-liberty-red text-white'
                     : 'bg-transparent border-white/20 text-white/70 hover:bg-white hover:text-liberty-dark'
@@ -165,8 +169,8 @@ export default function LeaderboardPage() {
                       This board fills on July 31.
                     </h2>
                     <p className="text-white/60">
-                      One day, as many as you can. The biggest single-day total takes the crown —
-                      every rep logged on the 31st lands here.
+                      One final day to contribute at your own safe pace. The biggest verified
+                      single-day total takes the crown, within the 500-rep safety cap.
                     </p>
                   </>
                 ) : (
