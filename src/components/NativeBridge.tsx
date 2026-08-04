@@ -43,88 +43,142 @@ export default function NativeBridge() {
     let cancelled = false
     const removers: Array<() => Promise<void>> = []
     const handledAuthCodes = new Set<string>()
+    const originalShareDescriptor = Object.getOwnPropertyDescriptor(navigator, 'share')
 
-    void Promise.all([
-      import('@capacitor/app'),
-      import('@capacitor/keyboard'),
-      import('@capacitor/share'),
-      import('@capacitor/status-bar'),
-    ]).then(async ([{ App }, { Keyboard }, { Share }, { StatusBar, Style }]) => {
-      if (cancelled) return
+    const registerRemover = async (remove: () => Promise<void>) => {
+      if (cancelled) {
+        await remove().catch(() => undefined)
+      } else {
+        removers.push(remove)
+      }
+    }
 
-      await StatusBar.setOverlaysWebView({ overlay: false })
-      await StatusBar.setStyle({ style: Style.Dark })
+    const handleIncomingUrl = async (url: string) => {
+      const route = routeFromAppUrl(url)
+      if (!route) return
 
-      // Existing share buttons use Web Share. Bridge them to the native iOS
-      // activity sheet so their behavior is consistent across WKWebView versions.
-      Object.defineProperty(navigator, 'share', {
-        configurable: true,
-        value: async ({ title, text, url }: ShareData) => {
-          await Share.share({ title, text, url, dialogTitle: title })
-        },
-      })
+      if (route.startsWith('/auth/callback')) {
+        const incomingUrl = new URL(url)
+        await import('@capacitor/browser').then(({ Browser }) => Browser.close()).catch(() => undefined)
 
-      const handleIncomingUrl = async (url: string) => {
-        const route = routeFromAppUrl(url)
-        if (!route) return
-
-        if (route?.startsWith('/auth/callback')) {
-          const incomingUrl = new URL(url)
-          await import('@capacitor/browser').then(({ Browser }) => Browser.close()).catch(() => undefined)
-
-          const authError = incomingUrl.searchParams.get('error_code')
-            || incomingUrl.searchParams.get('error')
-            || incomingUrl.searchParams.get('error_description')
-          if (authError) {
-            router.replace(`/login?error=${encodeURIComponent(authError)}`)
-            return
-          }
-
-          const code = incomingUrl.searchParams.get('code')
-          if (!code) {
-            router.replace('/login?error=auth')
-            return
-          }
-
-          // Capacitor retains a cold-launch URL until a listener consumes it,
-          // while getLaunchUrl can report that same URL too. A PKCE code is
-          // single-use, so never let both delivery paths exchange it.
-          if (handledAuthCodes.has(code)) return
-          handledAuthCodes.add(code)
-
-          const { error } = await createClient().auth.exchangeCodeForSession(code)
-          router.replace(error ? '/login?error=auth' : safeAuthDestination(incomingUrl))
+        const authError = incomingUrl.searchParams.get('error_code')
+          || incomingUrl.searchParams.get('error')
+          || incomingUrl.searchParams.get('error_description')
+        if (authError) {
+          router.replace(`/login?error=${encodeURIComponent(authError)}`)
           return
         }
 
-        router.push(route)
+        const code = incomingUrl.searchParams.get('code')
+        if (!code) {
+          router.replace('/login?error=auth')
+          return
+        }
+
+        // Capacitor can deliver the same cold-launch URL through both APIs.
+        // PKCE codes are single-use, so exchange each one at most once.
+        if (handledAuthCodes.has(code)) return
+        handledAuthCodes.add(code)
+
+        const { error } = await createClient().auth.exchangeCodeForSession(code)
+        router.replace(error ? '/login?error=auth' : safeAuthDestination(incomingUrl))
+        return
       }
 
-      const linkHandle = await App.addListener('appUrlOpen', ({ url }) => {
-        void handleIncomingUrl(url)
-      })
-      removers.push(() => linkHandle.remove())
+      router.push(route)
+    }
 
-      // appUrlOpen covers a running app. getLaunchUrl covers the same link
-      // when iOS had to cold-launch the process (common for email sign-in).
-      const launchUrl = await App.getLaunchUrl()
-      if (launchUrl?.url) await handleIncomingUrl(launchUrl.url)
+    const configureDeepLinks = async () => {
+      try {
+        const { App } = await import('@capacitor/app')
+        if (cancelled) return
 
-      const keyboardHandle = await Keyboard.addListener('keyboardWillShow', () => {
-        document.documentElement.classList.add('native-keyboard-open')
-      })
-      removers.push(() => keyboardHandle.remove())
+        const linkHandle = await App.addListener('appUrlOpen', ({ url }) => {
+          void handleIncomingUrl(url)
+        })
+        await registerRemover(() => linkHandle.remove())
 
-      const keyboardHideHandle = await Keyboard.addListener('keyboardWillHide', () => {
-        document.documentElement.classList.remove('native-keyboard-open')
-      })
-      removers.push(() => keyboardHideHandle.remove())
-    })
+        // appUrlOpen covers a running app. getLaunchUrl covers the same link
+        // when iOS cold-launched the process, which is common for email auth.
+        const launchUrl = await App.getLaunchUrl().catch(() => undefined)
+        if (!cancelled && launchUrl?.url) await handleIncomingUrl(launchUrl.url)
+      } catch (error) {
+        console.error('Native link handling could not be initialized.', error)
+      }
+    }
+
+    const configureStatusBar = async () => {
+      try {
+        const { StatusBar, Style } = await import('@capacitor/status-bar')
+        if (cancelled) return
+        await StatusBar.setOverlaysWebView({ overlay: false })
+        // Capacitor's Style.Dark means light glyphs for a dark background.
+        await StatusBar.setStyle({ style: Style.Dark })
+      } catch (error) {
+        console.warn('Native status bar could not be configured.', error)
+      }
+    }
+
+    const hideLaunchScreen = async () => {
+      try {
+        const { SplashScreen } = await import('@capacitor/splash-screen')
+        if (!cancelled) await SplashScreen.hide()
+      } catch (error) {
+        console.warn('Native launch screen could not be dismissed.', error)
+      }
+    }
+
+    const configureShare = async () => {
+      try {
+        const { Share } = await import('@capacitor/share')
+        if (cancelled) return
+        Object.defineProperty(navigator, 'share', {
+          configurable: true,
+          value: async ({ title, text, url }: ShareData) => {
+            await Share.share({ title, text, url, dialogTitle: title })
+          },
+        })
+      } catch (error) {
+        console.warn('Native sharing could not be configured.', error)
+      }
+    }
+
+    const configureKeyboard = async () => {
+      try {
+        const { Keyboard } = await import('@capacitor/keyboard')
+        if (cancelled) return
+
+        const showHandle = await Keyboard.addListener('keyboardWillShow', () => {
+          document.documentElement.classList.add('native-keyboard-open')
+        })
+        await registerRemover(() => showHandle.remove())
+
+        const hideHandle = await Keyboard.addListener('keyboardWillHide', () => {
+          document.documentElement.classList.remove('native-keyboard-open')
+        })
+        await registerRemover(() => hideHandle.remove())
+      } catch (error) {
+        console.warn('Native keyboard handling could not be initialized.', error)
+      }
+    }
+
+    // Authentication links are critical and initialize independently. Optional
+    // presentation integrations must never prevent them from being registered.
+    void configureDeepLinks()
+    void hideLaunchScreen()
+    void configureStatusBar()
+    void configureShare()
+    void configureKeyboard()
 
     return () => {
       cancelled = true
       document.documentElement.classList.remove('native-keyboard-open')
-      void Promise.all(removers.map(remove => remove()))
+      if (originalShareDescriptor) {
+        Object.defineProperty(navigator, 'share', originalShareDescriptor)
+      } else {
+        delete (navigator as { share?: typeof navigator.share }).share
+      }
+      void Promise.all(removers.map(remove => remove().catch(() => undefined)))
     }
   }, [router])
 

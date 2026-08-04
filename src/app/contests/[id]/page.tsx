@@ -59,7 +59,8 @@ export default function ContestDetailPage() {
   const [isMember, setIsMember] = useState(false)
   const [loading, setLoading] = useState(true)
   const [joining, setJoining] = useState(false)
-  const [copied, setCopied] = useState(false)
+  const [copied, setCopied] = useState<'code' | 'link' | null>(null)
+  const [copyError, setCopyError] = useState<string | null>(null)
   const [filter, setFilter] = useState<'all' | 'streak' | 'daily'>('all')
 
   const supabase = useMemo(() => createClient(), [])
@@ -200,19 +201,21 @@ export default function ContestDetailPage() {
     setJoining(false)
   }
 
-  const copyInviteCode = () => {
-    if (contest) {
-      navigator.clipboard.writeText(contest.invite_code)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
+  const copyInvite = async (value: string, kind: 'code' | 'link') => {
+    setCopyError(null)
+    try {
+      await navigator.clipboard.writeText(value)
+      setCopied(kind)
+      window.setTimeout(() => setCopied(current => current === kind ? null : current), 2000)
+    } catch {
+      setCopied(null)
+      setCopyError('Could not copy. Touch and hold the invite code instead.')
     }
   }
 
   const copyInviteLink = () => {
     if (contest && typeof window !== 'undefined') {
-      navigator.clipboard.writeText(`${window.location.origin}/join/${encodeURIComponent(contest.invite_code)}`)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
+      void copyInvite(`${window.location.origin}/join/${encodeURIComponent(contest.invite_code)}`, 'link')
     }
   }
 
@@ -269,13 +272,14 @@ export default function ContestDetailPage() {
               <div className="flex items-center gap-2 bg-white/[0.04] border border-white/15 px-4 py-3">
                 <span className="text-sm text-white/50">Invite code:</span>
                 <span className="font-mono text-liberty-gold font-bold">{contest.invite_code}</span>
-                <button onClick={copyInviteCode} className="text-white/50 hover:text-white transition-colors">
-                  Copy code
+                <button onClick={() => void copyInvite(contest.invite_code, 'code')} className="text-white/50 hover:text-white transition-colors">
+                  {copied === 'code' ? 'Copied' : 'Copy code'}
                 </button>
                 <button onClick={copyInviteLink} className="text-white/50 hover:text-white transition-colors">
-                  {copied ? 'Copied' : 'Copy link'}
+                  {copied === 'link' ? 'Copied' : 'Copy link'}
                 </button>
               </div>
+              {copyError && <p className="text-sm text-red-300" role="alert">{copyError}</p>}
               <div className="text-sm text-white/50">
                 {members.length} {members.length === 1 ? 'lifter' : 'lifters'}
               </div>

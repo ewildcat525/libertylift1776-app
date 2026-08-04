@@ -62,7 +62,15 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script
+          id="app-environment"
+          dangerouslySetInnerHTML={{
+            __html: "document.documentElement.dataset.appEnvironment=window.Capacitor?.isNativePlatform?.()?'native':((window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone===true)?'standalone':'browser')",
+          }}
+        />
+      </head>
       <body className="liberty-bg min-h-screen">
         <AppEnvironment />
         <NativeBridge />

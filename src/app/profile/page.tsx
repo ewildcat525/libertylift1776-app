@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import Navigation from '@/components/Navigation'
 import AccountSettings from '@/components/AccountSettings'
 import ShareProgress from '@/components/ShareProgress'
@@ -15,15 +15,26 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [stats, setStats] = useState<UserStats | null>(null)
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [editingName, setEditingName] = useState(false)
   const [displayName, setDisplayName] = useState('')
   const [savingName, setSavingName] = useState(false)
   const [nameError, setNameError] = useState<string | null>(null)
+  const [signingOut, setSigningOut] = useState(false)
+  const [signOutError, setSignOutError] = useState<string | null>(null)
 
-  useEffect(() => {
-    const loadProfile = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
+  const loadProfile = useCallback(async () => {
+    setLoading(true)
+    setLoadError(null)
+
+    try {
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
       if (!user) {
+        if (authError) {
+          setLoadError('We could not verify your session. Check your connection and try again.')
+          setLoading(false)
+          return
+        }
         router.replace('/login')
         return
       }
@@ -32,18 +43,43 @@ export default function ProfilePage() {
         supabase.from('profiles').select('*').eq('id', user.id).single(),
         supabase.from('user_stats').select('*').eq('user_id', user.id).single(),
       ])
+
+      if (profileResult.error || !profileResult.data || statsResult.error || !statsResult.data) {
+        setLoadError('Your profile could not be loaded. Check your connection and try again.')
+        setLoading(false)
+        return
+      }
+
       setProfile(profileResult.data)
-      setDisplayName(profileResult.data?.display_name || '')
+      setDisplayName(profileResult.data.display_name || '')
       setStats(statsResult.data)
       setLoading(false)
+    } catch {
+      setLoadError('Your profile could not be loaded. Check your connection and try again.')
+      setLoading(false)
     }
-
-    void loadProfile()
   }, [router, supabase])
 
+  useEffect(() => {
+    void loadProfile()
+  }, [loadProfile])
+
   const signOut = async () => {
-    await supabase.auth.signOut()
-    router.replace('/login')
+    if (signingOut) return
+    setSigningOut(true)
+    setSignOutError(null)
+    try {
+      const { error } = await supabase.auth.signOut()
+      if (error) {
+        setSignOutError('We could not sign you out. Check your connection and try again.')
+        setSigningOut(false)
+        return
+      }
+      router.replace('/login')
+    } catch {
+      setSignOutError('We could not sign you out. Check your connection and try again.')
+      setSigningOut(false)
+    }
   }
 
   const saveDisplayName = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -92,6 +128,16 @@ export default function ProfilePage() {
             <div className="native-loading" role="status">
               <span />
               Loading your profile…
+            </div>
+          ) : loadError ? (
+            <div className="native-profile-card text-center" role="alert">
+              <div>
+                <h1 className="app-title text-4xl">Profile unavailable</h1>
+                <p>{loadError}</p>
+              </div>
+              <button type="button" className="btn-primary min-h-12 px-6" onClick={() => void loadProfile()}>
+                Try again
+              </button>
             </div>
           ) : (
             <>
@@ -157,8 +203,12 @@ export default function ProfilePage() {
                 <button type="button" onClick={() => setEditingName(true)}><span>Edit public handle</span><b aria-hidden="true">›</b></button>
                 <Link href="/support"><span>Help and support</span><b aria-hidden="true">›</b></Link>
                 <Link href="/privacy"><span>Privacy policy</span><b aria-hidden="true">›</b></Link>
-                <button type="button" onClick={signOut}><span>Sign out</span><b aria-hidden="true">›</b></button>
+                <button type="button" onClick={() => void signOut()} disabled={signingOut}>
+                  <span>{signingOut ? 'Signing out…' : 'Sign out'}</span><b aria-hidden="true">›</b>
+                </button>
               </section>
+
+              {signOutError && <p className="mt-3 text-center text-sm text-red-300" role="alert">{signOutError}</p>}
 
               <AccountSettings />
             </>

@@ -60,6 +60,14 @@ export default function NativeAppNavigation() {
     return () => subscription.unsubscribe()
   }, [])
 
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return
+
+    const root = document.documentElement
+    root.classList.toggle('native-tabs-visible', Boolean(user))
+    return () => root.classList.remove('native-tabs-visible')
+  }, [user])
+
   if (!user) return null
 
   const openLogger = () => {
