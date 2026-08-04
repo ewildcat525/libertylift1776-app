@@ -10,7 +10,7 @@
     "ios:sync": "cap sync ios",
     "ios:open": "cap open ios",
     "ios:run": "cap run ios",
-    "ios:assets": "capacitor-assets generate --ios --assetPath native/assets --iconBackgroundColor '#10100F' --iconBackgroundColorDark '#10100F' --splashBackgroundColor '#10100F' --splashBackgroundColorDark '#10100F'"
+    "ios:assets": "capacitor-assets generate --ios --assetPath native/assets --logoSplashScale 0.42 --iconBackgroundColor '#10100F' --iconBackgroundColorDark '#10100F' --splashBackgroundColor '#10100F' --splashBackgroundColorDark '#10100F'"
   },
   "dependencies": {
     "@capacitor/app": "^8.1.1",

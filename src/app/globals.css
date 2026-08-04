@@ -2526,8 +2526,12 @@ html[data-app-environment='native'] {
   scroll-padding-bottom: calc(var(--native-tab-height) + var(--safe-area-bottom) + 1rem);
 }
 
-html[data-app-environment='native'] body {
+html[data-app-environment='native'].native-tabs-visible body {
   padding-bottom: calc(var(--native-tab-height) + var(--safe-area-bottom));
+  overscroll-behavior-y: none;
+}
+
+html[data-app-environment='native'] body {
   overscroll-behavior-y: none;
 }
 
@@ -2654,7 +2658,7 @@ html[data-app-environment='native'] .native-screen {
   padding-bottom: 1.5rem;
 }
 
-html[data-app-environment='native'] .connectivity-notice {
+html[data-app-environment='native'].native-tabs-visible .connectivity-notice {
   bottom: calc(var(--native-tab-height) + var(--safe-area-bottom) + 0.75rem);
 }
 
@@ -2671,6 +2675,13 @@ html[data-app-environment='native'] .native-tab-bar {
   box-shadow: 0 -1rem 3rem rgba(0, 0, 0, 0.3);
   backdrop-filter: blur(24px) saturate(140%);
   -webkit-backdrop-filter: blur(24px) saturate(140%);
+  transition: transform 180ms ease, opacity 180ms ease;
+}
+
+html[data-app-environment='native'].native-keyboard-open .native-tab-bar {
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(100%);
 }
 
 .native-tab-bar-inner {
@@ -3319,7 +3330,8 @@ html[data-app-environment='native'] .native-log-sheet .btn-gold {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  html[data-app-environment='native'] .native-log-sheet {
+  html[data-app-environment='native'] .native-log-sheet,
+  html[data-app-environment='native'] .native-tab-bar {
     transition: none;
   }
   .native-loading span {

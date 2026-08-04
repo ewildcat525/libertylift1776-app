@@ -1,18 +1,6 @@
 import UIKit
 import Capacitor
 
-final class AppBridgeViewController: CAPBridgeViewController {
-    override func capacitorDidLoad() {
-        super.capacitorDidLoad()
-
-        // WKWebView's elastic bottom overscroll shifts fixed-position UI with
-        // the visual viewport. Keep the native tab bar anchored to the safe
-        // area while the document itself remains normally scrollable.
-        webView?.scrollView.bounces = false
-        webView?.scrollView.alwaysBounceVertical = false
-    }
-}
-
 class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     var window: UIWindow?
 
@@ -20,7 +8,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         guard let windowScene = scene as? UIWindowScene else { return }
 
         window = UIWindow(windowScene: windowScene)
-        window?.rootViewController = AppBridgeViewController()
+        window?.rootViewController = CAPBridgeViewController()
         window?.makeKeyAndVisible()
 
         SceneDelegateProxy.shared.scene(scene, willConnectTo: session, options: connectionOptions)

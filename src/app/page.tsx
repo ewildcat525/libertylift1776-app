@@ -263,13 +263,17 @@ export default function Home() {
                       <input
                         id="offseason-email"
                         type="email"
+                        inputMode="email"
+                        autoComplete="email"
+                        autoCapitalize="none"
+                        autoCorrect="off"
+                        spellCheck={false}
                         value={nextYearEmail}
                         onChange={(event) => {
                           setNextYearEmail(event.target.value)
                           setNextYearError(null)
                         }}
                         placeholder="you@example.com"
-                        autoComplete="email"
                         required
                       />
                       <button type="submit" disabled={nextYearBusy}>

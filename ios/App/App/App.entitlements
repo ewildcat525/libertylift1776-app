@@ -5,7 +5,6 @@
 	<key>com.apple.developer.associated-domains</key>
 	<array>
 		<string>applinks:libertylift1776.com</string>
-		<string>applinks:www.libertylift1776.com</string>
 	</array>
 </dict>
 </plist>

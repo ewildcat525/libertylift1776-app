@@ -192,10 +192,16 @@ export default function SignupForm() {
     } else if (native && data.url) {
       try {
         await openNativeOAuth(data.url)
+        // Browser.open resolves once the sheet is presented. Re-enable the
+        // controls so cancelling the provider does not strand this screen.
+        setLoadingProvider(null)
       } catch {
         setError('Google sign-in could not be opened. Please try again or use email.')
         setLoadingProvider(null)
       }
+    } else if (native) {
+      setError('Google sign-in could not be started. Please try again or use email.')
+      setLoadingProvider(null)
     }
   }
 
@@ -379,6 +385,11 @@ export default function SignupForm() {
             <input
               id="email"
               type="email"
+              inputMode="email"
+              autoComplete="email"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
               value={email}
               onChange={(event) => {
                 setEmail(event.target.value)
