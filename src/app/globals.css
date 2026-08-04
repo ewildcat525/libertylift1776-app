@@ -2528,7 +2528,7 @@ html[data-app-environment='native'] {
 
 html[data-app-environment='native'] body {
   padding-bottom: calc(var(--native-tab-height) + var(--safe-area-bottom));
-  overscroll-behavior-y: contain;
+  overscroll-behavior-y: none;
 }
 
 html.native-dashboard-locked,
