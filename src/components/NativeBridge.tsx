@@ -112,7 +112,8 @@ export default function NativeBridge() {
         const { StatusBar, Style } = await import('@capacitor/status-bar')
         if (cancelled) return
         await StatusBar.setOverlaysWebView({ overlay: false })
-        await StatusBar.setStyle({ style: Style.Light })
+        // Capacitor's Style.Dark means light glyphs for a dark background.
+        await StatusBar.setStyle({ style: Style.Dark })
       } catch (error) {
         console.warn('Native status bar could not be configured.', error)
       }

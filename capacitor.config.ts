@@ -43,7 +43,8 @@ const config: CapacitorConfig = {
     },
     StatusBar: {
       overlaysWebView: false,
-      style: 'LIGHT',
+      // Capacitor names this for the background: DARK renders light glyphs.
+      style: 'DARK',
       backgroundColor: '#10100F',
     },
   },
