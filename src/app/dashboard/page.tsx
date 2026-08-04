@@ -123,6 +123,9 @@ export default function DashboardPage() {
     if (!isNativeApp()) return
     setNativeMode(true)
 
+    const root = document.documentElement
+    root.classList.add('native-dashboard-locked')
+
     const openLogger = () => setNativeLoggerOpen(true)
     window.addEventListener('libertylift:open-log', openLogger)
     if (new URLSearchParams(window.location.search).get('log') === '1') {
@@ -130,7 +133,10 @@ export default function DashboardPage() {
       window.history.replaceState(window.history.state, '', '/dashboard')
     }
 
-    return () => window.removeEventListener('libertylift:open-log', openLogger)
+    return () => {
+      root.classList.remove('native-dashboard-locked')
+      window.removeEventListener('libertylift:open-log', openLogger)
+    }
   }, [])
 
   useEffect(() => {
@@ -637,8 +643,8 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
-      <div className="min-h-screen pt-24 pb-12 px-4 app-surface">
-        <div className="max-w-4xl mx-auto">
+      <div className="native-dashboard-screen min-h-screen pt-24 pb-12 px-4 app-surface">
+        <div className="native-dashboard-content max-w-4xl mx-auto">
           <section className="native-today" aria-labelledby="native-today-title">
             <header className="native-today-heading">
               <div>
