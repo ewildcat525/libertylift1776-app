@@ -17,7 +17,7 @@ export default function ChatPage() {
     const supabase = createClient()
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!canUseChat(user?.email)) {
-        router.replace('/leaderboard')
+        router.replace('/login')
         return
       }
       setUserId(user?.id ?? null)

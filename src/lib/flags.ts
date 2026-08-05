@@ -1,13 +1,11 @@
 // Feature gates for staged rollouts.
 
-// Community chat contains participant-created content, so release builds keep
-// it hidden unless an operator opts in. The database has an independent gate
-// in public.can_use_chat(); both gates must be enabled before chat is usable.
-const COMMUNITY_CHAT_ENABLED = process.env.NEXT_PUBLIC_ENABLE_COMMUNITY_CHAT === 'true'
 const PUBLIC_CONTESTS_ENABLED = process.env.NEXT_PUBLIC_ENABLE_PUBLIC_CONTESTS === 'true'
 
-export function canUseChat(_email?: string | null) {
-  return COMMUNITY_CHAT_ENABLED
+// Chat is available to authenticated participants. Database RLS independently
+// enforces the same signed-in requirement for messages, reactions, and alerts.
+export function canUseChat(email?: string | null) {
+  return Boolean(email)
 }
 
 export function canUsePublicContests() {

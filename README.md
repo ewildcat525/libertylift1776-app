@@ -90,7 +90,6 @@ Create a `.env.local` file in the project root:
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
-NEXT_PUBLIC_ENABLE_COMMUNITY_CHAT=false
 NEXT_PUBLIC_ENABLE_PUBLIC_CONTESTS=false
 ```
 
@@ -98,28 +97,23 @@ You can find the Supabase values in your Supabase project under **Project Settin
 Set `NEXT_PUBLIC_SITE_URL` to your production domain when deploying; it is used for
 canonical metadata, Open Graph URLs, and the sitemap.
 
-### Community Content Release Gate
+### Community Content Access
 
-Public user-generated content is fail-closed for App Store releases. Leave
-`NEXT_PUBLIC_ENABLE_COMMUNITY_CHAT=false` and `NEXT_PUBLIC_ENABLE_PUBLIC_CONTESTS=false`
-unless moderation, reporting, and release readiness have been reviewed. To enable
-either feature, set its environment variable to `true` **and** explicitly enable
-the matching database gate after applying migrations:
+Community chat is available to signed-in users and remains protected by database
+Row Level Security. Public contests remain fail-closed; leave
+`NEXT_PUBLIC_ENABLE_PUBLIC_CONTESTS=false` unless release readiness has been
+reviewed. To enable public contests, set that environment variable to `true`
+**and** explicitly enable the matching database gate after applying migrations:
 
 ```sql
-update private.release_features
-set enabled = true, updated_at = now()
-where feature_key = 'community_chat';
-
 update private.release_features
 set enabled = true, updated_at = now()
 where feature_key = 'public_contests';
 ```
 
-Setting only one gate is intentionally insufficient. Disable either gate to remove
-chat navigation and reject database reads/writes. Raw `pushup_logs` are owner-only;
-public profile and contest charts read `public_user_daily_pushups`, which exposes
-only user ID, calendar day, and that day's aggregate total.
+Raw `pushup_logs` are owner-only; public profile and contest charts read
+`public_user_daily_pushups`, which exposes only user ID, calendar day, and that
+day's aggregate total.
 
 ### Set Up Supabase
 
