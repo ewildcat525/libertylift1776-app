@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
-import { merchConfig, merchTotal, formatUsd } from '@/lib/merch'
+import { merchConfig, merchTotal, formatUsd, ordersOpen } from '@/lib/merch'
 
 const THRESHOLD = merchConfig.unlock.threshold
 
@@ -12,6 +12,9 @@ type GateState =
   | { status: 'signed-out' }
   | { status: 'locked'; total: number }
   | { status: 'unlocked' }
+  // The deadline the email promises is enforced here too: once it passes,
+  // nothing on this page can still take an order.
+  | { status: 'closed' }
 
 export default function MerchBuy() {
   const [gate, setGate] = useState<GateState>({ status: 'loading' })
@@ -20,6 +23,10 @@ export default function MerchBuy() {
   useEffect(() => {
     let cancelled = false
     async function check() {
+      if (!ordersOpen()) {
+        setGate({ status: 'closed' })
+        return
+      }
       const { data: { user } } = await supabase.auth.getUser()
       if (cancelled) return
       if (!user) {
@@ -92,6 +99,18 @@ function ProgressBar({ total }: { total: number }) {
 function GateBody({ gate }: { gate: GateState }) {
   const goal = THRESHOLD.toLocaleString()
 
+  if (gate.status === 'closed') {
+    return (
+      <>
+        <h2 className="font-bebas text-3xl text-white mb-2">Ordering has closed.</h2>
+        <p className="text-white/60 text-sm max-w-md mx-auto">
+          The finisher tee was available only to people who logged all {goal} push-ups, and
+          only until {merchConfig.finalCall.ordersCloseLabel}. We produced only what was ordered.
+        </p>
+      </>
+    )
+  }
+
   if (gate.status === 'loading') {
     return <p className="text-white/40 text-sm uppercase tracking-[0.12em] font-bold py-4">Checking your reps&hellip;</p>
   }
@@ -161,5 +180,11 @@ function StickyAction({ gate }: { gate: GateState }) {
       )
     case 'unlocked':
       return <BuyButton className={base} />
+    case 'closed':
+      return (
+        <span className={`btn-primary opacity-40 cursor-not-allowed select-none text-center leading-tight ${base}`} aria-disabled="true">
+          Closed
+        </span>
+      )
   }
 }

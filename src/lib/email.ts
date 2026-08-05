@@ -1,8 +1,9 @@
 // Server-only email helpers for the reminder cron and unsubscribe flow.
-import { createHash, createHmac, timingSafeEqual } from 'node:crypto'
+import { createHmac, timingSafeEqual } from 'node:crypto'
 import { siteUrl } from '@/lib/site'
 import { CHARITY_DONATE_URLS } from '@/lib/charities'
-import { merchConfig } from '@/lib/merch'
+import { CHALLENGE_TOTAL } from '@/lib/dates'
+import { merchConfig, merchCost, merchTotal, formatUsd } from '@/lib/merch'
 
 export function getSiteUrl() {
   return siteUrl
@@ -258,46 +259,164 @@ export function buildFinaleEmail({
   }
 }
 
-// One-time, manually triggered final call for 2026 finishers. This is kept
-// out of the reminder cron intentionally: the protected campaign endpoint
-// requires an explicit confirmation phrase before it will send anything.
-export function buildMerchFinalCallEmail(profileId: string) {
+// One-time, manually triggered merch campaign for 2026 finishers. This is
+// kept out of the reminder cron intentionally: the protected campaign
+// endpoint requires an explicit confirmation phrase before it will send.
+//
+// Every date, price and claim below comes from src/lib/merch.ts — the same
+// source the /merch page renders from, so the email and the page can never
+// disagree about when ordering closes.
+export type MerchCampaignVariant = 'final-call' | 'last-hours'
+
+interface MerchCampaignArgs {
+  profileId: string
+  displayName?: string | null
+  totalPushups?: number | null
+  variant?: MerchCampaignVariant
+}
+
+const VARIANT_COPY = {
+  'final-call': {
+    subject: 'Final call: the finisher shirt disappears Friday',
+    preheader: `Order by ${merchConfig.finalCall.ordersCloseLabel} — this shirt is never offered again.`,
+    badge: 'FINAL CALL',
+    headline: 'The finisher shirt<br/>disappears Friday.',
+    opener: 'This is the last time you can claim it.',
+  },
+  'last-hours': {
+    subject: 'Hours left: the finisher shirt comes down tonight',
+    preheader: `Ordering closes ${merchConfig.finalCall.ordersCloseLabel}. After that it's gone for good.`,
+    badge: 'HOURS LEFT',
+    headline: 'Tonight the order<br/>page comes down.',
+    opener: 'You earned this shirt. There are hours left to claim it.',
+  },
+} as const
+
+// Display names are user-chosen, so they never go into markup unescaped.
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+}
+
+export function buildMerchCampaignEmail({
+  profileId,
+  displayName,
+  totalPushups,
+  variant = 'final-call',
+}: MerchCampaignArgs) {
+  const copy = VARIANT_COPY[variant]
   const checkoutUrl = merchConfig.stripePaymentLink || `${siteUrl}/merch`
   const unsubscribe = unsubscribeUrl('profile', profileId)
+  const { product, finalCall } = merchConfig
+  const price = formatUsd(merchTotal)
+  const margin = formatUsd(merchTotal - merchCost)
+  const goal = CHALLENGE_TOTAL.toLocaleString()
+  const name = displayName ? escapeHtml(displayName) : 'Patriot'
+  const sizes = product.sizes.join(' · ')
+
+  // Personal proof of work. Only finishers are ever in this audience, so the
+  // fallback still asserts the threshold rather than softening it.
+  const earnedLine =
+    typeof totalPushups === 'number' && totalPushups > 0
+      ? `${name} — you logged <strong style="color:#FFFFFF;">${totalPushups.toLocaleString()} push-ups</strong> in 31 days. This is the shirt for that.`
+      : `${name} — you finished all ${goal}. This is the shirt for that.`
+
+  const ctaButton = (label: string) =>
+    `<a href="${checkoutUrl}" style="display:inline-block;background:#C9A227;color:#090D16;text-decoration:none;font-size:16px;font-weight:bold;padding:16px 30px;border-radius:3px;">${label}</a>`
+
+  const text = [
+    copy.subject,
+    '',
+    `${displayName || 'Patriot'} — you finished all ${goal} push-ups. This is the shirt for that.`,
+    '',
+    `The Reps for the Republic finisher tee is sold only to people who logged all ${goal} reps. It is not a store item and it will not be offered again.`,
+    '',
+    `Orders close: ${finalCall.ordersCloseLabel}`,
+    `First batch arrives ${finalCall.firstBatchLabel}; orders in available sizes ship that week. If your size sells through, it goes into the final production run.`,
+    '',
+    `Price: ${price} all-in — shipping included, nothing added at checkout.`,
+    `It costs us ${formatUsd(merchCost)} to make and ship. We keep ${margin}.`,
+    `Sizes ${sizes}. Pick yours at checkout.`,
+    '',
+    `Order: ${checkoutUrl}`,
+    '',
+    'Already ordered? You are all set — thank you.',
+    `Unsubscribe: ${unsubscribe}`,
+  ].join('\n')
 
   return {
-    subject: 'Final call: The finisher shirt disappears Friday',
+    subject: copy.subject,
+    listUnsubscribeUrl: unsubscribe,
+    text,
     html: `<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${copy.subject}</title></head>
 <body style="margin:0;padding:0;background:#070B14;color:#F5F2E8;font-family:Arial,Helvetica,sans-serif;">
-  <div style="display:none;max-height:0;overflow:hidden;opacity:0;">Order by 11:59 PM ET Friday, August 7—or miss it forever.</div>
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;">${copy.preheader}</div>
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#070B14;">
     <tr><td align="center" style="padding:28px 14px;">
       <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:620px;background:#101725;border:1px solid #31394A;">
         <tr><td style="height:6px;background:#B22234;"></td></tr>
         <tr><td align="center" style="padding:34px 32px 18px;">
           <div style="color:#C9A227;font-size:12px;letter-spacing:4px;font-weight:bold;">LIBERTY LIFT / 1776</div>
-          <div style="margin-top:16px;color:#FFFFFF;font-size:12px;letter-spacing:3px;font-weight:bold;">FINAL CALL</div>
-          <h1 style="margin:10px 0 0;color:#FFFFFF;font-size:38px;line-height:1.08;">The finisher shirt<br/>disappears Friday.</h1>
+          <div style="margin-top:16px;color:#FFFFFF;font-size:12px;letter-spacing:3px;font-weight:bold;">${copy.badge}</div>
+          <h1 style="margin:10px 0 0;color:#FFFFFF;font-size:38px;line-height:1.08;">${copy.headline}</h1>
         </td></tr>
-        <tr><td style="padding:8px 38px 12px;color:#E6E6EC;font-size:16px;line-height:1.65;">
-          <p style="margin:0 0 18px;">You earned it. Now this is your last chance to claim it.</p>
-          <p style="margin:0 0 22px;">The <strong style="color:#FFFFFF;">Reps for the Republic</strong> finisher shirt is available only to those who completed all 1,776 push-ups. It isn't ordinary merchandise, and it will never become a permanent store item.</p>
-          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:4px 0 24px;border:1px solid #B22234;background:#0B101B;">
+
+        <tr><td align="center" style="padding:20px 24px 4px;">
+          <a href="${checkoutUrl}" style="text-decoration:none;">
+            <img src="${siteUrl}/merch/reps-tee-both.jpg" alt="Front and back of the Reps for the Republic finisher tee" width="540" style="display:block;width:100%;max-width:540px;height:auto;border:1px solid #31394A;" />
+          </a>
+        </td></tr>
+
+        <tr><td style="padding:18px 38px 6px;color:#E6E6EC;font-size:16px;line-height:1.65;">
+          <p style="margin:0 0 16px;">${earnedLine} ${copy.opener}</p>
+          <p style="margin:0 0 20px;">The <strong style="color:#FFFFFF;">Reps for the Republic</strong> tee is sold only to people who logged all ${goal}. It has never been on open sale, it will not become a store item, and <strong style="color:#FFFFFF;">it will not be offered again.</strong></p>
+        </td></tr>
+
+        <tr><td style="padding:0 38px 8px;">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border:1px solid #B22234;background:#0B101B;">
             <tr><td align="center" style="padding:20px 14px;">
               <div style="color:#C9A227;font-size:11px;letter-spacing:2px;font-weight:bold;">ORDERS CLOSE</div>
-              <div style="margin-top:6px;color:#FFFFFF;font-size:23px;font-weight:bold;">Friday, August 7 · 11:59 PM ET</div>
+              <div style="margin-top:6px;color:#FFFFFF;font-size:23px;font-weight:bold;">${finalCall.ordersCloseLabel}</div>
             </td></tr>
           </table>
-          <p style="margin:0 0 18px;">Our first batch is expected to arrive August 10. Orders in available sizes will begin shipping that week. If your size sells through the first batch, we'll include it in the final production run and ship it as soon as it's ready.</p>
-          <p style="margin:0 0 26px;">After Friday's deadline, the order page comes down. We'll produce only what was ordered, and <strong style="color:#FFFFFF;">this shirt will never be offered again.</strong></p>
         </td></tr>
+
+        <tr><td align="center" style="padding:22px 38px 6px;">
+          ${ctaButton('ORDER NOW &amp; PICK YOUR SIZE →')}
+          <div style="margin-top:10px;color:#9A9AA5;font-size:12px;">${price} all-in · shipping included · sizes ${sizes}</div>
+        </td></tr>
+
+        <tr><td style="padding:20px 38px 6px;">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border:1px solid #31394A;background:#0B101B;">
+            <tr><td style="padding:18px 20px;color:#E6E6EC;font-size:14px;line-height:1.6;">
+              <div style="color:#C9A227;font-size:11px;letter-spacing:2px;font-weight:bold;margin-bottom:8px;">WHERE YOUR ${price} GOES</div>
+              ${merchConfig.pricing.breakdown
+                .map(
+                  (item) =>
+                    `<div style="padding:3px 0;">${item.label} <span style="float:right;color:#FFFFFF;font-weight:bold;">${formatUsd(item.amount)}</span></div>`
+                )
+                .join('')}
+              <div style="border-top:1px solid #31394A;margin-top:10px;padding-top:10px;color:#9A9AA5;">We keep ${margin} on a ${price} shirt. This isn't a fundraiser — it's a trophy at cost.</div>
+            </td></tr>
+          </table>
+        </td></tr>
+
+        <tr><td style="padding:18px 38px 24px;color:#E6E6EC;font-size:16px;line-height:1.65;">
+          <p style="margin:0 0 16px;">Our first batch arrives ${finalCall.firstBatchLabel}. Orders in available sizes ship that week. If your size sells through the first batch, we'll include it in the final production run and ship it as soon as it's ready.</p>
+          <p style="margin:0;">After the deadline the order page comes down, and we produce only what was ordered.</p>
+        </td></tr>
+
         <tr><td align="center" style="padding:0 38px 30px;">
-          <a href="${checkoutUrl}" style="display:inline-block;background:#C9A227;color:#090D16;text-decoration:none;font-size:16px;font-weight:bold;padding:16px 28px;border-radius:3px;">ORDER NOW &amp; RESERVE YOUR SIZE →</a>
+          ${ctaButton(`CLAIM YOUR SHIRT — ${price} →`)}
         </td></tr>
+
         <tr><td align="center" style="padding:22px 32px;background:#0B101B;border-top:1px solid #31394A;">
-          <div style="color:#FFFFFF;font-size:15px;font-weight:bold;">1,776 push-ups. One month. One shirt you had to earn.</div>
+          <div style="color:#FFFFFF;font-size:15px;font-weight:bold;">${goal} push-ups. One month. One shirt you had to earn.</div>
           <div style="margin-top:14px;color:#9A9AA5;font-size:12px;line-height:1.5;">Already ordered? You're all set. Thank you—and wear it with pride.</div>
           <div style="margin-top:14px;color:#9A9AA5;font-size:11px;"><a href="${unsubscribe}" style="color:#9A9AA5;">Unsubscribe from these emails</a></div>
         </td></tr>
@@ -314,8 +433,28 @@ export function buildMerchFinalCallEmail(profileId: string) {
 // carries a caller-supplied key (profile/subscriber id); only keys from
 // chunks Resend accepted are returned, so failed sends get retried on the
 // next run instead of being marked as delivered.
+export interface OutboundEmail {
+  key: string
+  to: string
+  subject: string
+  html: string
+  text?: string
+  // One-click unsubscribe target. Bulk senders need this in the headers, not
+  // just in the body, to stay out of Gmail/Yahoo spam folders.
+  listUnsubscribeUrl?: string
+}
+
+// Resend replays a request carrying an Idempotency-Key it has already seen
+// instead of sending again, for 24h. The key deliberately covers only the
+// campaign and chunk position: hashing the recipient list would mint a new
+// key — and re-send the whole chunk — the moment one person unsubscribed
+// between a failed marker write and the operator's retry.
+function idempotencyKeyFor(prefix: string, chunkIndex: number) {
+  return `${prefix}/${chunkIndex}`
+}
+
 export async function sendEmailBatch(
-  messages: { key: string; to: string; subject: string; html: string }[],
+  messages: OutboundEmail[],
   options: { idempotencyKeyPrefix?: string } = {}
 ) {
   const apiKey = process.env.RESEND_API_KEY
@@ -331,26 +470,49 @@ export async function sendEmailBatch(
     }
 
     if (options.idempotencyKeyPrefix) {
-      const recipientHash = createHash('sha256')
-        .update(chunk.map((message) => message.key).join(','))
-        .digest('hex')
-        .slice(0, 32)
-      headers['Idempotency-Key'] = `${options.idempotencyKeyPrefix}/${i / 100}/${recipientHash}`
+      headers['Idempotency-Key'] = idempotencyKeyFor(options.idempotencyKeyPrefix, i / 100)
     }
 
-    const response = await fetch('https://api.resend.com/emails/batch', {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(
-        chunk.map((m) => ({ from, to: [m.to], subject: m.subject, html: m.html }))
-      ),
-    })
+    const body = JSON.stringify(
+      chunk.map((m) => ({
+        from,
+        to: [m.to],
+        subject: m.subject,
+        html: m.html,
+        ...(m.text ? { text: m.text } : {}),
+        ...(m.listUnsubscribeUrl
+          ? {
+              headers: {
+                'List-Unsubscribe': `<${m.listUnsubscribeUrl}>`,
+                'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+              },
+            }
+          : {}),
+      }))
+    )
 
-    if (response.ok) {
-      sentKeys.push(...chunk.map((m) => m.key))
-    } else {
+    // Rate limits and transient 5xx would otherwise drop a whole 100-person
+    // chunk. The idempotency key makes retrying the same chunk safe.
+    let accepted = false
+    for (let attempt = 0; attempt < 3 && !accepted; attempt++) {
+      if (attempt > 0) await new Promise((resolve) => setTimeout(resolve, 1000 * 2 ** attempt))
+
+      const response = await fetch('https://api.resend.com/emails/batch', {
+        method: 'POST',
+        headers,
+        body,
+      })
+
+      if (response.ok) {
+        accepted = true
+        break
+      }
+
       console.error('Resend batch failed:', response.status, await response.text())
+      if (response.status !== 429 && response.status < 500) break
     }
+
+    if (accepted) sentKeys.push(...chunk.map((m) => m.key))
   }
 
   return { sentKeys }

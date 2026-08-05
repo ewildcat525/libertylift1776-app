@@ -52,13 +52,30 @@ export const merchConfig = {
   },
 
   fulfillment: {
-    preorderNote: 'Orders are open now — all shirts ship in August.',
+    preorderNote: 'Orders close Friday, August 7 — first batch ships the week of August 10.',
     shipsFrom: 'Printed and shipped from the USA',
     usOnly: true,
+  },
+
+  // The one-time final-call window. The /merch countdown, the buy gate, and
+  // the campaign email all read these — never restate a date in markup.
+  finalCall: {
+    // 11:59 PM ET on Friday, August 7 2026 (EDT is UTC-4).
+    ordersCloseAt: '2026-08-07T23:59:59-04:00',
+    ordersCloseLabel: 'Friday, August 7 · 11:59 PM ET',
+    firstBatchLabel: 'August 10',
   },
 } as const
 
 export const merchTotal = merchConfig.pricing.total
+
+export const ordersCloseAt = new Date(merchConfig.finalCall.ordersCloseAt)
+
+// Ordering is open until the final-call deadline passes. Everything that can
+// take money — the buy button, the campaign email — checks this first.
+export function ordersOpen(now: Date = new Date()): boolean {
+  return now.getTime() <= ordersCloseAt.getTime()
+}
 
 export const merchCost = merchConfig.pricing.breakdown.reduce(
   (sum, item) => sum + item.amount,
