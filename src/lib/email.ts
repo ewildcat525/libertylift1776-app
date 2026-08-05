@@ -1,5 +1,5 @@
 // Server-only email helpers for the reminder cron and unsubscribe flow.
-import { createHmac, timingSafeEqual } from 'node:crypto'
+import { createHash, createHmac, timingSafeEqual } from 'node:crypto'
 import { siteUrl } from '@/lib/site'
 import { CHARITY_DONATE_URLS } from '@/lib/charities'
 import { CHALLENGE_TOTAL } from '@/lib/dates'
@@ -444,13 +444,13 @@ export interface OutboundEmail {
   listUnsubscribeUrl?: string
 }
 
-// Resend replays a request carrying an Idempotency-Key it has already seen
-// instead of sending again, for 24h. The key deliberately covers only the
-// campaign and chunk position: hashing the recipient list would mint a new
-// key — and re-send the whole chunk — the moment one person unsubscribed
-// between a failed marker write and the operator's retry.
-function idempotencyKeyFor(prefix: string, chunkIndex: number) {
-  return `${prefix}/${chunkIndex}`
+// Resend rejects an idempotency key when it is reused with a different
+// payload. Hash the exact serialized request body so recipient filtering,
+// unsubscribe changes, or chunk re-indexing can never create that collision.
+// An identical retry within Resend's 24h window still produces the same key.
+function idempotencyKeyFor(prefix: string, body: string) {
+  const payloadHash = createHash('sha256').update(body).digest('hex')
+  return `${prefix}/${payloadHash}`
 }
 
 export async function sendEmailBatch(
@@ -460,17 +460,14 @@ export async function sendEmailBatch(
   const apiKey = process.env.RESEND_API_KEY
   const from = process.env.EMAIL_FROM
   const sentKeys: string[] = []
-  if (!apiKey || !from || messages.length === 0) return { sentKeys }
+  const failedKeys: string[] = []
+  if (!apiKey || !from || messages.length === 0) return { sentKeys, failedKeys }
 
   for (let i = 0; i < messages.length; i += 100) {
     const chunk = messages.slice(i, i + 100)
     const headers: Record<string, string> = {
       Authorization: `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
-    }
-
-    if (options.idempotencyKeyPrefix) {
-      headers['Idempotency-Key'] = idempotencyKeyFor(options.idempotencyKeyPrefix, i / 100)
     }
 
     const body = JSON.stringify(
@@ -490,6 +487,10 @@ export async function sendEmailBatch(
           : {}),
       }))
     )
+
+    if (options.idempotencyKeyPrefix) {
+      headers['Idempotency-Key'] = idempotencyKeyFor(options.idempotencyKeyPrefix, body)
+    }
 
     // Rate limits and transient 5xx would otherwise drop a whole 100-person
     // chunk. The idempotency key makes retrying the same chunk safe.
@@ -512,8 +513,10 @@ export async function sendEmailBatch(
       if (response.status !== 429 && response.status < 500) break
     }
 
-    if (accepted) sentKeys.push(...chunk.map((m) => m.key))
+    const chunkKeys = chunk.map((message) => message.key)
+    if (accepted) sentKeys.push(...chunkKeys)
+    else failedKeys.push(...chunkKeys)
   }
 
-  return { sentKeys }
+  return { sentKeys, failedKeys }
 }
