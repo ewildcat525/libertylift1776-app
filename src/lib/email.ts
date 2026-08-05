@@ -1,7 +1,8 @@
 // Server-only email helpers for the reminder cron and unsubscribe flow.
-import { createHmac, timingSafeEqual } from 'node:crypto'
+import { createHash, createHmac, timingSafeEqual } from 'node:crypto'
 import { siteUrl } from '@/lib/site'
 import { CHARITY_DONATE_URLS } from '@/lib/charities'
+import { merchConfig } from '@/lib/merch'
 
 export function getSiteUrl() {
   return siteUrl
@@ -257,12 +258,65 @@ export function buildFinaleEmail({
   }
 }
 
+// One-time, manually triggered final call for 2026 finishers. This is kept
+// out of the reminder cron intentionally: the protected campaign endpoint
+// requires an explicit confirmation phrase before it will send anything.
+export function buildMerchFinalCallEmail(profileId: string) {
+  const checkoutUrl = merchConfig.stripePaymentLink || `${siteUrl}/merch`
+  const unsubscribe = unsubscribeUrl('profile', profileId)
+
+  return {
+    subject: 'Final call: The finisher shirt disappears Friday',
+    html: `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#070B14;color:#F5F2E8;font-family:Arial,Helvetica,sans-serif;">
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;">Order by 11:59 PM ET Friday, August 7—or miss it forever.</div>
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#070B14;">
+    <tr><td align="center" style="padding:28px 14px;">
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:620px;background:#101725;border:1px solid #31394A;">
+        <tr><td style="height:6px;background:#B22234;"></td></tr>
+        <tr><td align="center" style="padding:34px 32px 18px;">
+          <div style="color:#C9A227;font-size:12px;letter-spacing:4px;font-weight:bold;">LIBERTY LIFT / 1776</div>
+          <div style="margin-top:16px;color:#FFFFFF;font-size:12px;letter-spacing:3px;font-weight:bold;">FINAL CALL</div>
+          <h1 style="margin:10px 0 0;color:#FFFFFF;font-size:38px;line-height:1.08;">The finisher shirt<br/>disappears Friday.</h1>
+        </td></tr>
+        <tr><td style="padding:8px 38px 12px;color:#E6E6EC;font-size:16px;line-height:1.65;">
+          <p style="margin:0 0 18px;">You earned it. Now this is your last chance to claim it.</p>
+          <p style="margin:0 0 22px;">The <strong style="color:#FFFFFF;">Reps for the Republic</strong> finisher shirt is available only to those who completed all 1,776 push-ups. It isn't ordinary merchandise, and it will never become a permanent store item.</p>
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:4px 0 24px;border:1px solid #B22234;background:#0B101B;">
+            <tr><td align="center" style="padding:20px 14px;">
+              <div style="color:#C9A227;font-size:11px;letter-spacing:2px;font-weight:bold;">ORDERS CLOSE</div>
+              <div style="margin-top:6px;color:#FFFFFF;font-size:23px;font-weight:bold;">Friday, August 7 · 11:59 PM ET</div>
+            </td></tr>
+          </table>
+          <p style="margin:0 0 18px;">Our first batch is expected to arrive August 10. Orders in available sizes will begin shipping that week. If your size sells through the first batch, we'll include it in the final production run and ship it as soon as it's ready.</p>
+          <p style="margin:0 0 26px;">After Friday's deadline, the order page comes down. We'll produce only what was ordered, and <strong style="color:#FFFFFF;">this shirt will never be offered again.</strong></p>
+        </td></tr>
+        <tr><td align="center" style="padding:0 38px 30px;">
+          <a href="${checkoutUrl}" style="display:inline-block;background:#C9A227;color:#090D16;text-decoration:none;font-size:16px;font-weight:bold;padding:16px 28px;border-radius:3px;">ORDER NOW &amp; RESERVE YOUR SIZE →</a>
+        </td></tr>
+        <tr><td align="center" style="padding:22px 32px;background:#0B101B;border-top:1px solid #31394A;">
+          <div style="color:#FFFFFF;font-size:15px;font-weight:bold;">1,776 push-ups. One month. One shirt you had to earn.</div>
+          <div style="margin-top:14px;color:#9A9AA5;font-size:12px;line-height:1.5;">Already ordered? You're all set. Thank you—and wear it with pride.</div>
+          <div style="margin-top:14px;color:#9A9AA5;font-size:11px;"><a href="${unsubscribe}" style="color:#9A9AA5;">Unsubscribe from these emails</a></div>
+        </td></tr>
+        <tr><td style="height:6px;background:#244A86;"></td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`,
+  }
+}
+
 // Resend batch endpoint accepts up to 100 messages per call. Each message
 // carries a caller-supplied key (profile/subscriber id); only keys from
 // chunks Resend accepted are returned, so failed sends get retried on the
 // next run instead of being marked as delivered.
 export async function sendEmailBatch(
-  messages: { key: string; to: string; subject: string; html: string }[]
+  messages: { key: string; to: string; subject: string; html: string }[],
+  options: { idempotencyKeyPrefix?: string } = {}
 ) {
   const apiKey = process.env.RESEND_API_KEY
   const from = process.env.EMAIL_FROM
@@ -271,13 +325,22 @@ export async function sendEmailBatch(
 
   for (let i = 0; i < messages.length; i += 100) {
     const chunk = messages.slice(i, i + 100)
+    const headers: Record<string, string> = {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    }
+
+    if (options.idempotencyKeyPrefix) {
+      const recipientHash = createHash('sha256')
+        .update(chunk.map((message) => message.key).join(','))
+        .digest('hex')
+        .slice(0, 32)
+      headers['Idempotency-Key'] = `${options.idempotencyKeyPrefix}/${i / 100}/${recipientHash}`
+    }
 
     const response = await fetch('https://api.resend.com/emails/batch', {
       method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
+      headers,
       body: JSON.stringify(
         chunk.map((m) => ({ from, to: [m.to], subject: m.subject, html: m.html }))
       ),
