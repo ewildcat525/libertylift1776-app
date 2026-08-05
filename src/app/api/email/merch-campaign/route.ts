@@ -120,7 +120,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Email delivery is not configured' }, { status: 503 })
   }
 
-  const { sentKeys } = await sendEmailBatch(
+  const { sentKeys, failedKeys } = await sendEmailBatch(
     eligible.map((recipient) => ({
       key: recipient.id,
       to: recipient.email as string,
@@ -148,13 +148,29 @@ export async function POST(request: NextRequest) {
         {
           error: 'Emails were accepted but delivery markers could not be saved',
           sent: sentKeys.length,
-          // Retrying is safe: Resend replays the same idempotency key for 24h
-          // instead of sending again.
-          retrySafe: true,
+          retrySafeWithin24HoursIfPayloadIsUnchanged: true,
         },
         { status: 500 }
       )
     }
+  }
+
+  // Never report a successful campaign when Resend rejected any chunk. The
+  // accepted recipients are already in the ledger, so the next invocation
+  // targets only the failed recipients and derives a key from that exact
+  // retry payload.
+  if (failedKeys.length > 0) {
+    return NextResponse.json(
+      {
+        error: 'Resend did not accept every campaign email',
+        campaign: campaignId,
+        eligibleRecipients: eligible.length,
+        sent: sentKeys.length,
+        failed: failedKeys.length,
+        retrySafe: true,
+      },
+      { status: 502 }
+    )
   }
 
   return NextResponse.json({

@@ -1,10 +1,8 @@
--- A ledger for one-off campaign sends.
+-- A reusable ledger for one-off campaign sends.
 --
--- Every campaign so far added its own profiles.<name>_emailed_at column
--- (launch, final_push, finale). That means a new migration and a new deploy
--- for every send, which is exactly the wrong shape for merch campaigns where
--- a second touch before the deadline is the point. One row per (user,
--- campaign) gives the same idempotency with no schema change per campaign.
+-- This intentionally has a newer migration version than every migration
+-- currently recorded in production. The table may already exist there from
+-- a direct schema apply, so every statement is safe to reconcile and record.
 
 create table if not exists public.email_campaign_sends (
   campaign text not null check (length(campaign) between 1 and 64),
