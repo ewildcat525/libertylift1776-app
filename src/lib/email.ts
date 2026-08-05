@@ -280,17 +280,21 @@ const VARIANT_COPY = {
     subject: 'Final call: the finisher shirt disappears Friday',
     preheader: `Order by ${merchConfig.finalCall.ordersCloseLabel} — this shirt is never offered again.`,
     badge: 'FINAL CALL',
-    headline: 'The finisher shirt<br/>disappears Friday.',
+    headline: 'The finisher shirt disappears Friday.',
     opener: 'This is the last time you can claim it.',
   },
   'last-hours': {
     subject: 'Hours left: the finisher shirt comes down tonight',
     preheader: `Ordering closes ${merchConfig.finalCall.ordersCloseLabel}. After that it's gone for good.`,
     badge: 'HOURS LEFT',
-    headline: 'Tonight the order<br/>page comes down.',
+    headline: 'Tonight the order page comes down.',
     opener: 'You earned this shirt. There are hours left to claim it.',
   },
 } as const
+
+// Inbox images must live on a public, stable origin. Preview deployments can
+// be protected by Vercel, which leaves email clients showing a broken image.
+const EMAIL_ASSET_ORIGIN = 'https://libertylift1776.com'
 
 // Display names are user-chosen, so they never go into markup unescaped.
 function escapeHtml(value: string) {
@@ -353,26 +357,36 @@ export function buildMerchCampaignEmail({
     text,
     html: `<!DOCTYPE html>
 <html lang="en">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${copy.subject}</title></head>
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${copy.subject}</title>
+  <style>
+    @media only screen and (max-width:480px) {
+      .merch-email-header { padding:24px 20px 12px !important; }
+      .merch-email-headline { font-size:28px !important; line-height:1.12 !important; }
+      .merch-email-image { padding:14px 16px 4px !important; }
+      .merch-email-copy { padding-left:22px !important; padding-right:22px !important; }
+    }
+  </style>
+</head>
 <body style="margin:0;padding:0;background:#070B14;color:#F5F2E8;font-family:Arial,Helvetica,sans-serif;">
   <div style="display:none;max-height:0;overflow:hidden;opacity:0;">${copy.preheader}</div>
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#070B14;">
     <tr><td align="center" style="padding:28px 14px;">
       <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:620px;background:#101725;border:1px solid #31394A;">
         <tr><td style="height:6px;background:#B22234;"></td></tr>
-        <tr><td align="center" style="padding:34px 32px 18px;">
+        <tr><td class="merch-email-header" align="center" style="padding:28px 28px 14px;">
           <div style="color:#C9A227;font-size:12px;letter-spacing:4px;font-weight:bold;">LIBERTY LIFT / 1776</div>
           <div style="margin-top:16px;color:#FFFFFF;font-size:12px;letter-spacing:3px;font-weight:bold;">${copy.badge}</div>
-          <h1 style="margin:10px 0 0;color:#FFFFFF;font-size:38px;line-height:1.08;">${copy.headline}</h1>
+          <h1 class="merch-email-headline" style="margin:10px 0 0;color:#FFFFFF;font-size:34px;line-height:1.1;">${copy.headline}</h1>
         </td></tr>
 
-        <tr><td align="center" style="padding:20px 24px 4px;">
+        <tr><td class="merch-email-image" align="center" style="padding:16px 24px 4px;">
           <a href="${checkoutUrl}" style="text-decoration:none;">
-            <img src="${siteUrl}/merch/reps-tee-both.jpg" alt="Front and back of the Reps for the Republic finisher tee" width="540" style="display:block;width:100%;max-width:540px;height:auto;border:1px solid #31394A;" />
+            <img src="${EMAIL_ASSET_ORIGIN}/merch/reps-tee-both.jpg" alt="Front and back of the Reps for the Republic finisher tee" width="540" style="display:block;width:100%;max-width:540px;height:auto;border:1px solid #31394A;" />
           </a>
         </td></tr>
 
-        <tr><td style="padding:18px 38px 6px;color:#E6E6EC;font-size:16px;line-height:1.65;">
+        <tr><td class="merch-email-copy" style="padding:18px 38px 6px;color:#E6E6EC;font-size:16px;line-height:1.65;">
           <p style="margin:0 0 16px;">${earnedLine} ${copy.opener}</p>
           <p style="margin:0 0 20px;">The <strong style="color:#FFFFFF;">Reps for the Republic</strong> tee is sold only to people who logged all ${goal}. It has never been on open sale, it will not become a store item, and <strong style="color:#FFFFFF;">it will not be offered again.</strong></p>
         </td></tr>
