@@ -2,15 +2,16 @@ import type { Metadata } from 'next'
 import Image from 'next/image'
 import Navigation from '@/components/Navigation'
 import MerchBuy from '@/components/MerchBuy'
+import MerchDeadline from '@/components/MerchDeadline'
 import { merchConfig, merchTotal, merchCost, formatUsd } from '@/lib/merch'
 
 export const metadata: Metadata = {
   title: 'Merch — Liberty Lift 1776',
   description:
-    'The Reps for the Republic tee. You can\'t buy it — you unlock it by finishing all 1,776 push-ups. Transparent pricing, ships in August.',
+    'The Reps for the Republic tee. You can\'t buy it — you unlock it by finishing all 1,776 push-ups. Transparent pricing. Orders close August 7.',
   openGraph: {
     title: 'Reps for the Republic Tee — Liberty Lift 1776',
-    description: 'Earned, not given: finish 1,776 push-ups to unlock it. Ships in August.',
+    description: 'Earned, not given: finish 1,776 push-ups to unlock it. Orders close August 7.',
     images: [{ url: '/merch/reps-tee-both.jpg', width: 1402, height: 1122 }],
   },
 }
@@ -33,10 +34,12 @@ export default function MerchPage() {
                 Unlocks at {goal} push-ups
               </span>
               <span className="text-[10px] font-extrabold uppercase tracking-[0.1em] px-2 py-1 bg-liberty-gold/15 text-liberty-gold border border-liberty-gold/40 leading-none">
-                Pre-order &middot; ships in August
+                Orders close {merchConfig.finalCall.ordersCloseLabel}
               </span>
             </div>
           </div>
+
+          <MerchDeadline />
 
           {/* Product photos */}
           <div className="grid grid-cols-2 gap-3 mb-8">
