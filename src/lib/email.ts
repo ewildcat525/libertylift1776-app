@@ -277,10 +277,10 @@ interface MerchCampaignArgs {
 
 const VARIANT_COPY = {
   'final-call': {
-    subject: 'Final call: the finisher shirt disappears Friday',
+    subject: 'Final call: the finisher shirt disappears Sunday',
     preheader: `Order by ${merchConfig.finalCall.ordersCloseLabel} — this shirt is never offered again.`,
     badge: 'FINAL CALL',
-    headline: 'The finisher shirt disappears Friday.',
+    headline: 'The finisher shirt disappears Sunday.',
     opener: 'This is the last time you can claim it.',
   },
   'last-hours': {
