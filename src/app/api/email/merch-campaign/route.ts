@@ -18,6 +18,15 @@ const CAMPAIGNS: Record<string, { confirm: string; variant: MerchCampaignVariant
   'merch-final-call-2026': { confirm: 'SEND_MERCH_FINAL_CALL_2026', variant: 'final-call' },
   'merch-last-hours-2026': { confirm: 'SEND_MERCH_LAST_HOURS_2026', variant: 'last-hours' },
 }
+
+// Vercel cron expressions are UTC. These resolve to Thursday, August 6 at
+// 11:00 AM ET and Sunday, August 9 at 6:00 PM ET, respectively. Both jobs
+// share this route; Vercel signs the request and includes the exact schedule
+// in x-vercel-cron-schedule so the route can select the intended touch.
+const SCHEDULED_CAMPAIGNS: Record<string, string> = {
+  '0 15 6 8 *': 'merch-final-call-2026',
+  '0 22 9 8 *': 'merch-last-hours-2026',
+}
 const DEFAULT_CAMPAIGN = 'merch-final-call-2026'
 const MAX_RECIPIENTS = 2000
 
@@ -33,13 +42,17 @@ function totalPushupsOf(row: FinisherRow) {
   return stats?.total_pushups ?? null
 }
 
-export async function POST(request: NextRequest) {
+async function runCampaign(
+  request: NextRequest,
+  scheduledCampaignId?: string
+) {
   const secret = process.env.CRON_SECRET
   if (!secret || request.headers.get('authorization') !== `Bearer ${secret}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const campaignId = request.nextUrl.searchParams.get('campaign') || DEFAULT_CAMPAIGN
+  const campaignId =
+    scheduledCampaignId || request.nextUrl.searchParams.get('campaign') || DEFAULT_CAMPAIGN
   const campaign = CAMPAIGNS[campaignId]
   if (!campaign) {
     return NextResponse.json(
@@ -86,7 +99,9 @@ export async function POST(request: NextRequest) {
   const sentAlready = new Set((alreadySent || []).map((row) => row.user_id as string))
   const eligible = rows.slice(0, MAX_RECIPIENTS).filter((row) => !sentAlready.has(row.id))
 
-  const body = (await request.json().catch(() => ({}))) as { confirm?: string }
+  const body = scheduledCampaignId
+    ? { confirm: campaign.confirm }
+    : ((await request.json().catch(() => ({}))) as { confirm?: string })
   const open = ordersOpen()
 
   if (body.confirm !== campaign.confirm) {
@@ -181,4 +196,23 @@ export async function POST(request: NextRequest) {
     sent: sentKeys.length,
     truncated,
   })
+}
+
+// Manual operator path: a missing or incorrect confirmation phrase remains a
+// dry run, preserving the existing fire-control behavior.
+export async function POST(request: NextRequest) {
+  return runCampaign(request)
+}
+
+// Scheduled path: only a Vercel-signed request with one of the two configured
+// schedule expressions is allowed to select and confirm a campaign.
+export async function GET(request: NextRequest) {
+  const schedule = request.headers.get('x-vercel-cron-schedule')
+  const campaignId = schedule ? SCHEDULED_CAMPAIGNS[schedule] : null
+
+  if (!campaignId) {
+    return NextResponse.json({ error: 'Unknown merch campaign schedule' }, { status: 400 })
+  }
+
+  return runCampaign(request, campaignId)
 }

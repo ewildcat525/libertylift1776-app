@@ -8,10 +8,10 @@ import { merchConfig, merchTotal, merchCost, formatUsd } from '@/lib/merch'
 export const metadata: Metadata = {
   title: 'Merch — Liberty Lift 1776',
   description:
-    'The Reps for the Republic tee. You can\'t buy it — you unlock it by finishing all 1,776 push-ups. Transparent pricing. Orders close August 7.',
+    'The Reps for the Republic tee. You can\'t buy it — you unlock it by finishing all 1,776 push-ups. Transparent pricing. Orders close August 9 at midnight ET.',
   openGraph: {
     title: 'Reps for the Republic Tee — Liberty Lift 1776',
-    description: 'Earned, not given: finish 1,776 push-ups to unlock it. Orders close August 7.',
+    description: 'Earned, not given: finish 1,776 push-ups to unlock it. Orders close August 9 at midnight ET.',
     images: [{ url: '/merch/reps-tee-both.jpg', width: 1402, height: 1122 }],
   },
 }
