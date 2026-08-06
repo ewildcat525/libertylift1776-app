@@ -7,6 +7,7 @@ type NavigatorWithStandalone = Navigator & {
 }
 
 type WindowWithCapacitor = Window & {
+  __LIBERTY_LIFT_NATIVE__?: boolean
   Capacitor?: {
     isNativePlatform?: () => boolean
   }
@@ -26,6 +27,8 @@ export default function AppEnvironment() {
       const navigatorStandalone = (window.navigator as NavigatorWithStandalone).standalone === true
       const capacitor = (window as WindowWithCapacitor).Capacitor
       const isNative = capacitor?.isNativePlatform?.() === true
+        || (window as WindowWithCapacitor).__LIBERTY_LIFT_NATIVE__ === true
+        || window.navigator.userAgent.includes('LibertyLiftNative/')
       const isStandalone = standaloneQuery.matches || navigatorStandalone
 
       root.dataset.appEnvironment = isNative

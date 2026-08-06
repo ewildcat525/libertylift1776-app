@@ -4,9 +4,9 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import type { User } from '@supabase/supabase-js'
-import { Capacitor } from '@capacitor/core'
 import { createClient } from '@/lib/supabase'
 import { challengePhase } from '@/lib/dates'
+import { isNativeApp } from '@/lib/native-auth'
 
 const tabs = [
   {
@@ -16,7 +16,7 @@ const tabs = [
   },
   {
     href: '/leaderboard',
-    label: 'Boards',
+    label: 'Standings',
     icon: <><path d="M8 21h8M12 17v4M7 4h10v4a5 5 0 0 1-10 0V4Z" /><path d="M7 6H4v2a4 4 0 0 0 4 4M17 6h3v2a4 4 0 0 1-4 4" /></>,
   },
   {
@@ -32,7 +32,7 @@ const tabs = [
 ]
 
 async function tapFeedback() {
-  if (!Capacitor.isNativePlatform()) return
+  if (!isNativeApp()) return
   try {
     const { Haptics, ImpactStyle } = await import('@capacitor/haptics')
     await Haptics.impact({ style: ImpactStyle.Light })
@@ -48,7 +48,7 @@ export default function NativeAppNavigation() {
   const [challengeEnded, setChallengeEnded] = useState(false)
 
   useEffect(() => {
-    if (!Capacitor.isNativePlatform()) return
+    if (!isNativeApp()) return
     setChallengeEnded(challengePhase() === 'ended')
 
     const supabase = createClient()
@@ -61,7 +61,7 @@ export default function NativeAppNavigation() {
   }, [])
 
   useEffect(() => {
-    if (!Capacitor.isNativePlatform()) return
+    if (!isNativeApp()) return
 
     const root = document.documentElement
     root.classList.toggle('native-tabs-visible', Boolean(user))
@@ -86,28 +86,25 @@ export default function NativeAppNavigation() {
   return (
     <nav className="native-tab-bar" aria-label="App navigation">
       <div className="native-tab-bar-inner">
-        {tabs.slice(0, 2).map((tab) => (
-          <NativeTab key={tab.href} {...tab} active={pathname.startsWith(tab.href)} />
-        ))}
-        <button
-          type="button"
-          className={`native-log-tab ${pathname.startsWith('/finale') ? 'is-active' : ''}`}
-          onClick={openLogger}
-          aria-label={challengeEnded ? 'Open the finale' : 'Log push-ups'}
-        >
-          <span className="native-log-tab-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24">
-              {challengeEnded
-                ? <><path d="M6 21V4M6 5h11l-2.5 3L17 11H6" /></>
-                : <path d="M12 5v14M5 12h14" />}
-            </svg>
-          </span>
-          <span>{challengeEnded ? 'Finale' : 'Log'}</span>
-        </button>
-        {tabs.slice(2).map((tab) => (
+        {tabs.map((tab) => (
           <NativeTab key={tab.href} {...tab} active={pathname.startsWith(tab.href)} />
         ))}
       </div>
+      <button
+        type="button"
+        className={`native-log-tab ${pathname.startsWith('/finale') ? 'is-active' : ''}`}
+        onClick={openLogger}
+        aria-label={challengeEnded ? 'Open the finale' : 'Log push-ups'}
+      >
+        <span className="native-log-tab-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            {challengeEnded
+              ? <><path d="M6 21V4M6 5h11l-2.5 3L17 11H6" /></>
+              : <path d="M12 5v14M5 12h14" />}
+          </svg>
+        </span>
+        <span>{challengeEnded ? 'Finale' : 'Log'}</span>
+      </button>
     </nav>
   )
 }
@@ -118,7 +115,6 @@ function NativeTab({ href, label, icon, active }: (typeof tabs)[number] & { acti
       href={href}
       className={`native-tab ${active ? 'is-active' : ''}`}
       aria-current={active ? 'page' : undefined}
-      onClick={() => void tapFeedback()}
     >
       <svg viewBox="0 0 24 24" aria-hidden="true">{icon}</svg>
       <span>{label}</span>

@@ -96,13 +96,13 @@ export default function LeaderboardPage() {
   return (
     <>
       <Navigation />
-      <div className="min-h-screen pt-24 pb-12 px-4 app-surface">
+      <div className="native-standings-screen min-h-screen pt-24 pb-12 px-4 app-surface">
         <div className="max-w-4xl mx-auto">
           {/* Header */}
           <div className="mb-8">
             <div className="app-eyebrow mb-3">National board</div>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-              <h1 className="app-title text-6xl sm:text-7xl">Leaderboard</h1>
+              <h1 className="app-title text-6xl sm:text-7xl">Standings</h1>
               {ended && (
                 <span className="inline-flex items-center gap-1 px-3 py-1 border-2 border-liberty-gold text-liberty-gold text-xs font-extrabold uppercase tracking-[0.2em] -rotate-2">
                   🇺🇸 Final
@@ -230,17 +230,17 @@ export default function LeaderboardPage() {
               </>
             )
           ) : loading ? (
-            <div className="text-center text-white/50 py-12">Loading leaderboard...</div>
+            <div className="native-board-loading text-center text-white/50 py-12" role="status"><span />Loading standings…</div>
           ) : leaderboard.length === 0 ? (
             <div className="card p-12 text-center">
               <h2 className="font-bebas text-3xl text-liberty-red mb-2">No one on the board yet.</h2>
               <p className="text-white/60">Be the first to log your push-ups and claim the top spot.</p>
             </div>
           ) : (
-            <div className="card overflow-hidden divide-y divide-white/10">
+            <div className="native-leaderboard-list card overflow-hidden divide-y divide-white/10" role="list">
               {sortedLeaderboard.map((entry, index) => (
-                <div key={entry.id} className="flex items-center gap-4 p-4 hover:bg-white/5 transition-colors">
-                  <div className={`w-10 h-10 flex items-center justify-center font-bold text-lg ${
+                <div key={entry.id} className={`native-leaderboard-row flex items-center gap-4 p-4 transition-colors ${entry.id === userId ? 'is-you' : ''}`} role="listitem">
+                  <div className={`native-rank-badge w-10 h-10 flex items-center justify-center font-bold text-lg ${
                     index === 0 ? 'bg-liberty-red text-white' :
                     index === 1 ? 'bg-white text-liberty-dark' :
                     index === 2 ? 'bg-white/70 text-liberty-dark' :

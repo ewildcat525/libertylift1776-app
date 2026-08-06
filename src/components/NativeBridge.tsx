@@ -2,9 +2,9 @@
 
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Capacitor } from '@capacitor/core'
 import { createClient } from '@/lib/supabase'
 import { isHallOpen, postAuthLanding } from '@/lib/dates'
+import { isNativeApp } from '@/lib/native-auth'
 
 const WEB_HOSTS = new Set(['libertylift1776.com', 'www.libertylift1776.com'])
 
@@ -38,7 +38,7 @@ export default function NativeBridge() {
   const router = useRouter()
 
   useEffect(() => {
-    if (!Capacitor.isNativePlatform()) return
+    if (!isNativeApp()) return
 
     let cancelled = false
     const removers: Array<() => Promise<void>> = []

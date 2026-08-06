@@ -21,6 +21,7 @@ const config: CapacitorConfig = {
     allowNavigation: ['libertylift1776.com', '*.libertylift1776.com'],
   },
   ios: {
+    appendUserAgent: 'LibertyLiftNative/1',
     backgroundColor: '#10100F',
     contentInset: 'automatic',
     preferredContentMode: 'mobile',
