@@ -361,6 +361,7 @@ export function buildMerchCampaignEmail({
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${copy.subject}</title>
   <style>
     @media only screen and (max-width:480px) {
+      .merch-email-viewport { padding-bottom:140px !important; }
       .merch-email-header { padding:24px 20px 12px !important; }
       .merch-email-headline { font-size:28px !important; line-height:1.12 !important; }
       .merch-email-image { padding:14px 16px 4px !important; }
@@ -371,7 +372,9 @@ export function buildMerchCampaignEmail({
 <body style="margin:0;padding:0;background:#070B14;color:#F5F2E8;font-family:Arial,Helvetica,sans-serif;">
   <div style="display:none;max-height:0;overflow:hidden;opacity:0;">${copy.preheader}</div>
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#070B14;">
-    <tr><td align="center" style="padding:28px 14px;">
+    <!-- Gmail iOS pins reply controls over the message viewport. Extra mobile
+         bottom padding keeps the final CTA and footer reachable above them. -->
+    <tr><td class="merch-email-viewport" align="center" style="padding:28px 14px;">
       <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:620px;background:#101725;border:1px solid #31394A;">
         <tr><td style="height:6px;background:#B22234;"></td></tr>
         <tr><td class="merch-email-header" align="center" style="padding:28px 28px 14px;">
