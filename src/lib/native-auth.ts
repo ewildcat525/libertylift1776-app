@@ -1,6 +1,8 @@
 import { Capacitor } from '@capacitor/core'
 
 export const isNativeApp = () => Capacitor.isNativePlatform()
+  || (typeof window !== 'undefined' && Boolean((window as typeof window & { __LIBERTY_LIFT_NATIVE__?: boolean }).__LIBERTY_LIFT_NATIVE__))
+  || (typeof navigator !== 'undefined' && navigator.userAgent.includes('LibertyLiftNative/'))
 
 export function nativeAuthRedirect(webRedirect: string | undefined) {
   if (!webRedirect || !isNativeApp()) return webRedirect

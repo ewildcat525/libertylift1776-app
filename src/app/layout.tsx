@@ -67,7 +67,7 @@ export default function RootLayout({
         <script
           id="app-environment"
           dangerouslySetInnerHTML={{
-            __html: "document.documentElement.dataset.appEnvironment=window.Capacitor?.isNativePlatform?.()?'native':((window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone===true)?'standalone':'browser')",
+            __html: "document.documentElement.dataset.appEnvironment=(window.__LIBERTY_LIFT_NATIVE__===true||window.Capacitor?.isNativePlatform?.()||navigator.userAgent.includes('LibertyLiftNative/'))?'native':((window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone===true)?'standalone':'browser')",
           }}
         />
       </head>

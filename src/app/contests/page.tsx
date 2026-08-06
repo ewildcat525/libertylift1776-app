@@ -1,12 +1,13 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient, Contest } from '@/lib/supabase'
 import { localDateString } from '@/lib/dates'
 import Navigation from '@/components/Navigation'
 import { canUsePublicContests } from '@/lib/flags'
+import { isNativeApp } from '@/lib/native-auth'
 
 const publicContestsEnabled = canUsePublicContests()
 
@@ -25,6 +26,9 @@ export default function ContestsPage() {
   const [contestDesc, setContestDesc] = useState('')
   const [isPublic, setIsPublic] = useState(false)
   const [creating, setCreating] = useState(false)
+  const [nativeMode, setNativeMode] = useState(false)
+  const createCrewButtonRef = useRef<HTMLButtonElement>(null)
+  const createCrewSheetRef = useRef<HTMLDivElement>(null)
   
   const router = useRouter()
   const supabase = useMemo(() => createClient(), [])
@@ -68,6 +72,48 @@ export default function ContestsPage() {
     loadData()
   }, [supabase])
 
+  useEffect(() => {
+    setNativeMode(isNativeApp())
+  }, [])
+
+  useEffect(() => {
+    if (!showCreate) return
+    const previousOverflow = document.body.style.overflow
+    const previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setShowCreate(false)
+        return
+      }
+      if (!nativeMode || event.key !== 'Tab') return
+
+      const focusable = Array.from(
+        createCrewSheetRef.current?.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), input:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ) ?? [],
+      )
+      if (focusable.length === 0) return
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
+    if (nativeMode) document.body.style.overflow = 'hidden'
+    document.addEventListener('keydown', handleKeyDown)
+    const focusTimer = window.setTimeout(() => document.getElementById('crew-name')?.focus(), 50)
+    return () => {
+      window.clearTimeout(focusTimer)
+      document.removeEventListener('keydown', handleKeyDown)
+      document.body.style.overflow = previousOverflow
+      previouslyFocused?.focus()
+    }
+  }, [nativeMode, showCreate])
+
   const createContest = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!user) {
@@ -105,7 +151,7 @@ export default function ContestsPage() {
       setContestName('')
       setContestDesc('')
     } else if (error) {
-      setCreateError('Failed to create contest. Please try again.')
+      setCreateError('Failed to create crew. Please try again.')
     }
 
     setCreating(false)
@@ -130,7 +176,7 @@ export default function ContestsPage() {
     })
 
     if (error) {
-      setJoinError(error.message.includes('Invalid invite code') ? 'Invalid invite code' : 'Failed to join contest')
+      setJoinError(error.message.includes('Invalid invite code') ? 'Invalid invite code' : 'Failed to join crew')
       return
     }
 
@@ -147,25 +193,27 @@ export default function ContestsPage() {
   return (
     <>
       <Navigation />
-      <div className="min-h-screen pt-24 pb-12 px-4 app-surface">
+      <div className="native-crews-screen min-h-screen pt-24 pb-12 px-4 app-surface">
         <div className="max-w-4xl mx-auto">
           {/* Header */}
           <div className="mb-8">
             <div className="app-eyebrow mb-3">Private rivalries</div>
-            <h1 className="app-title text-6xl sm:text-7xl">Contests</h1>
-            <p className="text-white/60 mt-3">Create private challenges or join public competitions.</p>
+            <h1 className="app-title text-6xl sm:text-7xl">Crews</h1>
+            <p className="text-white/60 mt-3">Train together, compete, and keep each other moving.</p>
           </div>
 
           {/* Actions */}
-          <div className="flex flex-col sm:flex-row gap-4 mb-8">
+          <div className="native-crew-actions flex flex-col sm:flex-row gap-4 mb-8">
             <button
+              ref={createCrewButtonRef}
               onClick={() => user ? setShowCreate(true) : router.push('/login')}
               className="btn-gold flex-1"
             >
-              Create contest
+              Create crew
             </button>
             <div className="flex-1 flex gap-2">
               <input
+                aria-label="Crew invite code"
                 type="text"
                 value={joinCode}
                 onChange={(e) => setJoinCode(e.target.value)}
@@ -186,12 +234,19 @@ export default function ContestsPage() {
 
           {/* Create Contest Modal */}
           {showCreate && (
-            <div className="card p-6 mb-8">
-              <h2 className="font-bebas text-3xl text-liberty-red mb-4">Create New Contest</h2>
+            <>
+            <button type="button" className="native-modal-backdrop" aria-label="Close create crew" onClick={() => setShowCreate(false)} />
+            <div ref={createCrewSheetRef} className="native-create-crew-sheet card p-6 mb-8" role="dialog" aria-modal={nativeMode || undefined} aria-labelledby="create-crew-title">
+              <div className="native-sheet-handle" aria-hidden="true" />
+              <div className="native-create-crew-heading">
+                <h2 id="create-crew-title" className="font-bebas text-3xl text-liberty-red mb-4">Create a crew</h2>
+                <button type="button" onClick={() => setShowCreate(false)} aria-label="Close create crew">Done</button>
+              </div>
               <form onSubmit={createContest} className="space-y-4">
                 <div>
-                  <label className="block text-sm text-white/70 mb-2">Contest Name *</label>
+                  <label htmlFor="crew-name" className="block text-sm text-white/70 mb-2">Crew name *</label>
                   <input
+                    id="crew-name"
                     type="text"
                     value={contestName}
                     onChange={(e) => setContestName(e.target.value)}
@@ -201,8 +256,9 @@ export default function ContestsPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-white/70 mb-2">Description</label>
+                  <label htmlFor="crew-description" className="block text-sm text-white/70 mb-2">Description</label>
                   <textarea
+                    id="crew-description"
                     value={contestDesc}
                     onChange={(e) => setContestDesc(e.target.value)}
                     className="input"
@@ -219,7 +275,7 @@ export default function ContestsPage() {
                     className="w-4 h-4"
                   />
                   <label htmlFor="isPublic" className="text-sm text-white/70">
-                    Make this contest public (anyone can find and join)
+                    Make this crew public (anyone can find and join)
                   </label>
                 </div>}
                 {createError && (
@@ -229,7 +285,7 @@ export default function ContestsPage() {
                 )}
                 <div className="flex gap-2">
                   <button type="submit" disabled={creating} className="btn-gold flex-1">
-                    {creating ? 'Creating...' : 'Create Contest'}
+                    {creating ? 'Creating…' : 'Create crew'}
                   </button>
                   <button
                     type="button"
@@ -241,12 +297,13 @@ export default function ContestsPage() {
                 </div>
               </form>
             </div>
+            </>
           )}
 
           {/* My Contests */}
           {user && myContests.length > 0 && (
             <div className="mb-8">
-              <h2 className="font-bebas text-3xl text-liberty-red mb-4">My Contests</h2>
+              <h2 className="font-bebas text-3xl text-liberty-red mb-4">My crews</h2>
               <div className="space-y-4">
                 {myContests.map((contest) => (
                   <Link key={contest.id} href={`/contests/${contest.id}`}>
@@ -279,13 +336,13 @@ export default function ContestsPage() {
 
           {/* Public discovery stays fail-closed until moderation is ready. */}
           {publicContestsEnabled && <div>
-              <h2 className="font-bebas text-3xl text-liberty-red mb-4">Public Contests</h2>
+              <h2 className="font-bebas text-3xl text-liberty-red mb-4">Public crews</h2>
             {loading ? (
-              <div className="text-center text-white/50 py-12">Loading contests...</div>
+              <div className="text-center text-white/50 py-12" role="status">Loading crews…</div>
             ) : contests.length === 0 ? (
               <div className="card p-12 text-center">
-                <h3 className="font-bebas text-xl text-white mb-2">No Public Contests Yet</h3>
-                <p className="text-white/60">Create the first public contest!</p>
+                <h3 className="font-bebas text-xl text-white mb-2">No public crews yet</h3>
+                <p className="text-white/60">Create the first public crew.</p>
               </div>
             ) : (
               <div className="space-y-4">

@@ -124,9 +124,6 @@ export default function DashboardPage() {
     if (!isNativeApp()) return
     setNativeMode(true)
 
-    const root = document.documentElement
-    root.classList.add('native-dashboard-locked')
-
     const openLogger = () => setNativeLoggerOpen(true)
     window.addEventListener('libertylift:open-log', openLogger)
     if (new URLSearchParams(window.location.search).get('log') === '1') {
@@ -135,7 +132,6 @@ export default function DashboardPage() {
     }
 
     return () => {
-      root.classList.remove('native-dashboard-locked')
       window.removeEventListener('libertylift:open-log', openLogger)
     }
   }, [])
@@ -551,6 +547,20 @@ export default function DashboardPage() {
   }
 
   const progress = stats ? (stats.total_pushups / 1776) * 100 : 0
+  const totalPushups = stats?.total_pushups ?? 0
+  const remainingPushups = Math.max(0, 1776 - totalPushups)
+  const nextMilestone = AMERICAN_FACTS.find(milestone => milestone.threshold > totalPushups)
+  const activeDays = stats?.days_logged ?? Object.values(dailyLogs).filter(Boolean).length
+  const averageActiveDay = activeDays > 0 ? Math.round(totalPushups / activeDays) : 0
+  const julyActivity = Array.from({ length: 31 }, (_, index) => {
+    const day = index + 1
+    const count = dailyLogs[`2026-07-${String(day).padStart(2, '0')}`] ?? 0
+    return { day, count }
+  })
+  const recentLogEntries = Object.entries(dailyLogs)
+    .filter(([, count]) => count > 0)
+    .sort(([left], [right]) => right.localeCompare(left))
+    .slice(0, 3)
   const dailyTarget = DAILY_PACE
   const daysInJuly = 31
   const today = new Date()
@@ -682,8 +692,9 @@ export default function DashboardPage() {
           <section className="native-today" aria-labelledby="native-today-title">
             <header className="native-today-heading">
               <div>
-                <div className="native-overline">Today</div>
-                <h1 id="native-today-title">Hey, {profile?.display_name?.split(' ')[0] || 'Patriot'}.</h1>
+                <div className="native-overline">Your campaign</div>
+                <h1 id="native-today-title">Ready, {profile?.display_name?.split(' ')[0] || 'Patriot'}?</h1>
+                <p>{phase === 'ended' ? 'Your 2026 campaign is in the books.' : 'Keep the promise you made to yourself.'}</p>
               </div>
               <Link href="/profile" className="native-avatar" aria-label="Open your profile">
                 {profile?.display_name
@@ -697,32 +708,110 @@ export default function DashboardPage() {
 
             <div className="native-progress-hero">
               <div className="native-progress-copy">
-                <span>Your campaign</span>
-                <strong>{stats?.total_pushups.toLocaleString() || 0}</strong>
+                <span>Total completed</span>
+                <strong>{totalPushups.toLocaleString()}</strong>
                 <small>of 1,776 push-ups</small>
               </div>
               <div
                 className="native-progress-ring"
                 style={{ '--native-progress': `${Math.min(progress, 100)}%` } as React.CSSProperties}
-                aria-label={`${progress.toFixed(1)} percent complete`}
+                role="progressbar"
+                aria-label="Challenge completion"
+                aria-valuemin={0}
+                aria-valuemax={1776}
+                aria-valuenow={Math.min(totalPushups, 1776)}
+                aria-valuetext={`${Math.round(progress)} percent complete`}
               >
                 <span>{Math.round(progress)}%</span>
+              </div>
+              <div className="native-progress-track" aria-hidden="true">
+                <span style={{ width: `${Math.min(progress, 100)}%` }} />
               </div>
             </div>
 
             <div className="native-today-stats">
               <div><span>Today</span><strong>{dailyLogs[localDateString()] || 0}</strong><small>reps</small></div>
               <div><span>Streak</span><strong>{liveStreak(stats?.current_streak, stats?.last_log_date)}</strong><small>days</small></div>
-              <div><span>Remaining</span><strong>{Math.max(0, 1776 - (stats?.total_pushups || 0))}</strong><small>reps</small></div>
+              <div><span>Remaining</span><strong>{remainingPushups}</strong><small>reps</small></div>
             </div>
 
             {phase === 'ended' ? (
-              <Link href="/finale" className="native-primary-action">View your final result</Link>
+              <Link href="/finale" className="native-primary-action">
+                <span>View your final result</span><b aria-hidden="true">›</b>
+              </Link>
             ) : (
               <button type="button" className="native-primary-action" onClick={() => setNativeLoggerOpen(true)}>
-                <span aria-hidden="true">＋</span> Log a set
+                <span className="native-primary-action-icon" aria-hidden="true">＋</span>
+                <span>Log a set</span>
               </button>
             )}
+
+            <section className="native-momentum-card" aria-labelledby="native-momentum-title">
+              <div className="native-section-heading">
+                <div>
+                  <span>Consistency</span>
+                  <h2 id="native-momentum-title">July activity</h2>
+                </div>
+                <strong>{activeDays}<small>/31 days</small></strong>
+              </div>
+              <div className="native-activity-grid" aria-label={`${activeDays} active days in July`}>
+                <span className="sr-only">
+                  {julyActivity.filter(day => day.count > 0).map(day => `July ${day.day}: ${day.count} push-ups`).join('; ') || 'No activity logged'}
+                </span>
+                {julyActivity.map(({ day, count }) => (
+                  <span
+                    key={day}
+                    className={count > 0 ? 'is-active' : ''}
+                    style={{ '--activity-strength': Math.min(1, 0.32 + count / 140) } as React.CSSProperties}
+                    title={`July ${day}: ${count} push-ups`}
+                  />
+                ))}
+              </div>
+              <div className="native-momentum-stats">
+                <div><span>Active-day average</span><strong>{averageActiveDay}</strong></div>
+                <div><span>Best day</span><strong>{stats?.best_day ?? 0}</strong></div>
+                <div><span>Longest streak</span><strong>{stats?.longest_streak ?? 0}</strong></div>
+              </div>
+            </section>
+
+            {nextMilestone && (
+              <section className="native-milestone-card" aria-label="Next milestone">
+                <span className="native-milestone-icon" aria-hidden="true">✦</span>
+                <div>
+                  <span>Next milestone</span>
+                  <strong>{nextMilestone.threshold.toLocaleString()} reps</strong>
+                  <small>{(nextMilestone.threshold - totalPushups).toLocaleString()} to go</small>
+                </div>
+              </section>
+            )}
+
+            {recentLogEntries.length > 0 && (
+              <section className="native-recent-card" aria-labelledby="native-recent-title">
+                <div className="native-section-heading">
+                  <div>
+                    <span>History</span>
+                    <h2 id="native-recent-title">Recent work</h2>
+                  </div>
+                </div>
+                <div className="native-recent-list">
+                  {recentLogEntries.map(([date, count]) => (
+                    <div key={date}>
+                      <span className="native-recent-check" aria-hidden="true">✓</span>
+                      <div>
+                        <strong>{new Date(`${date}T12:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</strong>
+                        <small>Completed</small>
+                      </div>
+                      <b>{count.toLocaleString()}<small> reps</small></b>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            <nav className="native-quick-links" aria-label="Quick links">
+              <Link href="/leaderboard"><span aria-hidden="true">⌁</span><div><strong>Standings</strong><small>See where you rank</small></div><b aria-hidden="true">›</b></Link>
+              <Link href="/contests"><span aria-hidden="true">◉</span><div><strong>Your crews</strong><small>Train with your people</small></div><b aria-hidden="true">›</b></Link>
+            </nav>
           </section>
 
           {/* Header */}
@@ -950,19 +1039,20 @@ export default function DashboardPage() {
               LOG YOUR PUSH-UPS
             </h2>
 
-            <div className="mb-5 border border-amber-300/25 bg-amber-300/[0.06] p-4 text-sm leading-relaxed text-amber-100/80" role="note">
+            <div className="native-safety-note mb-5 border border-amber-300/25 bg-amber-300/[0.06] p-4 text-sm leading-relaxed text-amber-100/80" role="note">
               <strong className="text-amber-100">Train safely.</strong> Use controlled form, rest
-              between sets, and follow your own ability—not the leaderboard. Stop if you feel
-              pain, dizziness, or unusual shortness of breath. The daily logging cap is 500.
+              between sets, and stop if anything feels wrong. Daily cap: 500.
             </div>
 
             {/* Quick Add Buttons */}
-            <div className="grid grid-cols-5 gap-2 mb-4">
+            <div className="native-log-presets grid grid-cols-5 gap-2 mb-4" aria-label="Rep presets">
               {[10, 20, 25, 50, 100].map((num) => (
                 <button
                   key={num}
+                  type="button"
                   onClick={() => setPushupCount(num.toString())}
-                  className="min-h-12 bg-white/10 hover:bg-white/20 text-sm font-bold transition-colors"
+                  className={`min-h-12 bg-white/10 hover:bg-white/20 text-sm font-bold transition-colors ${pushupCount === num.toString() ? 'is-selected' : ''}`}
+                  aria-pressed={pushupCount === num.toString()}
                 >
                   +{num}
                 </button>
@@ -970,8 +1060,11 @@ export default function DashboardPage() {
             </div>
 
             <div className="flex flex-col gap-3 items-center justify-center">
-              <div className="flex flex-col sm:flex-row gap-3 items-center w-full max-w-xl">
+              <div className="native-log-fields flex flex-col sm:flex-row gap-3 items-center w-full max-w-xl">
+                <div className="native-log-field">
+                <label htmlFor="pushup-count" className="sr-only native-field-label">Reps completed</label>
                 <input
+                  id="pushup-count"
                   ref={nativeRepInputRef}
                   type="number"
                   value={pushupCount}
@@ -979,9 +1072,14 @@ export default function DashboardPage() {
                   placeholder="0"
                   min="1"
                   max="500"
+                  inputMode="numeric"
                   className="input text-center text-2xl font-bold flex-1"
                 />
+                </div>
+                <div className="native-log-field">
+                <label htmlFor="pushup-date" className="sr-only native-field-label">Date completed</label>
                 <input
+                  id="pushup-date"
                   type="date"
                   value={logDate}
                   onChange={(e) => setLogDate(e.target.value)}
@@ -989,13 +1087,14 @@ export default function DashboardPage() {
                   max="2026-07-31"
                   className="input text-center flex-1"
                 />
+                </div>
               </div>
               <button
                 onClick={logPushups}
                 disabled={logging || !pushupCount}
                 className="btn-gold px-8 py-3 disabled:opacity-50 w-full max-w-xl"
               >
-                {logging ? 'Logging...' : 'Log push-ups'}
+                {logging ? 'Saving…' : nativeMode ? 'Save set' : 'Log push-ups'}
               </button>
             </div>
 
