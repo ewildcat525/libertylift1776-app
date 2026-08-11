@@ -39,11 +39,17 @@ export async function POST(request: NextRequest) {
   switch (type) {
     case 'merch-final-call':
     case 'merch-last-hours':
+    case 'merch-final-run':
       message = buildMerchCampaignEmail({
         profileId: testProfileId,
         displayName: 'Kevin',
         totalPushups: 1842,
-        variant: type === 'merch-last-hours' ? 'last-hours' : 'final-call',
+        variant:
+          type === 'merch-last-hours'
+            ? 'last-hours'
+            : type === 'merch-final-run'
+              ? 'final-run'
+              : 'final-call',
       })
       break
     case 'final-push':
