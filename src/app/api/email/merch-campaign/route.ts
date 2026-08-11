@@ -5,18 +5,31 @@
 // 1,776 push-ups, so the campaign never widens past people who did.
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase-admin'
-import { buildMerchCampaignEmail, sendEmailBatch, type MerchCampaignVariant } from '@/lib/email'
+import {
+  buildMerchCampaignEmail,
+  scheduleEmailBatch,
+  sendEmailBatch,
+  type MerchCampaignVariant,
+} from '@/lib/email'
 import { CHALLENGE_TOTAL } from '@/lib/dates'
 import { merchConfig, ordersOpen } from '@/lib/merch'
 
 export const dynamic = 'force-dynamic'
-export const maxDuration = 60
+export const maxDuration = 300
 
 // Each touch is its own campaign key so the ledger keeps them apart and a
 // second send needs no migration — only a different `campaign` parameter.
-const CAMPAIGNS: Record<string, { confirm: string; variant: MerchCampaignVariant }> = {
+const CAMPAIGNS: Record<
+  string,
+  { confirm: string; variant: MerchCampaignVariant; scheduledAt?: string }
+> = {
   'merch-final-call-2026': { confirm: 'SEND_MERCH_FINAL_CALL_2026', variant: 'final-call' },
   'merch-last-hours-2026': { confirm: 'SEND_MERCH_LAST_HOURS_2026', variant: 'last-hours' },
+  'merch-final-run-2026': {
+    confirm: 'SEND_MERCH_FINAL_RUN_2026',
+    variant: 'final-run',
+    scheduledAt: '2026-08-11T13:30:00.000Z',
+  },
 }
 
 // Vercel cron expressions are UTC. These resolve to Thursday, August 6 at
@@ -135,19 +148,25 @@ async function runCampaign(
     return NextResponse.json({ error: 'Email delivery is not configured' }, { status: 503 })
   }
 
-  const { sentKeys, failedKeys } = await sendEmailBatch(
-    eligible.map((recipient) => ({
-      key: recipient.id,
-      to: recipient.email as string,
-      ...buildMerchCampaignEmail({
-        profileId: recipient.id,
-        displayName: recipient.display_name,
-        totalPushups: totalPushupsOf(recipient),
-        variant: campaign.variant,
-      }),
-    })),
-    { idempotencyKeyPrefix: campaignId }
-  )
+  const messages = eligible.map((recipient) => ({
+    key: recipient.id,
+    to: recipient.email as string,
+    tags: [{ name: 'campaign', value: campaignId }],
+    ...buildMerchCampaignEmail({
+      profileId: recipient.id,
+      displayName: recipient.display_name,
+      totalPushups: totalPushupsOf(recipient),
+      variant: campaign.variant,
+    }),
+  }))
+  const { sentKeys, failedKeys, emailIds = [] } = campaign.scheduledAt
+    ? await scheduleEmailBatch(messages, campaign.scheduledAt, {
+        idempotencyKeyPrefix: campaignId,
+      })
+    : {
+        ...(await sendEmailBatch(messages, { idempotencyKeyPrefix: campaignId })),
+        emailIds: [] as string[],
+      }
 
   if (sentKeys.length > 0) {
     const { error: ledgerWriteError } = await supabase
@@ -195,6 +214,8 @@ async function runCampaign(
     eligibleRecipients: eligible.length,
     sent: sentKeys.length,
     truncated,
+    scheduledAt: campaign.scheduledAt || null,
+    scheduledEmailIds: emailIds,
   })
 }
 

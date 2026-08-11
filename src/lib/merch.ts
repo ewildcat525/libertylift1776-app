@@ -52,7 +52,7 @@ export const merchConfig = {
   },
 
   fulfillment: {
-    preorderNote: 'Orders close Sunday, August 9 at midnight ET — first batch ships the week of August 10.',
+    preorderNote: 'Final orders close Thursday, August 13 at 11:59 PM ET.',
     shipsFrom: 'Printed and shipped from the USA',
     usOnly: true,
   },
@@ -60,9 +60,9 @@ export const merchConfig = {
   // The one-time final-call window. The /merch countdown, the buy gate, and
   // the campaign email all read these — never restate a date in markup.
   finalCall: {
-    // Midnight ET ending Sunday, August 9 2026 (EDT is UTC-4).
-    ordersCloseAt: '2026-08-10T00:00:00-04:00',
-    ordersCloseLabel: 'Sunday, August 9 · midnight ET',
+    // End of day Thursday, August 13 2026 (EDT is UTC-4).
+    ordersCloseAt: '2026-08-14T00:00:00-04:00',
+    ordersCloseLabel: 'Thursday, August 13 · 11:59 PM ET',
     firstBatchLabel: 'August 10',
   },
 } as const

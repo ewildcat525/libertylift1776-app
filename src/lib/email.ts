@@ -266,7 +266,7 @@ export function buildFinaleEmail({
 // Every date, price and claim below comes from src/lib/merch.ts — the same
 // source the /merch page renders from, so the email and the page can never
 // disagree about when ordering closes.
-export type MerchCampaignVariant = 'final-call' | 'last-hours'
+export type MerchCampaignVariant = 'final-call' | 'last-hours' | 'final-run'
 
 interface MerchCampaignArgs {
   profileId: string
@@ -289,6 +289,13 @@ const VARIANT_COPY = {
     badge: 'HOURS LEFT',
     headline: 'Tonight the order page comes down.',
     opener: 'You earned this shirt. There are hours left to claim it.',
+  },
+  'final-run': {
+    subject: 'Thank you, and one last chance at the 2026 tee',
+    preheader: `The shirts are here. Final orders close ${merchConfig.finalCall.ordersCloseLabel}.`,
+    badge: 'FINAL PRODUCTION RUN',
+    headline: 'One last chance at the 2026 tee.',
+    opener: 'Thank you for answering the call.',
   },
 } as const
 
@@ -325,8 +332,104 @@ export function buildMerchCampaignEmail({
   // fallback still asserts the threshold rather than softening it.
   const earnedLine =
     typeof totalPushups === 'number' && totalPushups > 0
-      ? `${name} — you logged <strong style="color:#FFFFFF;">${totalPushups.toLocaleString()} push-ups</strong> in 31 days. This is the shirt for that.`
-      : `${name} — you finished all ${goal}. This is the shirt for that.`
+      ? `${name}, you logged <strong style="color:#FFFFFF;">${totalPushups.toLocaleString()} push-ups</strong> in 31 days. This is the shirt for that.`
+      : `${name}, you finished all ${goal}. This is the shirt for that.`
+
+  if (variant === 'final-run') {
+    const text = [
+      `Hi ${displayName || 'Patriot'},`,
+      '',
+      `First and foremost, thank you for participating in the 2026 LibertyLift Challenge. It was incredibly rewarding to see everyone embrace the challenge and ultimately reach the ${goal}-rep goal.`,
+      '',
+      `The T-shirts from our first order have arrived (thanks to the aptly named Teddys_American_Mustache for the modeling), and I'll be shipping most of them today. I had to estimate the sizing for that initial run, so I'll need to place one final order to fill in the gaps.`,
+      '',
+      'Current inventory:',
+      '- 2 × Medium',
+      '- 3 × XL',
+      '- 3 × XXL',
+      '',
+      `I'd love to get a few more orders so I'm not doing a tiny production run at more than $100 per shirt!`,
+      '',
+      `Orders will remain open until ${finalCall.ordersCloseLabel}. After that, ordering will close for good. You'll forever miss out on the 2026 edition tee and have to wait for next year’s version :)`,
+      '',
+      `Order here: ${checkoutUrl}`,
+      '',
+      `Thanks again for being part of LibertyLift. Let's run it back bigger and better next year.`,
+      '',
+      'Kevin',
+      'LibertyLift1776',
+      '',
+      `Already ordered? You're all set. Thank you.`,
+      `Unsubscribe: ${unsubscribe}`,
+    ].join('\n')
+
+    return {
+      from: 'Kevin <kevin@libertylift1776.com>',
+      subject: copy.subject,
+      listUnsubscribeUrl: unsubscribe,
+      text,
+      html: `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${copy.subject}</title></head>
+<body style="margin:0;padding:0;background:#070B14;color:#F5F2E8;font-family:Arial,Helvetica,sans-serif;">
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;">${copy.preheader}</div>
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#070B14;">
+    <tr><td align="center" style="padding:28px 14px 120px;">
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:620px;background:#101725;border:1px solid #31394A;">
+        <tr><td style="height:6px;background:#B22234;"></td></tr>
+        <tr><td align="center" style="padding:28px 28px 14px;">
+          <div style="color:#C9A227;font-size:12px;letter-spacing:4px;font-weight:bold;">LIBERTY LIFT / 1776</div>
+          <div style="margin-top:16px;color:#FFFFFF;font-size:12px;letter-spacing:3px;font-weight:bold;">${copy.badge}</div>
+          <h1 style="margin:10px 0 0;color:#FFFFFF;font-size:34px;line-height:1.1;">${copy.headline}</h1>
+        </td></tr>
+        <tr><td align="center" style="padding:16px 24px 4px;">
+          <a href="${checkoutUrl}" style="text-decoration:none;"><img src="${EMAIL_ASSET_ORIGIN}/merch/libertylift-final-run-2026.jpg" alt="Liberty Lift 1776 Reps for the Republic shirt" width="540" style="display:block;width:100%;max-width:540px;height:auto;border:1px solid #31394A;" /></a>
+        </td></tr>
+        <tr><td style="padding:22px 38px 8px;color:#E6E6EC;font-size:16px;line-height:1.65;">
+          <p style="margin:0 0 16px;">Hi ${name},</p>
+          <p style="margin:0 0 16px;">First and foremost, thank you for participating in the <strong style="color:#FFFFFF;">2026 LibertyLift Challenge</strong>. It was incredibly rewarding to see everyone embrace the challenge and ultimately reach the ${goal}-rep goal.</p>
+          <p style="margin:0 0 16px;">The T-shirts from our first order have arrived (thanks to the aptly named Teddys_American_Mustache for the modeling), and I'll be shipping most of them today. I had to estimate the sizing for that initial run, so I'll need to place one final order to fill in the gaps.</p>
+        </td></tr>
+        <tr><td style="padding:0 38px 18px;">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border:1px solid #31394A;background:#0B101B;">
+            <tr><td style="padding:18px 22px;color:#E6E6EC;font-size:16px;line-height:1.8;">
+              <div style="color:#C9A227;font-size:11px;letter-spacing:2px;font-weight:bold;margin-bottom:6px;">CURRENT INVENTORY</div>
+              <div>2 × Medium</div><div>3 × XL</div><div>3 × XXL</div>
+            </td></tr>
+          </table>
+        </td></tr>
+        <tr><td style="padding:0 38px 18px;color:#E6E6EC;font-size:16px;line-height:1.65;">
+          <p style="margin:0 0 16px;">I'd love to get a few more orders so I'm not doing a tiny production run at more than $100 per shirt!</p>
+          <p style="margin:0;">After this deadline, ordering will close for good. You'll forever miss out on the 2026 edition tee and have to wait for next year’s version :)</p>
+        </td></tr>
+        <tr><td style="padding:0 38px 8px;">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border:1px solid #B22234;background:#0B101B;">
+            <tr><td align="center" style="padding:20px 14px;">
+              <div style="color:#C9A227;font-size:11px;letter-spacing:2px;font-weight:bold;">ORDERS CLOSE</div>
+              <div style="margin-top:6px;color:#FFFFFF;font-size:22px;font-weight:bold;">${finalCall.ordersCloseLabel}</div>
+            </td></tr>
+          </table>
+        </td></tr>
+        <tr><td align="center" style="padding:22px 38px 18px;">
+          <a href="${checkoutUrl}" style="display:inline-block;background:#C9A227;color:#090D16;text-decoration:none;font-size:16px;font-weight:bold;padding:16px 30px;border-radius:3px;">ORDER YOUR 2026 TEE →</a>
+          <div style="margin-top:10px;color:#9A9AA5;font-size:12px;">${price} all-in · shipping included</div>
+        </td></tr>
+        <tr><td style="padding:4px 38px 28px;color:#E6E6EC;font-size:16px;line-height:1.65;">
+          <p style="margin:0;">Thanks again for being part of LibertyLift. Let's run it back bigger and better next year.</p>
+          <p style="margin:18px 0 0;color:#FFFFFF;">Kevin<br/>LibertyLift1776</p>
+        </td></tr>
+        <tr><td align="center" style="padding:22px 32px;background:#0B101B;border-top:1px solid #31394A;">
+          <div style="color:#9A9AA5;font-size:12px;line-height:1.5;">Already ordered? You're all set. Thank you.</div>
+          <div style="margin-top:14px;color:#9A9AA5;font-size:11px;"><a href="${unsubscribe}" style="color:#9A9AA5;">Unsubscribe from these emails</a></div>
+        </td></tr>
+        <tr><td style="height:6px;background:#244A86;"></td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`,
+    }
+  }
 
   const ctaButton = (label: string) =>
     `<a href="${checkoutUrl}" style="display:inline-block;background:#C9A227;color:#090D16;text-decoration:none;font-size:16px;font-weight:bold;padding:16px 30px;border-radius:3px;">${label}</a>`
@@ -453,9 +556,11 @@ export function buildMerchCampaignEmail({
 export interface OutboundEmail {
   key: string
   to: string
+  from?: string
   subject: string
   html: string
   text?: string
+  tags?: { name: string; value: string }[]
   // One-click unsubscribe target. Bulk senders need this in the headers, not
   // just in the body, to stay out of Gmail/Yahoo spam folders.
   listUnsubscribeUrl?: string
@@ -489,11 +594,12 @@ export async function sendEmailBatch(
 
     const body = JSON.stringify(
       chunk.map((m) => ({
-        from,
+        from: m.from || from,
         to: [m.to],
         subject: m.subject,
         html: m.html,
         ...(m.text ? { text: m.text } : {}),
+        ...(m.tags ? { tags: m.tags } : {}),
         ...(m.listUnsubscribeUrl
           ? {
               headers: {
@@ -536,4 +642,81 @@ export async function sendEmailBatch(
   }
 
   return { sentKeys, failedKeys }
+}
+
+export async function scheduleEmailBatch(
+  messages: OutboundEmail[],
+  scheduledAt: string,
+  options: { idempotencyKeyPrefix?: string } = {}
+) {
+  const apiKey = process.env.RESEND_API_KEY
+  const from = process.env.EMAIL_FROM
+  const sentKeys: string[] = []
+  const failedKeys: string[] = []
+  const emailIds: string[] = []
+
+  if (!apiKey || !from || messages.length === 0) {
+    return { sentKeys, failedKeys, emailIds }
+  }
+
+  // Resend does not support scheduled_at on its batch endpoint, so schedule
+  // each personalized message individually. Keeping requests below the
+  // default five-per-second team limit avoids turning a one-time campaign
+  // into a burst of 429 responses.
+  for (const message of messages) {
+    const body = JSON.stringify({
+      from: message.from || from,
+      to: [message.to],
+      subject: message.subject,
+      html: message.html,
+      ...(message.text ? { text: message.text } : {}),
+      ...(message.tags ? { tags: message.tags } : {}),
+      scheduled_at: scheduledAt,
+      ...(message.listUnsubscribeUrl
+        ? {
+            headers: {
+              'List-Unsubscribe': `<${message.listUnsubscribeUrl}>`,
+              'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+            },
+          }
+        : {}),
+    })
+    const headers: Record<string, string> = {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+      'User-Agent': 'libertylift1776-app/1.0',
+    }
+
+    if (options.idempotencyKeyPrefix) {
+      headers['Idempotency-Key'] = idempotencyKeyFor(options.idempotencyKeyPrefix, body)
+    }
+
+    let accepted = false
+    for (let attempt = 0; attempt < 3 && !accepted; attempt++) {
+      if (attempt > 0) await new Promise((resolve) => setTimeout(resolve, 1000 * 2 ** attempt))
+
+      const response = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers,
+        body,
+      })
+
+      if (response.ok) {
+        const result = (await response.json()) as { id?: string }
+        if (result.id) emailIds.push(result.id)
+        accepted = true
+        break
+      }
+
+      console.error('Resend scheduled email failed:', response.status, await response.text())
+      if (response.status !== 429 && response.status < 500) break
+    }
+
+    if (accepted) sentKeys.push(message.key)
+    else failedKeys.push(message.key)
+
+    await new Promise((resolve) => setTimeout(resolve, 220))
+  }
+
+  return { sentKeys, failedKeys, emailIds }
 }
