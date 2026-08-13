@@ -1,7 +1,6 @@
 'use client'
 
 import Link from 'next/link'
-import Image from 'next/image'
 import { useEffect, useMemo, useState } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { track } from '@vercel/analytics'
@@ -206,15 +205,27 @@ export default function Home() {
         </header>
 
         <section className="offseason-hero">
-          <Image
-            src="/liberty-lift-hero-vintage.webp"
-            alt=""
-            fill
-            priority
-            sizes="100vw"
-            className="campaign-hero-video"
-            aria-hidden="true"
-          />
+          {showVideo ? (
+            <video
+              className="campaign-hero-video"
+              autoPlay
+              muted
+              loop
+              playsInline
+              poster="/liberty-lift-hero-vintage.webp"
+              aria-hidden="true"
+            >
+              <source src="/liberty-lift-pushup-loop.mp4" type="video/mp4" />
+            </video>
+          ) : (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              className="campaign-hero-video"
+              src="/liberty-lift-hero-vintage.webp"
+              alt=""
+              aria-hidden="true"
+            />
+          )}
           <div className="campaign-hero-wash" aria-hidden="true" />
           <div className="film-grain" aria-hidden="true" />
 
