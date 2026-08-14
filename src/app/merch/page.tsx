@@ -6,12 +6,12 @@ import MerchDeadline from '@/components/MerchDeadline'
 import { merchConfig, merchTotal, merchCost, formatUsd } from '@/lib/merch'
 
 export const metadata: Metadata = {
-  title: 'Merch — Liberty Lift 1776',
+  title: '2026 Finisher Tee — Liberty Lift 1776',
   description:
-    'The Reps for the Republic tee. You can\'t buy it — you unlock it by finishing all 1,776 push-ups. Transparent pricing. Orders close August 9 at midnight ET.',
+    'The sold-out Reps for the Republic finisher tee. The 2026 order window is closed and every shirt was made only for a finisher who ordered one.',
   openGraph: {
-    title: 'Reps for the Republic Tee — Liberty Lift 1776',
-    description: 'Earned, not given: finish 1,776 push-ups to unlock it. Orders close August 9 at midnight ET.',
+    title: 'Sold Out: 2026 Reps for the Republic Tee — Liberty Lift 1776',
+    description: 'The 2026 finisher edition is complete. Earned, made to order, and never offered as ordinary merch.',
     images: [{ url: '/merch/reps-tee-both.jpg', width: 1402, height: 1122 }],
   },
 }
@@ -34,7 +34,7 @@ export default function MerchPage() {
                 Unlocks at {goal} push-ups
               </span>
               <span className="text-[10px] font-extrabold uppercase tracking-[0.1em] px-2 py-1 bg-liberty-gold/15 text-liberty-gold border border-liberty-gold/40 leading-none">
-                Orders close {merchConfig.finalCall.ordersCloseLabel}
+                2026 sales complete
               </span>
             </div>
           </div>
@@ -74,10 +74,10 @@ export default function MerchPage() {
           {/* Everlane-style radical transparency: what it costs us vs. what you pay */}
           <div className="card p-6 mb-6">
             <h2 className="font-bebas text-2xl text-liberty-red mb-1">
-              Where your {formatUsd(merchTotal)} goes
+              What the 2026 shirt cost
             </h2>
             <p className="text-white/50 text-sm mb-4">
-              We believe you should know exactly what this shirt costs to make.
+              The completed run was priced transparently, down to the dollar.
             </p>
             <dl className="text-white/80">
               {pricing.breakdown.map((item) => (
@@ -94,7 +94,7 @@ export default function MerchPage() {
                 <dd>{formatUsd(merchCost)}</dd>
               </div>
               <div className="flex justify-between py-3 text-white">
-                <dt className="font-bebas text-xl tracking-wide">You pay, all-in</dt>
+                <dt className="font-bebas text-xl tracking-wide">2026 price, all-in</dt>
                 <dd className="font-bebas text-xl text-liberty-gold">{formatUsd(merchTotal)}</dd>
               </div>
             </dl>
@@ -121,14 +121,14 @@ export default function MerchPage() {
               ))}
             </ul>
             <p className="text-white/50 text-sm">
-              Sizes {product.sizes.join(' / ')} — you pick your size at checkout.
+              The 2026 run was offered in sizes {product.sizes.join(' / ')}.
             </p>
           </div>
 
-          {/* Shipping & how buying works */}
+          {/* The finished 2026 edition */}
           <div className="card p-6 mb-8">
             <h2 className="font-bebas text-2xl text-liberty-red mb-4">
-              Shipping &amp; checkout
+              The 2026 edition
             </h2>
             <ul className="text-white/70 text-sm space-y-2">
               <li>
@@ -137,10 +137,10 @@ export default function MerchPage() {
               <li>{fulfillment.shipsFrom}</li>
               {fulfillment.usOnly && <li>US shipping only</li>}
               <li>
-                Ordering unlocks once you&apos;ve logged all {goal} push-ups — this shirt is
-                proof of work, not just merch.
+                It was available only to people who logged all {goal} push-ups — proof of
+                work, not ordinary merch.
               </li>
-              <li>On your phone it&apos;s two taps with Apple Pay or Google Pay.</li>
+              <li>The order window will not reopen. The next finisher edition belongs to 2027.</li>
             </ul>
           </div>
 

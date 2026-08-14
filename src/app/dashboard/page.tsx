@@ -659,14 +659,14 @@ export default function DashboardPage() {
                 <path d="m6 6 12 12" />
               </svg>
             </button>
-            <div className="app-eyebrow mb-3">🔓 Merch shop unlocked</div>
+            <div className="app-eyebrow mb-3">2026 finisher edition</div>
             <h2 id="merch-unlock-title" className="font-bebas text-4xl text-white mb-3">
               You earned the shirt.
             </h2>
             <p className="text-white/60 text-sm mb-6 max-w-sm mx-auto">
-              All 1,776 push-ups, done. The Reps for the Republic tee just
-              unlocked — this one&apos;s proof of work, not just merch. Ships in
-              August.
+              All 1,776 push-ups, done. The Reps for the Republic tee was made
+              for finishers like you. Sales are complete for 2026, but the edition
+              remains part of the record.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <a
@@ -674,14 +674,14 @@ export default function DashboardPage() {
                 onClick={() => track('merch_unlock_cta_clicked')}
                 className="btn-primary px-8 py-3"
               >
-                Order your tee
+                View the 2026 edition
               </a>
               <button
                 type="button"
                 onClick={() => setShowMerchUnlock(false)}
                 className="btn-secondary px-8 py-3"
               >
-                Maybe later
+                Close
               </button>
             </div>
           </div>
@@ -950,7 +950,7 @@ export default function DashboardPage() {
                     onClick={() => track('merch_unlock_cta_clicked')}
                     className="text-liberty-gold hover:underline"
                   >
-                    🔓 You earned the Reps for the Republic tee — claim it →
+                    You earned the Reps for the Republic tee — view the 2026 edition →
                   </a>
                 </p>
               )}

@@ -17,7 +17,9 @@ type GateState =
   | { status: 'closed' }
 
 export default function MerchBuy() {
-  const [gate, setGate] = useState<GateState>({ status: 'loading' })
+  const [gate, setGate] = useState<GateState>(
+    merchConfig.finalCall.seasonClosed ? { status: 'closed' } : { status: 'loading' }
+  )
   const supabase = createClient()
 
   useEffect(() => {
@@ -58,12 +60,23 @@ export default function MerchBuy() {
       <div className="native-safe-bottom sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-liberty-dark/95 backdrop-blur border-t border-white/15 px-4 py-3">
         <div className="flex items-center justify-between gap-3">
           <div className="shrink-0">
-            <div className="font-bebas text-2xl text-white leading-none">
-              {formatUsd(merchTotal)}
-            </div>
-            <div className="text-white/50 text-[10px] uppercase tracking-[0.12em] font-bold">
-              all-in, shipping included
-            </div>
+            {gate.status === 'closed' ? (
+              <>
+                <div className="font-bebas text-2xl text-white leading-none">2026 edition</div>
+                <div className="text-white/50 text-[10px] uppercase tracking-[0.12em] font-bold">
+                  sales complete
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="font-bebas text-2xl text-white leading-none">
+                  {formatUsd(merchTotal)}
+                </div>
+                <div className="text-white/50 text-[10px] uppercase tracking-[0.12em] font-bold">
+                  all-in, shipping included
+                </div>
+              </>
+            )}
           </div>
           <StickyAction gate={gate} />
         </div>
@@ -104,8 +117,8 @@ function GateBody({ gate }: { gate: GateState }) {
       <>
         <h2 className="font-bebas text-3xl text-white mb-2">Ordering has closed.</h2>
         <p className="text-white/60 text-sm max-w-md mx-auto">
-          The finisher tee was available only to people who logged all {goal} push-ups, and
-          only until {merchConfig.finalCall.ordersCloseLabel}. We produced only what was ordered.
+          The 2026 finisher tee was available only to people who logged all {goal} push-ups.
+          Sales are complete for this year, and we produced only what was ordered.
         </p>
       </>
     )

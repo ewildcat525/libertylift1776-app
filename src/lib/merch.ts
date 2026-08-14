@@ -4,10 +4,10 @@
 import { CHALLENGE_TOTAL } from './dates'
 
 export const merchConfig = {
-  // Paste the live Stripe Payment Link here (https://buy.stripe.com/...).
-  // While this is empty the buy button renders as a disabled "Coming soon"
-  // even for people who have unlocked it.
-  stripePaymentLink: 'https://buy.stripe.com/00waER0kX0pBfNR1qY67S00' as string,
+  // Keep the retired checkout URL out of the client bundle. Keep the matching
+  // link deactivated in Stripe too so a previously saved URL cannot accept
+  // another 2026 order.
+  stripePaymentLink: '' as string,
 
   product: {
     name: 'Reps for the Republic Tee',
@@ -52,7 +52,7 @@ export const merchConfig = {
   },
 
   fulfillment: {
-    preorderNote: 'Final orders close Thursday, August 13 at 11:59 PM ET.',
+    preorderNote: 'The 2026 order window is closed. Every shirt was made only for a finisher who ordered one.',
     shipsFrom: 'Printed and shipped from the USA',
     usOnly: true,
   },
@@ -60,6 +60,9 @@ export const merchConfig = {
   // The one-time final-call window. The /merch countdown, the buy gate, and
   // the campaign email all read these — never restate a date in markup.
   finalCall: {
+    // This manual switch closes every checkout and campaign path immediately,
+    // even before the original date-based deadline has passed.
+    seasonClosed: true,
     // End of day Thursday, August 13 2026 (EDT is UTC-4).
     ordersCloseAt: '2026-08-14T00:00:00-04:00',
     ordersCloseLabel: 'Thursday, August 13 · 11:59 PM ET',
@@ -74,7 +77,7 @@ export const ordersCloseAt = new Date(merchConfig.finalCall.ordersCloseAt)
 // Ordering is open until the final-call deadline passes. Everything that can
 // take money — the buy button, the campaign email — checks this first.
 export function ordersOpen(now: Date = new Date()): boolean {
-  return now.getTime() < ordersCloseAt.getTime()
+  return !merchConfig.finalCall.seasonClosed && now.getTime() < ordersCloseAt.getTime()
 }
 
 export const merchCost = merchConfig.pricing.breakdown.reduce(
