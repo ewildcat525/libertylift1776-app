@@ -6,6 +6,8 @@ import { merchConfig, ordersCloseAt } from '@/lib/merch'
 // The deadline is the whole pitch of the final call, so it can't live only in
 // an email — anyone who lands on /merch has to see the same clock.
 function remainingLabel(now: Date) {
+  if (merchConfig.finalCall.seasonClosed) return null
+
   const ms = ordersCloseAt.getTime() - now.getTime()
   if (ms <= 0) return null
 
@@ -20,12 +22,16 @@ function remainingLabel(now: Date) {
 }
 
 export default function MerchDeadline() {
-  // Server render stays neutral; the live clock starts after hydration so the
-  // markup can't mismatch.
+  const permanentlyClosed = merchConfig.finalCall.seasonClosed
+
+  // A manually closed season renders closed on the server too; an active
+  // season starts its live clock after hydration so the markup can't mismatch.
   const [countdown, setCountdown] = useState<string | null>(null)
-  const [closed, setClosed] = useState(false)
+  const [closed, setClosed] = useState<boolean>(permanentlyClosed)
 
   useEffect(() => {
+    if (permanentlyClosed) return
+
     function tick() {
       const label = remainingLabel(new Date())
       setCountdown(label)
@@ -34,14 +40,14 @@ export default function MerchDeadline() {
     tick()
     const timer = setInterval(tick, 30000)
     return () => clearInterval(timer)
-  }, [])
+  }, [permanentlyClosed])
 
   if (closed) {
     return (
       <div className="card p-4 mb-6 border-white/20 text-center">
         <div className="app-eyebrow text-white/50">Ordering closed</div>
         <p className="text-white/60 text-sm mt-1">
-          The finisher tee is no longer available. We produced only what was ordered.
+          2026 shirt sales are complete. We produced only what was ordered.
         </p>
       </div>
     )

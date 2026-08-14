@@ -980,11 +980,11 @@ export default function FinaleClient() {
                   onClick={() => track('finale_merch_cta_clicked')}
                   className="finale-merch-cta"
                 >
-                  <span>Claim the shirt you earned</span>
+                  <span>View the sold-out 2026 edition</span>
                   <span aria-hidden="true">→</span>
                 </Link>
                 <small className="finale-merch-note">
-                  Finisher status is verified before ordering.
+                  2026 ordering is closed. Every shirt was made only for a finisher who ordered one.
                 </small>
               </div>
             </div>
