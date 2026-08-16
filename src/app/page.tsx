@@ -85,6 +85,7 @@ export default function Home() {
     setAccountDeleted(new URLSearchParams(window.location.search).get('account') === 'deleted')
 
     // Defer the 1.7MB hero video until after first paint; the poster carries the hero.
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
     const timer = setTimeout(() => setShowVideo(true), 300)
     return () => clearTimeout(timer)
   }, [])
@@ -143,8 +144,13 @@ export default function Home() {
     event.preventDefault()
     const email = nextYearEmail.trim().toLowerCase()
 
-    if (!email || !email.includes('@')) {
-      setNextYearError('Enter a valid email address.')
+    if (!email) {
+      setNextYearError('Enter your email so we can reach you.')
+      return
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+      setNextYearError('That address is missing something. Check it and try again.')
       return
     }
 
@@ -170,9 +176,11 @@ export default function Home() {
 
   if (postContest) {
     const total = finalCount !== null ? finalCount.toLocaleString() : '357,879'
+    const signedOut = authReady && !user
+    const recruitView = !user
 
     return (
-      <main className="campaign-page offseason-page">
+      <main className={`campaign-page offseason-page${recruitView ? ' offseason-page-recruit' : ''}`}>
         {accountDeleted && (
           <div className="fixed inset-x-3 top-[max(4.75rem,calc(env(safe-area-inset-top)+4.25rem))] z-[90] mx-auto max-w-lg border border-green-400/40 bg-[#10100f]/95 px-4 py-3 text-center text-sm font-semibold text-green-200 shadow-2xl backdrop-blur" role="status">
             Your account and challenge data were permanently deleted.
@@ -204,7 +212,7 @@ export default function Home() {
           </div>
         </header>
 
-        <section className="offseason-hero">
+        <section className={`offseason-hero${recruitView ? ' offseason-hero-recruit' : ''}`}>
           {showVideo ? (
             <video
               className="campaign-hero-video"
@@ -230,25 +238,24 @@ export default function Home() {
           <div className="film-grain" aria-hidden="true" />
 
           <div className="offseason-content">
-            <div className="campaign-kicker">
-              <span>The first Liberty Lift</span>
-              <span className="campaign-kicker-line" />
+            <div className="campaign-kicker offseason-rise">
+              <span className="campaign-kicker-line" aria-hidden="true" />
               <span>Returns July 2027</span>
             </div>
 
             <h1 className="offseason-title">
-              <span>2026</span>
-              <span>In the books.</span>
+              <span className="offseason-rise offseason-rise-delay-1">2026</span>
+              <span className="offseason-rise offseason-rise-delay-2">In the books.</span>
             </h1>
 
-            <p className="offseason-declaration">
+            <p className="offseason-declaration offseason-rise offseason-rise-delay-2">
               {authReady && user
                 ? 'Thank you for answering the call. We’ll see you again in July 2027.'
-                : 'America answered. We return in July 2027.'}
+                : 'America answered. 219 patriots logged 357,879 push-ups. We go again in July.'}
             </p>
 
             {authReady && user ? (
-              <div className="campaign-actions offseason-actions">
+              <div className="campaign-actions offseason-actions offseason-rise offseason-rise-delay-3">
                 <Link
                   href="/dashboard"
                   className="campaign-button campaign-button-primary"
@@ -261,15 +268,15 @@ export default function Home() {
                 </Link>
               </div>
             ) : authReady ? (
-              <div id="next-year" className="offseason-signup-shell">
+              <div id="next-year" className="offseason-signup-shell offseason-rise offseason-rise-delay-3">
                 {nextYearDone ? (
                   <div className="offseason-success" role="status">
                     <strong>You&apos;re on the 2027 list.</strong>
-                    <span>We&apos;ll send one message when enlistment opens.</span>
+                    <span>We&apos;ll send one message when July 2027 enlistment opens.</span>
                   </div>
                 ) : (
                   <form onSubmit={joinNextYear} className="offseason-signup-form">
-                    <label htmlFor="offseason-email">Be first to know when enlistment opens.</label>
+                    <label htmlFor="offseason-email">Be first to know when enlistment opens</label>
                     <div className="offseason-signup-fields">
                       <input
                         id="offseason-email"
@@ -284,52 +291,106 @@ export default function Home() {
                           setNextYearEmail(event.target.value)
                           setNextYearError(null)
                         }}
+                        aria-invalid={nextYearError ? true : undefined}
+                        aria-describedby={nextYearError ? 'offseason-email-note offseason-email-error' : 'offseason-email-note'}
                         placeholder="you@example.com"
                         required
                       />
                       <button type="submit" disabled={nextYearBusy}>
-                        {nextYearBusy ? 'Joining...' : 'Count me in for 2027'}
+                        {nextYearBusy ? 'Signing you up…' : 'Count me in'}
                       </button>
                     </div>
-                    <small>One message when 2027 registration opens. Nothing else.</small>
-                    {nextYearError && <p role="alert">{nextYearError}</p>}
+                    <small id="offseason-email-note">One message when 2027 registration opens. Nothing else.</small>
+                    {nextYearError && <p id="offseason-email-error" role="alert">{nextYearError}</p>}
                   </form>
                 )}
-
-                <Link
-                  href="/finale"
-                  className="offseason-hall-link"
-                  onClick={() => trackCta('offseason_hall')}
-                >
-                  Explore the 2026 Hall of Honor <span aria-hidden="true">→</span>
-                </Link>
               </div>
             ) : (
               <div className="offseason-auth-placeholder" aria-hidden="true" />
             )}
           </div>
 
-          <div className="offseason-proof" aria-label="2026 final results">
-            <div>
-              <span className="campaign-stat-value">{total}</span>
-              <span className="campaign-stat-label">push-ups together</span>
-            </div>
-            {enlisted !== null && (
+          {authReady && user && (
+            <div className="offseason-proof" aria-label="2026 final results">
               <div>
-                <span className="campaign-stat-value">{enlisted.toLocaleString()}</span>
-                <span className="campaign-stat-label">participants in 2026</span>
+                <span className="campaign-stat-value">{total}</span>
+                <span className="campaign-stat-label">push-ups together</span>
               </div>
-            )}
-          </div>
+              <div>
+                <span className="campaign-stat-value">219</span>
+                <span className="campaign-stat-label">patriots in 2026</span>
+              </div>
+            </div>
+          )}
         </section>
 
-        <footer className="offseason-footer">
-          <span>Liberty Lift / 1776</span>
-          <nav aria-label="Legal">
-            <Link href="/privacy">Privacy</Link>
-            <Link href="/terms">Terms</Link>
-          </nav>
-        </footer>
+        {signedOut && (
+          <>
+            <section className="offseason-impact" aria-labelledby="offseason-impact-title">
+              <div className="offseason-wrap">
+                <p className="offseason-section-label">The 2026 record</p>
+                <h2 id="offseason-impact-title">What 219 people did in one month.</h2>
+                <div className="offseason-tally">
+                  <div className="offseason-stat offseason-stat-primary">
+                    <strong>{total}</strong>
+                    <span>Push-ups logged</span>
+                  </div>
+                  <div className="offseason-stat">
+                    <strong>219</strong>
+                    <span>Patriots enlisted</span>
+                  </div>
+                  <div className="offseason-stat">
+                    <strong>1,634</strong>
+                    <span>Average per patriot</span>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section className="offseason-hall" aria-labelledby="offseason-hall-title">
+              <div className="offseason-wrap offseason-hall-inner">
+                <div>
+                  <p className="offseason-section-label">Hall of Honor</p>
+                  <h2 id="offseason-hall-title">Every name from 2026 is still on the wall.</h2>
+                </div>
+                <Link
+                  href="/finale"
+                  className="offseason-hall-link"
+                  onClick={() => trackCta('offseason_hall')}
+                >
+                  Explore the Hall of Honor <span aria-hidden="true">→</span>
+                </Link>
+              </div>
+            </section>
+
+            <footer className="offseason-footer offseason-footer-recruit">
+              <p className="offseason-creed">One standard. One mission. One nation.</p>
+              <div className="offseason-footer-row">
+                <Link href="/" className="campaign-nav-mark" aria-label="Liberty Lift 1776 home">
+                  <span className="campaign-nav-monogram" aria-hidden="true">LL</span>
+                  <span className="campaign-nav-name">Liberty Lift / 1776</span>
+                </Link>
+                <nav aria-label="Footer">
+                  <Link href="/finale">Hall of Honor</Link>
+                  <Link href="/merch">Merch</Link>
+                  <Link href="/support">Support</Link>
+                  <Link href="/privacy">Privacy</Link>
+                  <Link href="/terms">Terms</Link>
+                </nav>
+              </div>
+            </footer>
+          </>
+        )}
+
+        {authReady && user && (
+          <footer className="offseason-footer">
+            <span>Liberty Lift / 1776</span>
+            <nav aria-label="Legal">
+              <Link href="/privacy">Privacy</Link>
+              <Link href="/terms">Terms</Link>
+            </nav>
+          </footer>
+        )}
       </main>
     )
   }
