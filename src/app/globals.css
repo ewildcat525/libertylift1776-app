@@ -5597,11 +5597,22 @@ html[data-app-environment='native'] .offseason-footer {
 }
 
 /* Offseason homepage ------------------------------------------------------
-   Once the certified results are in, the homepage stops explaining the live
-   challenge. It thanks returning participants and recruits the next class. */
+   The live challenge has become a recruiting page for July 2027. The signed-
+   in path stays compact; the signed-out path carries the full campaign story. */
 .offseason-page {
   min-height: 100svh;
-  background: var(--campaign-ink);
+  background: #0b0b0c;
+}
+
+.offseason-page-recruit .conversion-nav {
+  border-bottom-color: rgba(235, 231, 220, 0.1);
+  background: rgba(11, 11, 12, 0.72);
+}
+
+.offseason-page-recruit .campaign-nav-monogram {
+  width: 2.65rem;
+  height: 2.65rem;
+  font-size: 1.35rem;
 }
 
 html[data-app-environment='native'] .offseason-page .conversion-nav {
@@ -5622,11 +5633,40 @@ html[data-app-environment='native'] .offseason-page .conversion-signin {
   flex-direction: column;
   justify-content: space-between;
   isolation: isolate;
+  overflow: hidden;
   padding: calc(8.5rem + var(--safe-area-top)) max(clamp(1.25rem, 5vw, 5.5rem), var(--safe-area-right)) max(2rem, var(--safe-area-bottom)) max(clamp(1.25rem, 5vw, 5.5rem), var(--safe-area-left));
+}
+
+.offseason-hero-recruit {
+  min-height: 100dvh;
+  justify-content: center;
+  padding-block: calc(7.5rem + var(--safe-area-top)) clamp(3.5rem, 8vh, 6.5rem);
+}
+
+.offseason-hero-recruit .campaign-hero-video {
+  object-position: 68% 42%;
+  filter: grayscale(1) contrast(1.4) brightness(0.44);
+}
+
+.offseason-hero-recruit .campaign-hero-wash {
+  background:
+    linear-gradient(90deg, #0b0b0c 0%, rgba(11, 11, 12, 0.95) 35%, rgba(11, 11, 12, 0.54) 64%, rgba(11, 11, 12, 0.72) 100%),
+    linear-gradient(0deg, #0b0b0c 0%, rgba(11, 11, 12, 0) 34%);
+  mix-blend-mode: normal;
+}
+
+.offseason-hero-recruit .film-grain {
+  opacity: 0.075;
+  animation: none;
+  mix-blend-mode: overlay;
 }
 
 .offseason-content {
   width: min(48rem, 100%);
+}
+
+.offseason-hero-recruit .offseason-content {
+  width: min(42rem, 100%);
 }
 
 .offseason-title {
@@ -5653,10 +5693,10 @@ html[data-app-environment='native'] .offseason-page .conversion-signin {
 .offseason-declaration {
   max-width: 35rem;
   margin-top: clamp(1.35rem, 3vh, 2.25rem);
-  color: rgba(235, 231, 220, 0.86);
-  font-size: clamp(1.05rem, 2vw, 1.4rem);
-  font-weight: 650;
-  line-height: 1.5;
+  color: rgba(235, 231, 220, 0.82);
+  font-size: clamp(1.05rem, 2vw, 1.35rem);
+  font-weight: 550;
+  line-height: 1.55;
 }
 
 .offseason-actions {
@@ -5664,60 +5704,84 @@ html[data-app-environment='native'] .offseason-page .conversion-signin {
 }
 
 .offseason-signup-shell {
-  width: min(38rem, 100%);
-  margin-top: 1.75rem;
+  width: min(35rem, 100%);
+  margin-top: clamp(1.5rem, 3.5vh, 2.2rem);
   scroll-margin-top: calc(var(--app-nav-height) + var(--safe-area-top) + 2rem);
 }
 
 .offseason-signup-form {
-  padding: clamp(1rem, 2.5vw, 1.4rem);
-  border: 1px solid rgba(235, 231, 220, 0.3);
-  background: rgba(7, 8, 8, 0.72);
-  box-shadow: 0 1.2rem 3rem rgba(0, 0, 0, 0.25);
-  backdrop-filter: blur(10px);
+  padding: clamp(1.15rem, 2.5vw, 1.65rem);
+  border: 1px solid #2b2b2f;
+  border-radius: 2px;
+  background: rgba(19, 19, 21, 0.88);
+  box-shadow: 0 1.2rem 3rem rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(8px);
 }
 
 .offseason-signup-form label {
   display: block;
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.9rem;
   color: var(--campaign-paper);
-  font-size: 0.72rem;
+  font-size: clamp(0.75rem, 1.4vw, 0.9rem);
   font-weight: 850;
   letter-spacing: 0.1em;
+  line-height: 1.35;
   text-transform: uppercase;
 }
 
 .offseason-signup-fields {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.65rem;
 }
 
 .offseason-signup-fields input {
   min-width: 0;
   min-height: 3.5rem;
   padding: 0.9rem 1rem;
-  border: 1px solid rgba(235, 231, 220, 0.36);
-  border-right: 0;
-  border-radius: 0;
-  background: rgba(16, 16, 15, 0.82);
+  border: 1px solid #39393f;
+  border-radius: 2px;
+  background: #0d0d0f;
   color: var(--campaign-paper);
   outline: none;
+  transition: border-color 160ms ease;
 }
 
-.offseason-signup-fields input:focus {
-  border-color: var(--campaign-paper);
+.offseason-signup-fields input::placeholder {
+  color: rgba(235, 231, 220, 0.38);
+}
+
+.offseason-signup-fields input:hover {
+  border-color: rgba(235, 231, 220, 0.42);
+}
+
+.offseason-signup-fields input:focus,
+.offseason-signup-fields input[aria-invalid='true'] {
+  border-color: #ee3945;
 }
 
 .offseason-signup-fields button {
   min-height: 3.5rem;
-  padding: 0.9rem 1.2rem;
+  padding: 0.9rem 1.25rem;
   border: 1px solid var(--campaign-red);
+  border-radius: 2px;
   background: var(--campaign-red);
   color: white;
-  font-size: 0.68rem;
+  cursor: pointer;
+  font-size: 0.7rem;
   font-weight: 850;
-  letter-spacing: 0.09em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
+  transition: background-color 160ms ease, border-color 160ms ease, transform 80ms ease;
+}
+
+.offseason-signup-fields button:hover {
+  border-color: #b91f2b;
+  background: #b91f2b;
+}
+
+.offseason-signup-fields button:active {
+  transform: translateY(1px);
 }
 
 .offseason-signup-fields button:disabled {
@@ -5727,56 +5791,48 @@ html[data-app-environment='native'] .offseason-page .conversion-signin {
 
 .offseason-signup-form small {
   display: block;
-  margin-top: 0.65rem;
-  color: rgba(235, 231, 220, 0.52);
-  font-size: 0.7rem;
+  margin-top: 0.75rem;
+  color: rgba(235, 231, 220, 0.46);
+  font-size: 0.72rem;
+  line-height: 1.45;
 }
 
 .offseason-signup-form p {
-  margin-top: 0.65rem;
-  color: #ffb4bc;
-  font-size: 0.78rem;
+  margin: 0.65rem 0 0;
+  color: #ff8f98;
+  font-size: 0.8rem;
 }
 
 .offseason-success {
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
-  padding: 1.15rem 1.25rem;
-  border: 1px solid rgba(74, 222, 128, 0.5);
-  background: rgba(34, 197, 94, 0.14);
-  color: #bbf7d0;
+  gap: 0.45rem;
+  padding: clamp(1.2rem, 2.5vw, 1.6rem);
+  border: 1px solid rgba(235, 231, 220, 0.24);
+  border-left: 3px solid var(--campaign-red);
+  border-radius: 2px;
+  background: rgba(19, 19, 21, 0.9);
+  color: var(--campaign-paper);
+  backdrop-filter: blur(8px);
 }
 
 .offseason-success strong {
-  font-size: 0.78rem;
-  letter-spacing: 0.08em;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(1.8rem, 5vw, 2.35rem);
+  font-weight: 400;
+  letter-spacing: 0.015em;
+  line-height: 1;
   text-transform: uppercase;
 }
 
 .offseason-success span {
-  font-size: 0.8rem;
-}
-
-.offseason-hall-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.7rem;
-  margin-top: 1rem;
-  color: rgba(235, 231, 220, 0.76);
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.offseason-hall-link:hover {
-  color: var(--campaign-paper);
+  color: rgba(235, 231, 220, 0.64);
+  font-size: 0.85rem;
 }
 
 .offseason-auth-placeholder {
-  width: min(38rem, 100%);
-  height: 8.5rem;
+  width: min(35rem, 100%);
+  height: 9rem;
   margin-top: 1.75rem;
 }
 
@@ -5792,6 +5848,121 @@ html[data-app-environment='native'] .offseason-page .conversion-signin {
   flex-direction: column;
   border-top: 1px solid rgba(235, 231, 220, 0.35);
   padding-top: 0.7rem;
+}
+
+.offseason-wrap {
+  width: min(82.5rem, 100%);
+  margin-inline: auto;
+  padding-inline: max(clamp(1.25rem, 5vw, 4rem), var(--safe-area-right));
+}
+
+.offseason-section-label {
+  margin: 0 0 1rem;
+  color: rgba(235, 231, 220, 0.5);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.offseason-impact {
+  padding-block: clamp(4.75rem, 10vw, 8.5rem);
+  border-top: 1px solid #28282c;
+  background: #0b0b0c;
+}
+
+.offseason-impact h2,
+.offseason-hall h2 {
+  margin: 0;
+  font-family: 'Bebas Neue', sans-serif;
+  font-weight: 400;
+  line-height: 0.92;
+  text-transform: uppercase;
+}
+
+.offseason-impact h2 {
+  max-width: 12ch;
+  font-size: clamp(2.8rem, 6.2vw, 5.25rem);
+}
+
+.offseason-tally {
+  display: grid;
+  grid-template-columns: 1.35fr 1fr 1fr;
+  gap: clamp(1.5rem, 4vw, 3.5rem);
+  margin-top: clamp(3.5rem, 7vw, 5.5rem);
+}
+
+.offseason-stat {
+  min-width: 0;
+}
+
+.offseason-stat strong {
+  display: block;
+  color: var(--campaign-paper);
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(4.4rem, 8vw, 7.5rem);
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.015em;
+  line-height: 0.82;
+}
+
+.offseason-stat-primary strong {
+  color: var(--campaign-red);
+  font-size: clamp(5rem, 11vw, 10rem);
+}
+
+.offseason-stat span {
+  display: block;
+  margin-top: 1rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid #28282c;
+  color: rgba(235, 231, 220, 0.5);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.offseason-hall {
+  padding-block: clamp(4rem, 8vw, 6rem);
+  border-top: 1px solid #28282c;
+  background: #141416;
+}
+
+.offseason-hall-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
+}
+
+.offseason-hall h2 {
+  max-width: 21ch;
+  font-size: clamp(2.35rem, 4.6vw, 4rem);
+}
+
+.offseason-hall-link {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.8rem;
+  margin-top: 0;
+  padding-bottom: 0.55rem;
+  border-bottom: 1px solid var(--campaign-red);
+  color: var(--campaign-paper);
+  font-size: 0.75rem;
+  font-weight: 850;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.offseason-hall-link span {
+  transition: transform 180ms ease;
+}
+
+.offseason-hall-link:hover span {
+  transform: translateX(0.35rem);
 }
 
 .offseason-footer {
@@ -5817,14 +5988,92 @@ html[data-app-environment='native'] .offseason-page .conversion-signin {
   color: rgba(235, 231, 220, 0.78);
 }
 
+.offseason-footer-recruit {
+  display: block;
+  padding-block: clamp(2.5rem, 5vw, 4rem);
+}
+
+.offseason-creed {
+  margin: 0;
+  padding-bottom: clamp(2.5rem, 5vw, 4rem);
+  color: rgba(235, 231, 220, 0.4);
+  font-size: clamp(0.65rem, 1.4vw, 0.78rem);
+  letter-spacing: 0.3em;
+  text-align: center;
+}
+
+.offseason-footer-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(235, 231, 220, 0.12);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .offseason-rise {
+    opacity: 0;
+    transform: translateY(1rem);
+    animation: offseasonRise 700ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  .offseason-rise-delay-1 {
+    animation-delay: 80ms;
+  }
+
+  .offseason-rise-delay-2 {
+    animation-delay: 170ms;
+  }
+
+  .offseason-rise-delay-3 {
+    animation-delay: 280ms;
+  }
+
+  @keyframes offseasonRise {
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+}
+
 @media (max-width: 800px) {
   .offseason-page .conversion-signin {
     display: inline-flex;
   }
 
+  .offseason-page-recruit .campaign-nav-name {
+    display: none;
+  }
+
+  .offseason-page-recruit .campaign-nav-monogram {
+    width: 2.35rem;
+    height: 2.35rem;
+    font-size: 1.15rem;
+  }
+
+  .offseason-page-recruit .campaign-nav-cta {
+    padding-inline: 0.8rem;
+  }
+
   .offseason-hero {
     min-height: 100svh;
     padding-top: calc(7rem + var(--safe-area-top));
+  }
+
+  .offseason-hero-recruit {
+    justify-content: center;
+    padding-block: calc(6.75rem + var(--safe-area-top)) 4rem;
+  }
+
+  .offseason-hero-recruit .campaign-hero-video {
+    object-position: 62% 30%;
+  }
+
+  .offseason-hero-recruit .campaign-hero-wash {
+    background:
+      linear-gradient(180deg, rgba(11, 11, 12, 0.88) 0%, rgba(11, 11, 12, 0.68) 32%, rgba(11, 11, 12, 0.96) 74%, #0b0b0c 100%);
   }
 
   .offseason-title {
@@ -5833,11 +6082,6 @@ html[data-app-environment='native'] .offseason-page .conversion-signin {
 
   .offseason-signup-fields {
     grid-template-columns: 1fr;
-    gap: 0.65rem;
-  }
-
-  .offseason-signup-fields input {
-    border-right: 1px solid rgba(235, 231, 220, 0.36);
   }
 
   .offseason-signup-fields button {
@@ -5849,8 +6093,53 @@ html[data-app-environment='native'] .offseason-page .conversion-signin {
     gap: 1rem;
   }
 
+  .offseason-tally {
+    grid-template-columns: 1fr;
+    gap: 2.4rem;
+  }
+
+  .offseason-stat strong,
+  .offseason-stat-primary strong {
+    font-size: clamp(4.4rem, 22vw, 7rem);
+  }
+
+  .offseason-hall-inner,
+  .offseason-footer-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
   .offseason-footer {
     align-items: flex-start;
     flex-direction: column;
   }
+
+  .offseason-footer-recruit nav {
+    flex-wrap: wrap;
+    row-gap: 0.8rem;
+  }
+}
+
+@media (max-width: 390px) {
+  .offseason-page-recruit .campaign-nav-cta {
+    display: none;
+  }
+
+  .offseason-title {
+    font-size: clamp(4.2rem, 23vw, 5.6rem);
+  }
+}
+
+html[data-app-environment='native'] .offseason-impact,
+html[data-app-environment='native'] .offseason-hall,
+html[data-app-environment='native'] .offseason-footer-recruit {
+  display: none;
+}
+
+html[data-app-environment='native'] .offseason-hero-recruit {
+  justify-content: flex-start;
+}
+
+html[data-app-environment='native'] .offseason-hero-recruit .campaign-hero-wash {
+  background: linear-gradient(180deg, rgba(11, 11, 12, 0.72), rgba(11, 11, 12, 0.96));
 }

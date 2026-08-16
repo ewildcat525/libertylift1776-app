@@ -18,8 +18,8 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
-  title: 'Liberty Lift 1776 — The Push-Up Challenge',
-  description: 'Complete 1776 push-ups in July. One nation. One month. One challenge.',
+  title: 'Liberty Lift 1776 — Returns July 2027',
+  description: '219 patriots. 357,879 push-ups. Liberty Lift returns July 2027.',
   keywords: ['push-up challenge', '1776 push-ups', 'July fitness challenge', 'state fitness competition'],
   icons: {
     icon: '/favicon.svg',
@@ -37,22 +37,22 @@ export const metadata: Metadata = {
     type: 'website',
     url: '/',
     siteName: 'Liberty Lift 1776',
-    title: 'Liberty Lift 1776',
-    description: 'Complete 1776 push-ups in July. Are you ready to earn your freedom?',
+    title: 'Liberty Lift 1776 — Returns July 2027',
+    description: '219 patriots. 357,879 push-ups. We go again in July 2027.',
     images: [
       {
-        url: '/og-image.png',
+        url: '/og-2027.png',
         width: 1200,
         height: 630,
-        alt: 'Liberty Lift 1776 - Complete 1776 push-ups in July',
+        alt: 'Liberty Lift 1776 returns July 2027',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Liberty Lift 1776',
-    description: 'Complete 1776 push-ups in July. Are you ready to earn your freedom?',
-    images: ['/og-image.png'],
+    title: 'Liberty Lift 1776 — Returns July 2027',
+    description: '219 patriots. 357,879 push-ups. We go again in July 2027.',
+    images: ['/og-2027.png'],
   },
 }
 
