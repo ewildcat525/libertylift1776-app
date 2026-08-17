@@ -1,0 +1,193 @@
+name: Agent Commit Bridge
+
+# Lets the trusted agent connection land a mail-formatted patch by opening an
+# issue. The workflow validates the envelope, applies the patch to the requested
+# base, pushes an agent/* branch, opens a PR, and closes the issue with the link.
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: agent-commit-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  land-patch:
+    # This repository is public, so the exact sender allowlist is the security
+    # boundary. Issue titles and bodies are still treated as untrusted input.
+    if: >-
+      startsWith(github.event.issue.title, '[agent-commit]') &&
+      github.event.sender.login == 'ewildcat525'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout full history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.AGENT_COMMIT_TOKEN || github.token }}
+
+      - name: Decode and verify patch
+        id: parse
+        env:
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+        run: |
+          set -euo pipefail
+
+          BRANCH="$(printf '%s' "$ISSUE_TITLE" | sed -n 's/^\[agent-commit\][[:space:]]*//p')"
+          [[ "$BRANCH" == agent/* ]] || {
+            echo "Branch must start with agent/" >&2
+            exit 1
+          }
+          git check-ref-format --branch "$BRANCH" >/dev/null
+
+          get_field() {
+            printf '%s\n' "$ISSUE_BODY" \
+              | sed -n "s/^$1:[[:space:]]*//p" \
+              | head -1 \
+              | tr -d '\r'
+          }
+
+          PR_TITLE="$(get_field 'PR-Title')"
+          PR_BASE="$(get_field 'PR-Base')"
+          PR_BASE="${PR_BASE:-main}"
+          EXPECT_SHA="$(get_field 'Sha256' | tr '[:upper:]' '[:lower:]')"
+
+          [[ -n "$PR_TITLE" ]] || { echo "PR-Title is required" >&2; exit 1; }
+          git check-ref-format --branch "$PR_BASE" >/dev/null
+          [[ "$BRANCH" != "$PR_BASE" ]] || {
+            echo "Head branch must differ from PR base" >&2
+            exit 1
+          }
+          [[ "$EXPECT_SHA" =~ ^[0-9a-f]{64}$ ]] || {
+            echo "Sha256 must be a 64-character hexadecimal digest" >&2
+            exit 1
+          }
+
+          # Extract the gzip+base64 payload from the patch64 fence. Decode to a
+          # bounded buffer so a tiny gzip bomb cannot exhaust the runner.
+          printf '%s\n' "$ISSUE_BODY" \
+            | awk '/^```patch64[[:space:]]*$/{f=1;next} /^```[[:space:]]*$/{if(f){f=0}} f{print}' \
+            | tr -d '[:space:]' > /tmp/change.patch.b64
+          [[ -s /tmp/change.patch.b64 ]] || {
+            echo "Missing patch64 payload" >&2
+            exit 1
+          }
+          base64 --decode /tmp/change.patch.b64 > /tmp/change.patch.gz
+
+          python3 - <<'PY'
+          import gzip
+          from pathlib import Path
+
+          limit = 8 * 1024 * 1024
+          with gzip.open('/tmp/change.patch.gz', 'rb') as source:
+              patch = source.read(limit + 1)
+          if len(patch) > limit:
+              raise SystemExit('Decoded patch exceeds the 8 MiB limit')
+          if not patch:
+              raise SystemExit('Decoded patch is empty')
+          Path('/tmp/change.patch').write_bytes(patch)
+          PY
+
+          GOT_SHA="$(sha256sum /tmp/change.patch | awk '{print $1}')"
+          [[ "$GOT_SHA" == "$EXPECT_SHA" ]] || {
+            echo "sha256 mismatch: got $GOT_SHA expected $EXPECT_SHA" >&2
+            exit 1
+          }
+
+          # Optional PR body: everything following a lone PR-Body: marker.
+          printf '%s\n' "$ISSUE_BODY" \
+            | awk 'copy{print} /^PR-Body:[[:space:]]*$/{copy=1}' \
+            > /tmp/pr-body.md
+
+          {
+            printf 'branch=%s\n' "$BRANCH"
+            printf 'pr_title=%s\n' "$PR_TITLE"
+            printf 'pr_base=%s\n' "$PR_BASE"
+          } >> "$GITHUB_OUTPUT"
+
+          echo "Validated patch bytes: $(wc -c < /tmp/change.patch)"
+
+      - name: Apply patch and push branch
+        env:
+          BRANCH: ${{ steps.parse.outputs.branch }}
+          PR_BASE: ${{ steps.parse.outputs.pr_base }}
+        run: |
+          set -euo pipefail
+
+          # Always build from the requested PR base, not whichever ref happened
+          # to be checked out for the issue event.
+          git fetch origin "+refs/heads/$PR_BASE:refs/remotes/origin/$PR_BASE"
+
+          # Fetch an existing bridge branch so --force-with-lease has an exact
+          # lease. This permits safe retries without blind overwrites.
+          if git ls-remote --exit-code --heads origin "refs/heads/$BRANCH" >/dev/null 2>&1; then
+            git fetch origin "+refs/heads/$BRANCH:refs/remotes/origin/$BRANCH"
+          fi
+
+          git config user.name "instinct-agent[bot]"
+          git config user.email "instinct-agent@users.noreply.github.com"
+          git switch --create "$BRANCH" "origin/$PR_BASE"
+          git am --3way /tmp/change.patch
+          git push --force-with-lease --set-upstream origin "$BRANCH"
+
+      - name: Open pull request
+        id: pr
+        env:
+          AGENT_COMMIT_TOKEN: ${{ secrets.AGENT_COMMIT_TOKEN }}
+          GH_TOKEN: ${{ secrets.AGENT_COMMIT_TOKEN || github.token }}
+          GH_REPO: ${{ github.repository }}
+          BRANCH: ${{ steps.parse.outputs.branch }}
+          PR_BASE: ${{ steps.parse.outputs.pr_base }}
+          PR_TITLE: ${{ steps.parse.outputs.pr_title }}
+        run: |
+          set -euo pipefail
+
+          if [[ -z "$AGENT_COMMIT_TOKEN" ]]; then
+            echo "::warning::AGENT_COMMIT_TOKEN is not configured. The repository must allow GitHub Actions to create pull requests for the GITHUB_TOKEN fallback to work."
+          fi
+
+          URL="$(gh pr list \
+            --state open \
+            --base "$PR_BASE" \
+            --head "$BRANCH" \
+            --json url \
+            --jq '.[0].url // empty')"
+
+          if [[ -z "$URL" ]]; then
+            URL="$(gh pr create \
+              --base "$PR_BASE" \
+              --head "$BRANCH" \
+              --title "$PR_TITLE" \
+              --body-file /tmp/pr-body.md)"
+          fi
+
+          printf 'url=%s\n' "$URL" >> "$GITHUB_OUTPUT"
+
+      - name: Comment PR link and close issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          PR_URL: ${{ steps.pr.outputs.url }}
+        run: |
+          set -euo pipefail
+          gh issue comment "$ISSUE_NUMBER" --body "Landed. Opened PR: $PR_URL"
+          gh issue close "$ISSUE_NUMBER"
+
+      - name: Report failure on issue
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          gh issue comment "$ISSUE_NUMBER" \
+            --body "Agent commit bridge failed. See the Actions run: $RUN_URL. The issue is still open for retry."
