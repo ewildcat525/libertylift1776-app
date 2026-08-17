@@ -1,5 +1,21 @@
 // Calendar-date helpers for the challenge.
 //
+// Every date in here used to be a 2026 literal. They now come from the season
+// mirror in lib/seasons.ts, which tracks public.challenge_seasons. The exported
+// names and signatures are unchanged, so callers keep working; what changed is
+// that they answer for whichever season the given date falls in. Opening 2027
+// is a row in challenge_seasons plus the matching entry in SEASONS, not a
+// find-and-replace through this file.
+//
+// Two seasons, two questions: the display season is the one the boards show
+// (the most recent July that has started, so the Hall of Honor keeps standing
+// all offseason), and the logging season is the one a rep written now belongs
+// to. These helpers are all about what a visitor sees, so they use the display
+// season. The database owns whether a rep is accepted.
+import { seasonForDisplay, seasonForLogging, seasonLengthInDays, type Season } from './seasons'
+
+export { seasonForDisplay, seasonForLogging, type Season }
+
 // Never derive "today" from Date.toISOString() — it formats in UTC, which
 // rolls over to tomorrow during the US evening (8pm ET is already the next
 // day in UTC). The challenge day is the user's local calendar day.
@@ -10,119 +26,129 @@ export function localDateString(date: Date = new Date()): string {
   return `${year}-${month}-${day}`
 }
 
-// Challenge window: July 1-31, 2026.
-export const CHALLENGE_TOTAL = 1776
-// The Final Push: last-day blitz — most reps logged on July 31 wins.
-export const FINAL_PUSH_DATE = '2026-07-31'
-const CHALLENGE_YEAR = 2026
-const JULY = 6 // Date.getMonth() is 0-indexed
-const DAYS_IN_JULY = 31
+const CURRENT = seasonForDisplay()
+
+// The season's goal. 1,776 in every season shipped so far.
+export const CHALLENGE_TOTAL = CURRENT.goal
+// The Final Push: last-day blitz — most reps logged on the last day wins.
+export const FINAL_PUSH_DATE = CURRENT.finalPushOn
 
 export function isChallengeLive(date: Date = new Date()): boolean {
-  return date.getFullYear() === CHALLENGE_YEAR && date.getMonth() === JULY
+  const season = seasonForDisplay(date)
+  const today = localDateString(date)
+  return today >= season.startsOn && today <= season.endsOn
 }
 
-// Lifecycle of the challenge, on the viewer's local calendar (same convention
-// as isChallengeLive — the challenge day is the user's local day):
-// - 'before': any day up to June 30, 2026
-// - 'live':   July 1-31, 2026 — the contest
-// - 'grace':  August 1, 2026 — the books are still open for July reps that
-//             didn't get logged in time (the database freezes writes at
-//             2026-08-02T10:00:00Z, after Aug 1 has ended in every US zone)
-// - 'ended':  August 2, 2026 onward — standings are final
+// Lifecycle of the challenge, on the viewer's local calendar:
+// - 'before': any day up to the day before it starts
+// - 'live':   the challenge month itself
+// - 'grace':  the day after it ends — the books are still open for reps that
+//             didn't get logged in time (the database freezes writes at the
+//             season's loggingClosesAt, after the grace day has ended in every
+//             US zone)
+// - 'ended':  from the day after that, standings are final
 export type ChallengePhase = 'before' | 'live' | 'grace' | 'ended'
 
-const AUGUST = 7 // Date.getMonth() is 0-indexed
+function dayAfter(day: string): string {
+  const next = new Date(`${day}T00:00:00Z`)
+  next.setUTCDate(next.getUTCDate() + 1)
+  return next.toISOString().slice(0, 10)
+}
 
 export function challengePhase(date: Date = new Date()): ChallengePhase {
-  const year = date.getFullYear()
-  const month = date.getMonth()
-  if (year < CHALLENGE_YEAR || (year === CHALLENGE_YEAR && month < JULY)) return 'before'
-  if (year === CHALLENGE_YEAR && month === JULY) return 'live'
-  if (year === CHALLENGE_YEAR && month === AUGUST && date.getDate() === 1) return 'grace'
+  const season = seasonForDisplay(date)
+  const today = localDateString(date)
+  if (today < season.startsOn) return 'before'
+  if (today <= season.endsOn) return 'live'
+  if (today === dayAfter(season.endsOn)) return 'grace'
   return 'ended'
 }
 
-// Days of July 2026 still available to log, counting today.
+// Days of the challenge still available to log, counting today.
 // The full month before the challenge starts, 0 once it's over.
 export function challengeDaysRemaining(date: Date = new Date()): number {
-  const year = date.getFullYear()
-  const month = date.getMonth()
-  if (year < CHALLENGE_YEAR || (year === CHALLENGE_YEAR && month < JULY)) return DAYS_IN_JULY
-  if (year > CHALLENGE_YEAR || month > JULY) return 0
-  return DAYS_IN_JULY - date.getDate() + 1
+  const season = seasonForDisplay(date)
+  const today = localDateString(date)
+  if (today < season.startsOn) return seasonLengthInDays(season)
+  if (today > season.endsOn) return 0
+  const end = Date.parse(`${season.endsOn}T00:00:00Z`)
+  const now = Date.parse(`${today}T00:00:00Z`)
+  return Math.round((end - now) / 86_400_000) + 1
 }
 
-// Push-ups per day to finish all 1,776 by July 31 when starting today.
-// Equals DAILY_PACE (58) before and on July 1; null once July is over.
+// Push-ups per day to finish the whole goal by the last day, starting today.
+// Equals the flat daily pace before and on day one; null once it's over.
 export function catchUpPace(date: Date = new Date()): number | null {
   const daysRemaining = challengeDaysRemaining(date)
   if (daysRemaining <= 0) return null
-  return Math.ceil(CHALLENGE_TOTAL / daysRemaining)
+  return Math.ceil(seasonForDisplay(date).goal / daysRemaining)
 }
 
 // "Today" for server-rendered campaign copy. Servers run on UTC, which is
-// already tomorrow during the US evening; anchor to US Eastern instead so
-// the quoted pace matches what stateside visitors see on their own clock.
+// already tomorrow during the US evening; anchor to the challenge timezone
+// instead so the quoted pace matches what stateside visitors see on their own
+// clock.
 export function easternNow(): Date {
-  return new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }))
+  return new Date(new Date().toLocaleString('en-US', { timeZone: CURRENT.timeZone }))
 }
 
 // The closing bell: ONE national instant, not each viewer's own midnight.
 //
-// Midnight ending July 31 in the last US timezone to reach it. Hawaii
-// (UTC-10, never on DST) gets there at 2026-08-01T10:00Z; Alaska, on AKDT
-// (UTC-8) in July, gets there two hours earlier at 08:00Z — so Hawaii is the
-// one that decides it. Every patriot's July 31 is over at that instant, and
-// that is when the Final Push Champion is crowned.
+// Midnight ending the last day in the last US timezone to reach it. Hawaii
+// (UTC-10, never on DST) gets there at 10:00Z the next morning; Alaska, on AKDT
+// (UTC-8) in July, gets there two hours earlier — so Hawaii is the one that
+// decides it. Every patriot's last day is over at that instant, and that is
+// when the Final Push Champion is crowned.
 //
 // The crown deliberately does NOT wait for the grace day. The books stay open
-// until 2026-08-02T10:00Z (see 20260727120000_close_the_books.sql — the same
-// midnight-in-Hawaii convention, one day later) so late July reps still count
-// toward 1,776, your state, and the national total. They just cannot change
-// who won the last day: the Final Push is a live contest, and it closes at
-// the bell.
-export const FINAL_PUSH_DEADLINE = '2026-08-01T10:00:00Z'
+// until the season's loggingClosesAt (the same midnight-in-Hawaii convention,
+// one day later) so late reps still count toward the goal, your state, and the
+// national total. They just cannot change who won the last day: the Final Push
+// is a live contest, and it closes at the bell.
+export const FINAL_PUSH_DEADLINE = CURRENT.finalPushDeadline
 export const FINAL_PUSH_DEADLINE_MS = Date.parse(FINAL_PUSH_DEADLINE)
 
-// The Hall of Honor opens at the same national instant as the closing bell:
-// midnight in Hawaii, 6:00am Eastern on August 1. Keep this tied to the Final
-// Push deadline so the war room and finale can never disagree at handoff.
+// The Hall of Honor opens at the same national instant as the closing bell.
+// Keep this tied to the Final Push deadline so the war room and finale can
+// never disagree at handoff.
 export function isHallOpen(date: Date = new Date()): boolean {
-  return date.getTime() >= FINAL_PUSH_DEADLINE_MS
+  return date.getTime() >= Date.parse(seasonForDisplay(date).finalPushDeadline)
 }
 
 // The Final Push, keyed to the bell above and the viewer's local calendar:
 // - 'before':  the blitz has not opened on the viewer's clock yet
-// - 'live':    the viewer's July 31 has started and the bell has not rung —
-//              which keeps a stateside viewer live into the small hours of
-//              August 1, because they can still log July 31 reps until it does
+// - 'live':    the viewer's last day has started and the bell has not rung —
+//              which keeps a stateside viewer live into the small hours of the
+//              next morning, because they can still log last-day reps until it
+//              does
 // - 'results': the bell has rung, the day board is frozen, the champion stands
-// - 'over':    August 2 onward — the Hall of Honor owns the story
+// - 'over':    from the day after the grace day, the Hall of Honor owns it
 export type FinalPushPhase = 'before' | 'live' | 'results' | 'over'
 
 export function finalPushPhase(date: Date = new Date()): FinalPushPhase {
-  if (date.getTime() >= FINAL_PUSH_DEADLINE_MS) {
-    return localDateString(date) >= '2026-08-02' ? 'over' : 'results'
+  const season = seasonForDisplay(date)
+  if (date.getTime() >= Date.parse(season.finalPushDeadline)) {
+    return localDateString(date) >= dayAfter(dayAfter(season.endsOn)) ? 'over' : 'results'
   }
-  return localDateString(date) < FINAL_PUSH_DATE ? 'before' : 'live'
+  return localDateString(date) < season.finalPushOn ? 'before' : 'live'
 }
 
 // Milliseconds until the closing bell. The same countdown for everyone in the
 // country, so the bell is a single shared moment rather than six staggered
 // ones. Negative once it has rung.
 export function msUntilClosingBell(date: Date = new Date()): number {
-  return FINAL_PUSH_DEADLINE_MS - date.getTime()
+  return Date.parse(seasonForDisplay(date).finalPushDeadline) - date.getTime()
 }
 
-// The blitz opens at the first US midnight of July 31 — Eastern, UTC-4 in
-// July — and runs to the bell. Both ends are absolute instants, so this is
+// The blitz opens at the first US midnight of the final day — Eastern, UTC-4
+// in July — and runs to the bell. Both ends are absolute instants, so this is
 // safe to evaluate on a server whose clock is UTC (Vercel's is).
-export const FINAL_PUSH_OPENS_MS = Date.parse('2026-07-31T04:00:00Z')
+export const FINAL_PUSH_OPENS_MS = Date.parse(CURRENT.finalPushOpensAt)
 
 export function isFinalPushWindow(date: Date = new Date()): boolean {
+  const season = seasonForDisplay(date)
   const t = date.getTime()
-  return t >= FINAL_PUSH_OPENS_MS && t < FINAL_PUSH_DEADLINE_MS
+  return t >= Date.parse(season.finalPushOpensAt) && t < Date.parse(season.finalPushDeadline)
 }
 
 // Where a returning patriot lands after signing in. While the blitz is running
@@ -138,15 +164,15 @@ export function postAuthLanding(date: Date = new Date()): string {
   return isFinalPushWindow(date) ? '/final-push' : '/dashboard'
 }
 
-// Milliseconds until the Final Push opens: midnight at the start of July 31,
-// local. Negative once the day is underway.
+// Milliseconds until the Final Push opens: midnight at the start of the final
+// day, local. Negative once the day is underway.
 export function msUntilFinalPush(date: Date = new Date()): number {
-  return new Date(CHALLENGE_YEAR, JULY, DAYS_IN_JULY, 0, 0, 0, 0).getTime() - date.getTime()
+  return new Date(`${seasonForDisplay(date).finalPushOn}T00:00:00`).getTime() - date.getTime()
 }
 
 // The live current streak, expiring a stored value the moment it goes stale.
 //
-// user_stats.current_streak is only rewritten when a log is inserted or
+// season_user_stats.current_streak is only rewritten when a log is inserted or
 // deleted, so a user who stops logging keeps showing their last streak
 // forever — the board reads "16 day streak" days after they quit. A streak
 // is only alive while its last logged day is yesterday or today (US Eastern),

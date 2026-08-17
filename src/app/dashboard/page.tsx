@@ -8,6 +8,8 @@ import { isNativeApp, nativeRepLoggedFeedback } from '@/lib/native-auth'
 import { createClient, UserStats, Profile, AMERICAN_FACTS, DAILY_PACE, isValidStateCode, US_STATES } from '@/lib/supabase'
 import { clearPendingSignup, generateDisplayName, readPendingSignup } from '@/lib/onboarding'
 import { challengePhase, ChallengePhase, localDateString, liveStreak } from '@/lib/dates'
+import { isSeasonDay, seasonForLogging } from '@/lib/seasons'
+import { clearPushupsForDay, logPushups as logPushupsRpc } from '@/lib/pushups'
 import { clearReferral } from '@/lib/referral'
 import BadgeCase from '@/components/BadgeCase'
 import CommunityMilestoneBanner from '@/components/CommunityMilestoneBanner'
@@ -291,26 +293,14 @@ export default function DashboardPage() {
       const { data: recruits } = await supabase.rpc('get_recruit_count')
       setRecruitCount(recruits || 0)
 
-      // Load stats (create if missing - handles users created before trigger was added)
-      let { data: statsData, error: statsError } = await supabase
+      // user_stats is a view over this season's stats with a zeroed row for
+      // every profile, so there is never a missing row to create.
+      const { data: statsData } = await supabase
         .from('user_stats')
         .select('*')
         .eq('user_id', user.id)
-        .single()
+        .maybeSingle()
 
-      if (statsError && statsError.code === 'PGRST116') {
-        // No stats row exists, create one
-        const { data: newStats, error: insertError } = await supabase
-          .from('user_stats')
-          .insert({ user_id: user.id })
-          .select()
-          .single()
-        if (!insertError) {
-          statsData = newStats
-        } else {
-          console.error('Failed to create user_stats:', insertError)
-        }
-      }
       setStats(statsData)
 
       // Load daily logs for calendar
@@ -414,8 +404,9 @@ export default function DashboardPage() {
     const count = parseInt(pushupCount)
     if (!count || count < 1 || !user) return
 
-    // Validate date is in July 2026
-    if (!logDate.startsWith('2026-07-')) {
+    const season = seasonForLogging()
+
+    if (!isSeasonDay(logDate, season)) {
       setShowError('🇺🇸 The Liberty Lift challenge is for the month of July only!')
       setTimeout(() => setShowError(null), 4000)
       return
@@ -423,12 +414,9 @@ export default function DashboardPage() {
 
     setLogging(true)
 
-    // Create timestamp for the selected date (noon to avoid timezone issues)
-    const loggedAt = new Date(logDate + 'T12:00:00').toISOString()
-
-    const { error } = await supabase
-      .from('pushup_logs')
-      .insert({ user_id: user.id, count, logged_at: loggedAt })
+    // The RPC stamps the timestamp, enforces the daily cap and rejects a day
+    // outside the season. The client no longer decides any of it.
+    const { error } = await logPushupsRpc(supabase, { count, day: logDate })
 
     if (error) {
       console.error('Error logging pushups:', error)
@@ -498,16 +486,9 @@ export default function DashboardPage() {
 
     if (!confirm(`Clear all ${count} push-ups for ${logDate}?`)) return
 
-    // Delete all logs for this date
-    const startOfDay = new Date(logDate + 'T00:00:00').toISOString()
-    const endOfDay = new Date(logDate + 'T23:59:59').toISOString()
-
-    const { error } = await supabase
-      .from('pushup_logs')
-      .delete()
-      .eq('user_id', user.id)
-      .gte('logged_at', startOfDay)
-      .lte('logged_at', endOfDay)
+    // Clearing a day is the same rule set as logging one, so it runs through
+    // the database too.
+    const { error } = await clearPushupsForDay(supabase, logDate)
 
     if (error) {
       setShowError(`Error: ${error.message}`)
