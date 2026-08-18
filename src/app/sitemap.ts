@@ -5,6 +5,7 @@ import { siteUrl } from '@/lib/site'
 export default function sitemap(): MetadataRoute.Sitemap {
   const staticRoutes: MetadataRoute.Sitemap = [
     { url: siteUrl, changeFrequency: 'daily', priority: 1 },
+    { url: `${siteUrl}/2026`, changeFrequency: 'yearly', priority: 0.8 },
     { url: `${siteUrl}/signup`, changeFrequency: 'monthly', priority: 0.9 },
     { url: `${siteUrl}/states`, changeFrequency: 'daily', priority: 0.8 },
     { url: `${siteUrl}/leaderboard`, changeFrequency: 'hourly', priority: 0.8 },
