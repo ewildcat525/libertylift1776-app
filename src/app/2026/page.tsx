@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { CHARITY_DONATE_URLS } from '@/lib/charities'
 import { siteUrl } from '@/lib/site'
 import Notify2027 from './Notify2027'
 
@@ -87,12 +88,20 @@ export default function Record2026Page() {
           </ul>
         </section>
 
-        <section className="record-2026-block record-2026-pledge" aria-labelledby="pledges-title">
-          <h2 id="pledges-title">Pledges</h2>
-          <p className="record-2026-pledge-sum">$2,039</p>
+        <section className="record-2026-block record-2026-pledge" aria-labelledby="wwp-title">
+          <h2 id="wwp-title" className="record-2026-pledge-sum">
+            $1,104
+          </h2>
           <p>to Wounded Warrior Project</p>
           <p className="record-2026-pledge-note">
-            21 people; honor system, we never collected
+            <a
+              href={CHARITY_DONATE_URLS.wounded_warrior}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Official campaign page
+            </a>
+            , LibertyLift1776. We never processed the donations.
           </p>
         </section>
 
