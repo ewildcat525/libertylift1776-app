@@ -1052,6 +1052,369 @@ textarea {
   font-style: italic;
 }
 
+/* Sealed 2026 record — public one-pager at /2026 */
+.record-2026 {
+  --finale-gold: #e6bd5a;
+  --finale-gold-light: #fff0a7;
+  --finale-ivory: #f4efe2;
+  --record-red: #b22234;
+  min-height: 100svh;
+  padding:
+    calc(1.25rem + var(--safe-area-top))
+    max(1rem, var(--safe-area-right))
+    calc(2rem + var(--safe-area-bottom))
+    max(1rem, var(--safe-area-left));
+  background:
+    radial-gradient(circle at 50% 0%, rgba(230, 189, 90, 0.1), transparent 22rem),
+    linear-gradient(180deg, rgba(178, 34, 52, 0.08), transparent 16rem),
+    #080b11;
+  color: var(--finale-ivory);
+}
+
+.record-2026-sheet {
+  width: min(28rem, 100%);
+  margin: 0 auto;
+}
+
+.record-2026-header {
+  padding: 1.25rem 0 1.75rem;
+  text-align: center;
+}
+
+.record-2026-mark {
+  margin: 0 0 1.1rem;
+}
+
+.record-2026-mark a {
+  color: var(--finale-gold);
+  font-size: 0.62rem;
+  font-weight: 900;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+}
+
+.record-2026-header h1 {
+  margin: 0;
+  color: var(--finale-ivory);
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(2.15rem, 11vw, 2.85rem);
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  line-height: 0.92;
+  text-transform: uppercase;
+}
+
+.record-2026-when {
+  margin: 0.85rem 0 0;
+  color: rgba(244, 239, 226, 0.5);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.record-2026-hero,
+.record-2026-block {
+  margin-top: 1.15rem;
+  padding: 1.15rem 1rem 1.2rem;
+  border: 1px solid rgba(230, 189, 90, 0.2);
+  background:
+    linear-gradient(180deg, rgba(230, 189, 90, 0.05), transparent 42%),
+    rgba(255, 255, 255, 0.018);
+}
+
+.record-2026-numbers {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.85rem 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.record-2026-numbers li {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.record-2026-numbers .is-featured {
+  grid-column: 1 / -1;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid rgba(244, 239, 226, 0.1);
+  text-align: center;
+}
+
+.record-2026-numbers strong {
+  color: var(--finale-ivory);
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(2.1rem, 10vw, 2.6rem);
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  line-height: 0.9;
+}
+
+.record-2026-numbers .is-featured strong {
+  color: var(--finale-gold-light);
+  font-size: clamp(4.4rem, 22vw, 5.8rem);
+  text-shadow: 0 0 2.5rem rgba(230, 189, 90, 0.16);
+}
+
+.record-2026-numbers span {
+  color: rgba(244, 239, 226, 0.46);
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.record-2026-block h2 {
+  margin: 0 0 0.85rem;
+  color: var(--finale-gold);
+  font-size: 0.62rem;
+  font-weight: 900;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+.record-2026-states,
+.record-2026-awards {
+  display: grid;
+  gap: 0.55rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.record-2026-states li,
+.record-2026-awards li {
+  display: grid;
+  gap: 0.15rem 0.7rem;
+  padding: 0.7rem 0 0.75rem;
+  border-top: 1px solid rgba(244, 239, 226, 0.1);
+}
+
+.record-2026-states li {
+  grid-template-columns: 1.6rem 1fr auto;
+  align-items: baseline;
+}
+
+.record-2026-rank {
+  color: var(--record-red);
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+.record-2026-state-name {
+  color: var(--finale-ivory);
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.45rem;
+  letter-spacing: 0.03em;
+  line-height: 1;
+}
+
+.record-2026-state-count {
+  color: var(--finale-gold);
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.2rem;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.record-2026-awards li {
+  grid-template-columns: 1fr;
+}
+
+.record-2026-awards span {
+  color: var(--record-red);
+  font-size: 0.58rem;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.record-2026-awards strong {
+  color: var(--finale-ivory);
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.55rem;
+  font-weight: 400;
+  letter-spacing: 0.03em;
+  line-height: 1.05;
+}
+
+.record-2026-awards b {
+  color: var(--finale-gold);
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 1.15rem;
+  font-weight: 400;
+}
+
+.record-2026-pledge {
+  text-align: center;
+}
+
+.record-2026-pledge-sum {
+  margin: 0.15rem 0 0.2rem;
+  color: var(--finale-gold-light);
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(3.4rem, 18vw, 4.4rem);
+  line-height: 0.9;
+}
+
+.record-2026-pledge p {
+  margin: 0;
+  color: rgba(244, 239, 226, 0.72);
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 0.95rem;
+  font-style: italic;
+}
+
+.record-2026-pledge p.record-2026-pledge-note {
+  margin-top: 0.45rem;
+  color: rgba(244, 239, 226, 0.42);
+  font-family: Inter, sans-serif;
+  font-size: 0.72rem;
+  font-style: normal;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.record-2026-next {
+  border-color: rgba(178, 34, 52, 0.42);
+}
+
+.record-2026-seal {
+  margin: 0 0 1rem;
+  color: var(--finale-ivory);
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 1.15rem;
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 1.35;
+  text-align: center;
+  text-transform: none;
+}
+
+.record-2026-actions {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.record-2026-hall {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--finale-gold);
+  background: var(--finale-gold);
+  color: #15100a;
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.record-2026-hall:hover,
+.record-2026-hall:focus-visible {
+  background: var(--finale-gold-light);
+  color: #15100a;
+}
+
+.record-2026-notify {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.record-2026-notify label {
+  color: rgba(244, 239, 226, 0.5);
+  font-size: 0.58rem;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.record-2026-notify-fields {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.5rem;
+}
+
+.record-2026-notify input {
+  min-height: 2.75rem;
+  width: 100%;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid rgba(244, 239, 226, 0.2);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--finale-ivory);
+}
+
+.record-2026-notify input::placeholder {
+  color: rgba(244, 239, 226, 0.35);
+}
+
+.record-2026-notify button {
+  min-height: 2.75rem;
+  border: 1px solid var(--record-red);
+  background: var(--record-red);
+  color: #fff;
+  font-size: 0.66rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.record-2026-notify button:hover,
+.record-2026-notify button:focus-visible {
+  background: #d32331;
+}
+
+.record-2026-notify button:disabled {
+  opacity: 0.6;
+}
+
+.record-2026-notify [role='alert'] {
+  margin: 0;
+  color: #fca5a5;
+  font-size: 0.75rem;
+}
+
+.record-2026-notify-done {
+  margin: 0;
+  padding: 0.85rem 0.75rem;
+  border: 1px solid rgba(230, 189, 90, 0.35);
+  color: var(--finale-gold);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.record-2026-footer {
+  margin-top: 1.35rem;
+  padding-top: 0.35rem;
+  text-align: center;
+}
+
+.record-2026-footer p {
+  margin: 0;
+  color: rgba(244, 239, 226, 0.32);
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+@media (min-width: 24rem) {
+  .record-2026-notify-fields {
+    grid-template-columns: 1fr auto;
+  }
+}
+
 /* Full-screen doors */
 .finale-ceremony {
   position: fixed;
