@@ -1256,12 +1256,15 @@ textarea {
   text-align: center;
 }
 
-.record-2026-pledge-sum {
+.record-2026-pledge h2.record-2026-pledge-sum {
   margin: 0.15rem 0 0.2rem;
   color: var(--finale-gold-light);
   font-family: 'Bebas Neue', sans-serif;
   font-size: clamp(3.4rem, 18vw, 4.4rem);
+  font-weight: 400;
+  letter-spacing: 0;
   line-height: 0.9;
+  text-transform: none;
 }
 
 .record-2026-pledge p {
@@ -1273,14 +1276,20 @@ textarea {
 }
 
 .record-2026-pledge p.record-2026-pledge-note {
-  margin-top: 0.45rem;
-  color: rgba(244, 239, 226, 0.42);
+  margin-top: 0.55rem;
+  color: rgba(244, 239, 226, 0.5);
   font-family: Inter, sans-serif;
-  font-size: 0.72rem;
+  font-size: 0.78rem;
   font-style: normal;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  font-weight: 500;
+  letter-spacing: 0;
+  line-height: 1.45;
+}
+
+.record-2026-pledge-note a {
+  color: var(--finale-gold);
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
 }
 
 .record-2026-next {
