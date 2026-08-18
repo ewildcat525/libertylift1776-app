@@ -45,8 +45,11 @@ export interface PushupLog {
   count: number
   logged_at: string
   notes: string | null
+  season_year?: number
+  client_log_id?: string | null
 }
 
+// The user_stats view: this season's numbers, zeroed before the first rep.
 export interface UserStats {
   user_id: string
   total_pushups: number
@@ -55,6 +58,7 @@ export interface UserStats {
   best_day: number
   days_logged: number
   last_log_date: string | null
+  season_year?: number
 }
 
 export interface LeaderboardEntry {
@@ -81,6 +85,7 @@ export interface Contest {
   is_public: boolean
   start_date: string
   end_date: string
+  season_year?: number
   created_at: string
 }
 

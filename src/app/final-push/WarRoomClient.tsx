@@ -39,6 +39,7 @@ import {
   msUntilClosingBell,
   msUntilFinalPush,
 } from '@/lib/dates'
+import { logPushups } from '@/lib/pushups'
 import Navigation from '@/components/Navigation'
 import Fireworks from '@/components/Fireworks'
 
@@ -407,12 +408,9 @@ export default function WarRoomClient() {
     setLogging(true)
     setLogError(null)
 
-    // Noon local for July 31, exactly as the dashboard stamps it, so the
-    // Eastern bucketing in final_push_board catches it from any US zone.
-    const loggedAt = new Date(`${FINAL_PUSH_DATE}T12:00:00`).toISOString()
-    const { error } = await supabase
-      .from('pushup_logs')
-      .insert({ user_id: user.id, count, logged_at: loggedAt })
+    // Same RPC the dashboard uses; it stamps noon in the season's timezone so
+    // the Eastern bucketing in final_push_board catches it from any US zone.
+    const { error } = await logPushups(supabase, { count, day: FINAL_PUSH_DATE })
 
     if (error) {
       setLogError(error.message)

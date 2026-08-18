@@ -1,3 +1,5 @@
+import { seasonForDisplay } from './seasons'
+
 // Read-only fetchers for publicly visible data (leaderboard + state views).
 // Plain fetch against the Supabase REST API so they work in both the Node and
 // edge runtimes (server components and opengraph-image routes).
@@ -15,17 +17,17 @@ export interface PublicProfileStats {
   created_at?: string
 }
 
-// Joined before the challenge started on July 1, 2026 — the Declaration
-// Signer badge. (Founding Father is the badge for completing all 1776.)
-// The cutoff is midnight US Eastern, matching the app's Eastern anchor for
-// challenge dates (see lib/dates.ts): a UTC-midnight cutoff would call a
-// stateside signup on the evening of June 30 "July".
-const JULY_1_MIDNIGHT_ET = Date.parse('2026-07-01T04:00:00Z')
-
+// Joined before the challenge started — the Declaration Signer badge.
+// (Founding Father is the badge for completing the whole goal.)
+// The cutoff is midnight US Eastern on the season's first day, matching the
+// app's Eastern anchor for challenge dates (see lib/dates.ts): a UTC-midnight
+// cutoff would call a stateside signup on the evening of June 30 "July".
 export function isDeclarationSigner(createdAt: string | null | undefined) {
   if (!createdAt) return false
+  const season = seasonForDisplay()
+  const startOfSeasonET = Date.parse(`${season.startsOn}T04:00:00Z`)
   const signedUpAt = Date.parse(createdAt)
-  return Number.isFinite(signedUpAt) && signedUpAt < JULY_1_MIDNIGHT_ET
+  return Number.isFinite(signedUpAt) && signedUpAt < startOfSeasonET
 }
 
 export interface PublicStateStats {
