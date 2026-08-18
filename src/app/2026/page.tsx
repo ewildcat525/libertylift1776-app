@@ -16,12 +16,12 @@ export const metadata: Metadata = {
   },
 }
 
-const HERO = [
+const HERO: { value: string; label: string; featured?: boolean }[] = [
   { value: '219', label: 'patriots enlisted' },
   { value: '357,879', label: 'push-ups', featured: true },
   { value: '24', label: 'states on the board' },
   { value: '95', label: 'finished all 1,776' },
-] as const
+]
 
 const STATES = [
   { rank: '01', name: 'Georgia', people: '44', reps: '91,939' },
