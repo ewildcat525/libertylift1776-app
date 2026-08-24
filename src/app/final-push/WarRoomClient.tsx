@@ -1,6 +1,6 @@
 'use client'
 
-// The Final Push War Room — the last day of the 2026 Liberty Lift, live.
+// The Final Push War Room — the last day of the display season, live.
 //
 // Everywhere else in the app the Final Push is a board you refresh. Here it
 // is a room you sit in: a clock counting down to the closing bell, the
@@ -39,6 +39,8 @@ import {
   msUntilClosingBell,
   msUntilFinalPush,
 } from '@/lib/dates'
+import { logPushups } from '@/lib/pushups'
+import { seasonForDisplay } from '@/lib/seasons'
 import Navigation from '@/components/Navigation'
 import Fireworks from '@/components/Fireworks'
 
@@ -85,7 +87,12 @@ const FEED_SIZE = 18
 const REFRESH_DEBOUNCE_MS = 1200
 // Backstop for viewers whose realtime never connects (locked-down networks).
 const POLL_MS = 25000
-const DAILY_CAP = 500
+const SEASON = seasonForDisplay()
+const DAILY_CAP = SEASON.dailyCap
+const FINAL_DAY_LABEL = new Date(`${FINAL_PUSH_DATE}T12:00:00`).toLocaleDateString('en-US', {
+  month: 'long',
+  day: 'numeric',
+})
 
 // The Eastern calendar day a log belongs to — the same bucket the day board
 // uses in SQL. en-CA formats as YYYY-MM-DD, which compares lexically.
@@ -98,7 +105,7 @@ const DAILY_CAP = 500
 function easternDay(timestamp: string): string | null {
   const parsed = new Date(timestamp.replace(' ', 'T'))
   if (Number.isNaN(parsed.getTime())) return null
-  return parsed.toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
+  return parsed.toLocaleDateString('en-CA', { timeZone: SEASON.timeZone })
 }
 
 function clockParts(ms: number) {
@@ -407,12 +414,9 @@ export default function WarRoomClient() {
     setLogging(true)
     setLogError(null)
 
-    // Noon local for July 31, exactly as the dashboard stamps it, so the
-    // Eastern bucketing in final_push_board catches it from any US zone.
-    const loggedAt = new Date(`${FINAL_PUSH_DATE}T12:00:00`).toISOString()
-    const { error } = await supabase
-      .from('pushup_logs')
-      .insert({ user_id: user.id, count, logged_at: loggedAt })
+    // Same RPC the dashboard uses; it stamps noon in the season's timezone so
+    // the Eastern bucketing in final_push_board catches it from any US zone.
+    const { error } = await logPushups(supabase, { count, day: FINAL_PUSH_DATE })
 
     if (error) {
       setLogError(error.message)
@@ -475,7 +479,7 @@ export default function WarRoomClient() {
               ? `${bellChampions
                   .map((c) => c.display_name || 'A patriot')
                   .join(' & ')} — ${bellChampions[0].final_day_pushups.toLocaleString()} on the last day`
-              : 'The 2026 Liberty Lift is complete'
+              : `The ${SEASON.year} Liberty Lift is complete`
           }
         />
       )}
@@ -484,7 +488,7 @@ export default function WarRoomClient() {
         <div className="max-w-5xl mx-auto">
           {previewMode && (
             <div className="finale-preview-note" role="status">
-              Private war-room preview · The boards fill with live July 31 reps on the day.
+              Private war-room preview · The boards fill with live {FINAL_DAY_LABEL} reps on the day.
             </div>
           )}
           {/* ---------------- Header + clock ---------------- */}
@@ -493,20 +497,20 @@ export default function WarRoomClient() {
               {phase === 'before'
                 ? 'The eve of the last day'
                 : phase === 'live'
-                  ? 'Live · July 31 · The war room'
+                  ? `Live · ${FINAL_DAY_LABEL} · The war room`
                   : phase === 'results'
-                    ? 'July 31 · Final results'
-                    : 'July 31 · In the books'}
+                    ? `${FINAL_DAY_LABEL} · Final results`
+                    : `${FINAL_DAY_LABEL} · In the books`}
             </div>
             <h1 className="warroom-title font-bebas">The Final Push</h1>
             <p className="warroom-lede">
               {phase === 'before'
-                ? 'One final day to contribute safely. The biggest verified single-day total on July 31 crowns the Final Push Champion — a permanent place in the Hall of Honor.'
+                ? `One final day to contribute safely. The biggest verified single-day total on ${FINAL_DAY_LABEL} crowns the Final Push Champion — a permanent place in the Hall of Honor.`
                 : phase === 'live'
                   ? 'Every rep in the country lands here as it happens. Log yours and watch the board move.'
                   : phase === 'results'
-                    ? 'The last day of the 2026 Liberty Lift, and the patriots who finished strong.'
-                    : 'The 2026 Liberty Lift is certified. The champion stands in the Hall of Honor.'}
+                    ? `The last day of the ${SEASON.year} Liberty Lift, and the patriots who finished strong.`
+                    : `The ${SEASON.year} Liberty Lift is certified. The champion stands in the Hall of Honor.`}
             </p>
 
             {(phase === 'before' || phase === 'live') && msLeft !== null && (
@@ -543,7 +547,7 @@ export default function WarRoomClient() {
                 {intensity === 'bell' && (
                   <p className="warroom-clock-note">
                     The day board is frozen. Reps logged from here still count toward your
-                    1,776, your state and the national total.
+                    {SEASON.goal.toLocaleString()}, your state and the national total.
                   </p>
                 )}
               </div>
@@ -572,14 +576,14 @@ export default function WarRoomClient() {
               <section className="card p-6 sm:p-8">
                 <h2 className="warroom-heading">How it works</h2>
                 <ul className="warroom-rules">
-                  <li>Every rep logged on July 31 counts toward one number: your day total.</li>
+                  <li>Every rep logged on {FINAL_DAY_LABEL} counts toward one number: your day total.</li>
                   <li>Biggest day total in the country takes the crown.</li>
-                  <li>They still count for your 1,776, your state, and the national total.</li>
+                  <li>They still count for your {SEASON.goal.toLocaleString()}, your state, and the national total.</li>
                   <li>The board is live — you will see the country move all day.</li>
                   <li>
                     One deadline for everyone: the closing bell at midnight in Hawaii, the last
                     time zone standing — 6:00am ET on August 1. Reps logged after it still count
-                    toward your 1,776, but not toward the crown.
+                    toward your {SEASON.goal.toLocaleString()}, but not toward the crown.
                   </li>
                   <li>Safety cap is {DAILY_CAP.toLocaleString()} in a day. Log only completed sets.</li>
                 </ul>
@@ -714,7 +718,7 @@ export default function WarRoomClient() {
                   ) : (
                     <div className="text-center">
                       <p className="text-white/70 text-sm">
-                        You are watching the last day of the 2026 Liberty Lift. There is still time
+                        You are watching the last day of the {SEASON.year} Liberty Lift. There is still time
                         to be in it.
                       </p>
                       <Link href="/signup" className="btn-primary mt-4">
@@ -855,7 +859,7 @@ export default function WarRoomClient() {
                 <div className="warroom-outro">
                   {phase === 'results' && (
                     <p className="warroom-outro-note">
-                      Frozen at the closing bell. Reps logged after it still count toward 1,776,
+                      Frozen at the closing bell. Reps logged after it still count toward {SEASON.goal.toLocaleString()},
                       your state and the national total — they cannot change who won the last day.
                     </p>
                   )}
@@ -888,7 +892,7 @@ function NationalPulse({ pulse, live }: { pulse: Pulse | null; live: boolean }) 
   return (
     <section className="warroom-pulse mt-8">
       <div className="warroom-pulse-label">
-        {live ? 'Logged across America today' : 'Logged across America on July 31'}
+        {live ? 'Logged across America today' : `Logged across America on ${FINAL_DAY_LABEL}`}
       </div>
       <div className="warroom-pulse-number font-bebas">{total.toLocaleString()}</div>
       <div className="warroom-pulse-stats">

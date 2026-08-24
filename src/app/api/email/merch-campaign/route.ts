@@ -47,12 +47,7 @@ interface FinisherRow {
   id: string
   email: string | null
   display_name: string | null
-  user_stats: { total_pushups: number } | { total_pushups: number }[] | null
-}
-
-function totalPushupsOf(row: FinisherRow) {
-  const stats = Array.isArray(row.user_stats) ? row.user_stats[0] : row.user_stats
-  return stats?.total_pushups ?? null
+  total_pushups: number | null
 }
 
 async function runCampaign(
@@ -79,25 +74,47 @@ async function runCampaign(
     return NextResponse.json({ error: 'Supabase admin client is not configured' }, { status: 503 })
   }
 
-  // One query: finishers who can still be emailed. The inner join keeps the
-  // threshold in the database instead of shipping thousands of ids back as a
-  // second `in(...)` filter.
-  const { data: finishers, error: finisherError } = await supabase
-    .from('profiles')
-    .select('id, email, display_name, user_stats!inner(total_pushups)')
-    .eq('email_opt_out', false)
-    .not('email', 'is', null)
-    .gte('user_stats.total_pushups', CHALLENGE_TOTAL)
-    .order('id')
+  // Finishers of the season on display. This used to embed user_stats through
+  // the foreign key; user_stats is now a view over the season's stats, so the
+  // threshold is applied there and the profiles come back by id.
+  const { data: finisherStats, error: statsQueryError } = await supabase
+    .from('user_stats')
+    .select('user_id, total_pushups')
+    .gte('total_pushups', CHALLENGE_TOTAL)
+    .order('user_id')
     .limit(MAX_RECIPIENTS + 1)
+
+  if (statsQueryError) {
+    console.error('Merch campaign finisher query failed:', statsQueryError)
+    return NextResponse.json({ error: 'Could not load campaign recipients' }, { status: 500 })
+  }
+
+  const finisherTotals = new Map<string, number>(
+    (finisherStats || []).map((row) => [row.user_id as string, row.total_pushups as number])
+  )
+
+  const { data: finishers, error: finisherError } = finisherTotals.size
+    ? await supabase
+        .from('profiles')
+        .select('id, email, display_name')
+        .in('id', Array.from(finisherTotals.keys()))
+        .eq('email_opt_out', false)
+        .not('email', 'is', null)
+        .order('id')
+    : { data: [], error: null }
 
   if (finisherError) {
     console.error('Merch campaign finisher query failed:', finisherError)
     return NextResponse.json({ error: 'Could not load campaign recipients' }, { status: 500 })
   }
 
-  const rows = (finishers || []) as FinisherRow[]
-  const truncated = rows.length > MAX_RECIPIENTS
+  const rows: FinisherRow[] = (finishers || []).map((row) => ({
+    id: row.id as string,
+    email: row.email as string | null,
+    display_name: row.display_name as string | null,
+    total_pushups: finisherTotals.get(row.id as string) ?? null,
+  }))
+  const truncated = finisherTotals.size > MAX_RECIPIENTS
 
   const { data: alreadySent, error: ledgerError } = await supabase
     .from('email_campaign_sends')
@@ -155,7 +172,7 @@ async function runCampaign(
     ...buildMerchCampaignEmail({
       profileId: recipient.id,
       displayName: recipient.display_name,
-      totalPushups: totalPushupsOf(recipient),
+      totalPushups: recipient.total_pushups,
       variant: campaign.variant,
     }),
   }))

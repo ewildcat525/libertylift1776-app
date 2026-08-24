@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient, Contest } from '@/lib/supabase'
 import { localDateString } from '@/lib/dates'
+import { seasonForLogging } from '@/lib/seasons'
 import Navigation from '@/components/Navigation'
 import { canUsePublicContests } from '@/lib/flags'
 import { isNativeApp } from '@/lib/native-auth'
@@ -134,7 +135,9 @@ export default function ContestsPage() {
         invite_code: inviteCode,
         is_public: publicContestsEnabled && isPublic,
         start_date: localDateString(),
-        end_date: '2026-07-31',
+        // The season's last day. The database enforces this too, so a client
+        // cannot create a crew that outlives its challenge.
+        end_date: seasonForLogging().endsOn,
       })
       .select()
       .single()

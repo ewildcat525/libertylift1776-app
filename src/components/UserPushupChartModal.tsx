@@ -14,6 +14,7 @@ import {
   YAxis,
 } from 'recharts'
 import { createClient, US_STATES } from '@/lib/supabase'
+import { seasonForDisplay } from '@/lib/seasons'
 
 const DAYS_IN_JULY = 31
 
@@ -30,6 +31,8 @@ interface ProfileSummary {
 
 // Read the deliberately public daily aggregate. Raw pushup_logs rows are
 // owner-only, so public charts never receive notes, IDs, or exact timestamps.
+const season = seasonForDisplay()
+
 function useUserDailyPushups(userId: string | null) {
   const [data, setData] = useState<DayBar[]>([])
   const [summary, setSummary] = useState<ProfileSummary>({ total: 0, bestDay: 0, daysLogged: 0 })
@@ -50,8 +53,9 @@ function useUserDailyPushups(userId: string | null) {
           .from('public_user_daily_pushups')
           .select('daily_pushups, log_date')
           .eq('user_id', userId)
-          .gte('log_date', '2026-07-01')
-          .lte('log_date', '2026-07-31')
+          .eq('season_year', season.year)
+          .gte('log_date', season.startsOn)
+          .lte('log_date', season.endsOn)
 
         if (cancelled) return
 
@@ -257,7 +261,7 @@ function ChartModal({ userId, displayName, stateCode, onClose }: ChartModalProps
                 </ResponsiveContainer>
               </div>
               <p className="text-center text-white/40 text-xs mt-3">
-                Push-ups logged each day in July 2026.
+                Push-ups logged each day in July {season.year}.
               </p>
             </>
           )}

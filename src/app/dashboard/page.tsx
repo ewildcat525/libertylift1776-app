@@ -5,9 +5,17 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { track } from '@vercel/analytics'
 import { isNativeApp, nativeRepLoggedFeedback } from '@/lib/native-auth'
-import { createClient, UserStats, Profile, AMERICAN_FACTS, DAILY_PACE, isValidStateCode, US_STATES } from '@/lib/supabase'
+import { createClient, UserStats, Profile, AMERICAN_FACTS, isValidStateCode, US_STATES } from '@/lib/supabase'
 import { clearPendingSignup, generateDisplayName, readPendingSignup } from '@/lib/onboarding'
 import { challengePhase, ChallengePhase, localDateString, liveStreak } from '@/lib/dates'
+import {
+  isSeasonDay,
+  seasonForDisplay,
+  seasonForLogging,
+  seasonLengthInDays,
+  type Season,
+} from '@/lib/seasons'
+import { clearPushupsForDay, logPushups as logPushupsRpc } from '@/lib/pushups'
 import { clearReferral } from '@/lib/referral'
 import BadgeCase from '@/components/BadgeCase'
 import CommunityMilestoneBanner from '@/components/CommunityMilestoneBanner'
@@ -32,43 +40,61 @@ import {
 
 type ChartPoint = { day: number; pace: number; you: number; required: number | null }
 
-// Day of July the "required pace" projection starts from, clamped to the challenge
-// window. Returns 32 once the challenge is over, so no days remain.
-const requiredStartDay = (now: Date) => {
-  const julyStart = new Date(2026, 6, 1)
-  const julyEnd = new Date(2026, 6, 31, 23, 59, 59)
-  if (now < julyStart) return 1
-  if (now > julyEnd) return 32
-  return now.getDate()
+const displaySeason = seasonForDisplay()
+const loggingSeason = seasonForLogging()
+const displaySeasonDays = seasonLengthInDays(displaySeason)
+const dailyPace = Math.ceil(displaySeason.goal / displaySeasonDays)
+const displaySeasonFinalDay = new Date(`${displaySeason.endsOn}T12:00:00`).toLocaleDateString(
+  'en-US',
+  { month: 'long', day: 'numeric' },
+)
+
+function seasonDate(season: Season, day: number): string {
+  return `${season.startsOn.slice(0, 8)}${String(day).padStart(2, '0')}`
 }
 
-const buildChartData = (logs: Record<string, number>): ChartPoint[] => {
-  const julyLogs: Record<number, number> = {}
-  for (let d = 1; d <= 31; d++) julyLogs[d] = 0
+function seasonDayNumber(date: string, season: Season): number {
+  const start = Date.parse(`${season.startsOn}T00:00:00Z`)
+  const current = Date.parse(`${date}T00:00:00Z`)
+  return Math.round((current - start) / 86_400_000) + 1
+}
+
+// Day of the season the "required pace" projection starts from, clamped to
+// the challenge window. Returns one past the final day once it is over.
+const requiredStartDay = (now: Date, season: Season) => {
+  const today = localDateString(now)
+  if (today < season.startsOn) return 1
+  if (today > season.endsOn) return seasonLengthInDays(season) + 1
+  return seasonDayNumber(today, season)
+}
+
+const buildChartData = (logs: Record<string, number>, season: Season): ChartPoint[] => {
+  const daysInSeason = seasonLengthInDays(season)
+  const seasonLogs: Record<number, number> = {}
+  for (let d = 1; d <= daysInSeason; d++) seasonLogs[d] = 0
   Object.entries(logs).forEach(([dateStr, count]) => {
-    if (dateStr.startsWith('2026-07-')) {
-      const day = parseInt(dateStr.split('-')[2], 10)
-      julyLogs[day] = count
+    if (dateStr >= season.startsOn && dateStr <= season.endsOn) {
+      seasonLogs[seasonDayNumber(dateStr, season)] = count
     }
   })
 
   let cumulative = 0
-  const points: ChartPoint[] = Array.from({ length: 31 }, (_, i) => {
+  const points: ChartPoint[] = Array.from({ length: daysInSeason }, (_, i) => {
     const day = i + 1
-    cumulative += julyLogs[day]
-    return { day, pace: Math.round(DAILY_PACE * day), you: cumulative, required: null }
+    cumulative += seasonLogs[day]
+    return { day, pace: Math.min(season.goal, Math.round(dailyPace * day)), you: cumulative, required: null }
   })
 
-  // Straight line to 1776 on July 31, anchored at the last fully elapsed day.
+  // Straight line to the goal on the final day, anchored at the last elapsed day.
   // Today is still in progress, so it counts as one of the remaining days.
-  const startDay = requiredStartDay(new Date())
-  const anchorDay = startDay - 1 // 0 = before July begins
+  const startDay = requiredStartDay(new Date(), season)
+  const anchorDay = startDay - 1
   const anchorTotal = anchorDay >= 1 ? points[anchorDay - 1].you : 0
-  const currentTotal = points[Math.min(startDay, 31) - 1].you
-  const daysLeft = 31 - anchorDay
-  if (currentTotal < 1776 && daysLeft > 0) {
-    const perDay = (1776 - anchorTotal) / daysLeft
-    for (let day = Math.max(anchorDay, 1); day <= 31; day++) {
+  const currentTotal = points[Math.min(startDay, daysInSeason) - 1].you
+  const daysLeft = daysInSeason - anchorDay
+  if (currentTotal < season.goal && daysLeft > 0) {
+    const perDay = (season.goal - anchorTotal) / daysLeft
+    for (let day = Math.max(anchorDay, 1); day <= daysInSeason; day++) {
       points[day - 1].required = Math.round(anchorTotal + perDay * (day - anchorDay))
     }
   }
@@ -82,12 +108,10 @@ export default function DashboardPage() {
   const [stats, setStats] = useState<UserStats | null>(null)
   const [pushupCount, setPushupCount] = useState('')
   const [logDate, setLogDate] = useState(() => {
-    const now = new Date()
-    const julyStart = new Date(2026, 6, 1)
-    const julyEnd = new Date(2026, 6, 31, 23, 59, 59)
-    if (now < julyStart) return '2026-07-01'
-    if (now > julyEnd) return '2026-07-31'
-    return localDateString(now)
+    const today = localDateString()
+    if (today < loggingSeason.startsOn) return loggingSeason.startsOn
+    if (today > loggingSeason.endsOn) return loggingSeason.endsOn
+    return today
   })
   const [logging, setLogging] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
@@ -101,7 +125,7 @@ export default function DashboardPage() {
   const [profileError, setProfileError] = useState<string | null>(null)
   const [currentFact, setCurrentFact] = useState<string | null>(null)
   const [dailyLogs, setDailyLogs] = useState<Record<string, number>>({})
-  const [calendarMonth] = useState(() => new Date(2026, 6, 1)) // July is month 6 (0-indexed)
+  const [calendarMonth] = useState(() => new Date(`${displaySeason.startsOn}T12:00:00`))
   const [chartData, setChartData] = useState<ChartPoint[]>([])
   const [recruitCount, setRecruitCount] = useState(0)
   // Challenge lifecycle, resolved after mount so the prerendered HTML (which
@@ -291,26 +315,14 @@ export default function DashboardPage() {
       const { data: recruits } = await supabase.rpc('get_recruit_count')
       setRecruitCount(recruits || 0)
 
-      // Load stats (create if missing - handles users created before trigger was added)
-      let { data: statsData, error: statsError } = await supabase
+      // user_stats is a view over this season's stats with a zeroed row for
+      // every profile, so there is never a missing row to create.
+      const { data: statsData } = await supabase
         .from('user_stats')
         .select('*')
         .eq('user_id', user.id)
-        .single()
+        .maybeSingle()
 
-      if (statsError && statsError.code === 'PGRST116') {
-        // No stats row exists, create one
-        const { data: newStats, error: insertError } = await supabase
-          .from('user_stats')
-          .insert({ user_id: user.id })
-          .select()
-          .single()
-        if (!insertError) {
-          statsData = newStats
-        } else {
-          console.error('Failed to create user_stats:', insertError)
-        }
-      }
       setStats(statsData)
 
       // Load daily logs for calendar
@@ -318,6 +330,7 @@ export default function DashboardPage() {
         .from('pushup_logs')
         .select('logged_at, count')
         .eq('user_id', user.id)
+        .eq('season_year', displaySeason.year)
 
       if (logsData) {
         const grouped: Record<string, number> = {}
@@ -327,7 +340,7 @@ export default function DashboardPage() {
         })
         setDailyLogs(grouped)
 
-        setChartData(buildChartData(grouped))
+        setChartData(buildChartData(grouped, displaySeason))
       }
     }
 
@@ -414,8 +427,9 @@ export default function DashboardPage() {
     const count = parseInt(pushupCount)
     if (!count || count < 1 || !user) return
 
-    // Validate date is in July 2026
-    if (!logDate.startsWith('2026-07-')) {
+    const season = seasonForLogging()
+
+    if (!isSeasonDay(logDate, season)) {
       setShowError('🇺🇸 The Liberty Lift challenge is for the month of July only!')
       setTimeout(() => setShowError(null), 4000)
       return
@@ -423,12 +437,9 @@ export default function DashboardPage() {
 
     setLogging(true)
 
-    // Create timestamp for the selected date (noon to avoid timezone issues)
-    const loggedAt = new Date(logDate + 'T12:00:00').toISOString()
-
-    const { error } = await supabase
-      .from('pushup_logs')
-      .insert({ user_id: user.id, count, logged_at: loggedAt })
+    // The RPC stamps the timestamp, enforces the daily cap and rejects a day
+    // outside the season. The client no longer decides any of it.
+    const { error } = await logPushupsRpc(supabase, { count, day: logDate })
 
     if (error) {
       console.error('Error logging pushups:', error)
@@ -459,21 +470,21 @@ export default function DashboardPage() {
       // Update daily logs for calendar and rebuild chart
       setDailyLogs(prev => {
         const updated = { ...prev, [logDate]: (prev[logDate] || 0) + count }
-        setChartData(buildChartData(updated))
+        setChartData(buildChartData(updated, displaySeason))
         return updated
       })
 
       track('pushups_logged', { count })
       void nativeRepLoggedFeedback()
 
-      // Crossing 1776 gets the full fireworks show; it outranks the
+      // Crossing the season goal gets the full fireworks show; it outranks the
       // Independence Day easter egg for reps logged on July 4th.
-      if (oldTotal < 1776 && newTotal >= 1776) {
+      if (oldTotal < displaySeason.goal && newTotal >= displaySeason.goal) {
         setFireworksShow('liberty')
         track('liberty_achieved_fireworks')
         // Finishing the challenge unlocks the merch shop; the CTA to order
         // waits for the fireworks to finish (see Fireworks onDone below).
-      } else if (logDate === '2026-07-04') {
+      } else if (logDate === `${loggingSeason.year}-07-04`) {
         setFireworksShow('fourth')
         track('july_4th_fireworks')
       }
@@ -498,16 +509,9 @@ export default function DashboardPage() {
 
     if (!confirm(`Clear all ${count} push-ups for ${logDate}?`)) return
 
-    // Delete all logs for this date
-    const startOfDay = new Date(logDate + 'T00:00:00').toISOString()
-    const endOfDay = new Date(logDate + 'T23:59:59').toISOString()
-
-    const { error } = await supabase
-      .from('pushup_logs')
-      .delete()
-      .eq('user_id', user.id)
-      .gte('logged_at', startOfDay)
-      .lte('logged_at', endOfDay)
+    // Clearing a day is the same rule set as logging one, so it runs through
+    // the database too.
+    const { error } = await clearPushupsForDay(supabase, logDate)
 
     if (error) {
       setShowError(`Error: ${error.message}`)
@@ -519,7 +523,7 @@ export default function DashboardPage() {
     setDailyLogs(prev => {
       const updated = { ...prev }
       delete updated[logDate]
-      setChartData(buildChartData(updated))
+      setChartData(buildChartData(updated, displaySeason))
       return updated
     })
 
@@ -546,54 +550,52 @@ export default function DashboardPage() {
     return { daysInMonth, startingDay, year, month }
   }
 
-  const progress = stats ? (stats.total_pushups / 1776) * 100 : 0
+  const progress = stats ? (stats.total_pushups / displaySeason.goal) * 100 : 0
   const totalPushups = stats?.total_pushups ?? 0
-  const remainingPushups = Math.max(0, 1776 - totalPushups)
+  const remainingPushups = Math.max(0, displaySeason.goal - totalPushups)
   const nextMilestone = AMERICAN_FACTS.find(milestone => milestone.threshold > totalPushups)
   const activeDays = stats?.days_logged ?? Object.values(dailyLogs).filter(Boolean).length
   const averageActiveDay = activeDays > 0 ? Math.round(totalPushups / activeDays) : 0
-  const julyActivity = Array.from({ length: 31 }, (_, index) => {
+  const seasonActivity = Array.from({ length: displaySeasonDays }, (_, index) => {
     const day = index + 1
-    const count = dailyLogs[`2026-07-${String(day).padStart(2, '0')}`] ?? 0
+    const count = dailyLogs[seasonDate(displaySeason, day)] ?? 0
     return { day, count }
   })
   const recentLogEntries = Object.entries(dailyLogs)
     .filter(([, count]) => count > 0)
     .sort(([left], [right]) => right.localeCompare(left))
     .slice(0, 3)
-  const dailyTarget = DAILY_PACE
-  const daysInJuly = 31
+  const dailyTarget = dailyPace
+  const daysInSeason = displaySeasonDays
   const today = new Date()
-  const julyStart = new Date(2026, 6, 1)
-  const julyEnd = new Date(2026, 6, 31, 23, 59, 59)
+  const todayString = localDateString(today)
 
-  // Push-ups per day needed (today included) to reach 1776 by July 31
-  const reqStartDay = requiredStartDay(today)
+  // Push-ups per day needed (today included) to reach the goal by the final day.
+  const reqStartDay = requiredStartDay(today, displaySeason)
   const reqAnchorDay = reqStartDay - 1
   const reqAnchorTotal = reqAnchorDay >= 1 ? chartData[reqAnchorDay - 1]?.you ?? 0 : 0
-  const reqCurrentTotal = chartData[Math.min(reqStartDay, 31) - 1]?.you ?? 0
+  const reqCurrentTotal = chartData[Math.min(reqStartDay, daysInSeason) - 1]?.you ?? 0
   const requiredPerDay =
-    chartData.length > 0 && reqCurrentTotal < 1776 && reqAnchorDay < 31
-      ? Math.ceil((1776 - reqAnchorTotal) / (31 - reqAnchorDay))
+    chartData.length > 0 && reqCurrentTotal < displaySeason.goal && reqAnchorDay < daysInSeason
+      ? Math.ceil((displaySeason.goal - reqAnchorTotal) / (daysInSeason - reqAnchorDay))
       : null
 
   // Determine challenge phase and pace
   let pace: 'before' | 'ahead' | 'ontrack' | 'behind' | 'complete'
 
-  if (today < julyStart) {
+  if (todayString < displaySeason.startsOn) {
     pace = 'before'
-  } else if (today > julyEnd) {
-    pace = stats && stats.total_pushups >= 1776 ? 'complete' : 'behind'
+  } else if (todayString > displaySeason.endsOn) {
+    pace = stats && stats.total_pushups >= displaySeason.goal ? 'complete' : 'behind'
   } else {
-    // During July - calculate based on day of month
-    const dayOfJuly = today.getDate()
+    const dayOfSeason = seasonDayNumber(todayString, displaySeason)
     const total = stats?.total_pushups ?? 0
     // The current day is still in progress, so its target isn't owed yet.
     // You're only "behind" if you've fallen short of the days that have
     // already fully elapsed. Once you've met that, you're "on track" until
     // you clear today's cumulative target, at which point you're "ahead".
-    const requiredByYesterday = ((dayOfJuly - 1) / daysInJuly) * 1776
-    const targetByToday = (dayOfJuly / daysInJuly) * 1776
+    const requiredByYesterday = ((dayOfSeason - 1) / daysInSeason) * displaySeason.goal
+    const targetByToday = (dayOfSeason / daysInSeason) * displaySeason.goal
     if (total >= targetByToday) {
       pace = 'ahead'
     } else if (total < requiredByYesterday) {
@@ -620,9 +622,8 @@ export default function DashboardPage() {
       {fireworksShow && (
         <Fireworks
           onDone={() => {
-            // Crossing 1776 unlocks the merch shop — once the show wraps up,
-            // hand off to the "shop unlocked" call to action.
-            if (fireworksShow === 'liberty') {
+            // The archived finisher merch belongs to the 2026 campaign.
+            if (fireworksShow === 'liberty' && displaySeason.year === 2026) {
               setShowMerchUnlock(true)
               track('merch_unlock_cta_shown')
             }
@@ -630,7 +631,7 @@ export default function DashboardPage() {
           }}
           {...(fireworksShow === 'liberty' && {
             title: '🇺🇸 LIBERTY ACHIEVED 🇺🇸',
-            subtitle: '1,776 push-ups — Founding Father',
+            subtitle: `${displaySeason.goal.toLocaleString()} push-ups — Founding Father`,
           })}
         />
       )}
@@ -664,7 +665,7 @@ export default function DashboardPage() {
               You earned the shirt.
             </h2>
             <p className="text-white/60 text-sm mb-6 max-w-sm mx-auto">
-              All 1,776 push-ups, done. The Reps for the Republic tee was made
+              All {displaySeason.goal.toLocaleString()} push-ups, done. The Reps for the Republic tee was made
               for finishers like you. Sales are complete for 2026, but the edition
               remains part of the record.
             </p>
@@ -694,7 +695,7 @@ export default function DashboardPage() {
               <div>
                 <div className="native-overline">Your campaign</div>
                 <h1 id="native-today-title">Ready, {profile?.display_name?.split(' ')[0] || 'Patriot'}?</h1>
-                <p>{phase === 'ended' ? 'Your 2026 campaign is in the books.' : 'Keep the promise you made to yourself.'}</p>
+                <p>{phase === 'ended' ? `Your ${displaySeason.year} campaign is in the books.` : 'Keep the promise you made to yourself.'}</p>
               </div>
               <Link href="/profile" className="native-avatar" aria-label="Open your profile">
                 {profile?.display_name
@@ -710,7 +711,7 @@ export default function DashboardPage() {
               <div className="native-progress-copy">
                 <span>Total completed</span>
                 <strong>{totalPushups.toLocaleString()}</strong>
-                <small>of 1,776 push-ups</small>
+                <small>of {displaySeason.goal.toLocaleString()} push-ups</small>
               </div>
               <div
                 className="native-progress-ring"
@@ -718,8 +719,8 @@ export default function DashboardPage() {
                 role="progressbar"
                 aria-label="Challenge completion"
                 aria-valuemin={0}
-                aria-valuemax={1776}
-                aria-valuenow={Math.min(totalPushups, 1776)}
+                aria-valuemax={displaySeason.goal}
+                aria-valuenow={Math.min(totalPushups, displaySeason.goal)}
                 aria-valuetext={`${Math.round(progress)} percent complete`}
               >
                 <span>{Math.round(progress)}%</span>
@@ -752,13 +753,13 @@ export default function DashboardPage() {
                   <span>Consistency</span>
                   <h2 id="native-momentum-title">July activity</h2>
                 </div>
-                <strong>{activeDays}<small>/31 days</small></strong>
+                <strong>{activeDays}<small>/{displaySeasonDays} days</small></strong>
               </div>
               <div className="native-activity-grid" aria-label={`${activeDays} active days in July`}>
                 <span className="sr-only">
-                  {julyActivity.filter(day => day.count > 0).map(day => `July ${day.day}: ${day.count} push-ups`).join('; ') || 'No activity logged'}
+                  {seasonActivity.filter(day => day.count > 0).map(day => `July ${day.day}: ${day.count} push-ups`).join('; ') || 'No activity logged'}
                 </span>
-                {julyActivity.map(({ day, count }) => (
+                {seasonActivity.map(({ day, count }) => (
                   <span
                     key={day}
                     className={count > 0 ? 'is-active' : ''}
@@ -818,7 +819,7 @@ export default function DashboardPage() {
           <div id="profile-name" className="web-dashboard-header mb-8">
             <div className="flex flex-wrap items-center gap-3 mb-3">
               <div className="app-eyebrow">Personal board</div>
-              {(stats?.total_pushups ?? 0) >= 1776 && (
+              {(stats?.total_pushups ?? 0) >= displaySeason.goal && (
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 border border-liberty-gold/50 bg-liberty-gold/10 text-liberty-gold text-[10px] font-bold uppercase tracking-[0.15em]">
                   🏛️ Founding Father
                 </span>
@@ -854,7 +855,9 @@ export default function DashboardPage() {
               )}
             </div>
             <p className="text-white/60 mt-3">
-              {phase === 'ended' ? 'Your 2026 campaign, in the books.' : 'Your journey to 1776.'}
+              {phase === 'ended'
+                ? `Your ${displaySeason.year} campaign, in the books.`
+                : `Your journey to ${displaySeason.goal.toLocaleString()}.`}
             </p>
             {editingProfile && (
               <form onSubmit={saveProfileName} className="mt-5 max-w-xl">
@@ -916,7 +919,7 @@ export default function DashboardPage() {
               className="web-dashboard-status mb-8 p-4 bg-yellow-500/15 border border-yellow-500/40 text-center text-yellow-200 text-sm"
               role="status"
             >
-              🔔 <strong>Last call.</strong> The contest ended July 31 — you have until midnight
+              🔔 <strong>Last call.</strong> The contest ended {displaySeasonFinalDay} — you have until midnight
               tonight to log any July reps you missed. After that, the books are closed for good.
             </div>
           )}
@@ -926,11 +929,11 @@ export default function DashboardPage() {
             <div className="web-dashboard-status card p-8 mb-8 text-center">
               <div className="app-eyebrow mb-3 justify-center">After-action report</div>
               <h2 className="font-bebas text-4xl sm:text-5xl text-white mb-2">
-                {(stats?.total_pushups ?? 0) >= 1776 ? 'Liberty achieved.' : 'You answered the call.'}
+                {(stats?.total_pushups ?? 0) >= displaySeason.goal ? 'Liberty achieved.' : 'You answered the call.'}
               </h2>
               <p className="text-white/60 text-sm max-w-lg mx-auto">
-                {(stats?.total_pushups ?? 0) >= 1776
-                  ? 'All 1,776 push-ups, in the books. Founding Father, forever.'
+                {(stats?.total_pushups ?? 0) >= displaySeason.goal
+                  ? `All ${displaySeason.goal.toLocaleString()} push-ups, in the books. Founding Father, forever.`
                   : `${(stats?.total_pushups ?? 0).toLocaleString()} push-ups on the board${
                       profile?.state_code ? ` for ${US_STATES[profile.state_code]}` : ''
                     } — every one of them counted in the national total.`}
@@ -943,7 +946,7 @@ export default function DashboardPage() {
                   {boardSize !== null && ` of ${boardSize.toLocaleString()} on the board`}.
                 </p>
               )}
-              {(stats?.total_pushups ?? 0) >= 1776 && (
+              {(stats?.total_pushups ?? 0) >= displaySeason.goal && (
                 <p className="text-sm mt-3">
                   <a
                     href="/merch"
@@ -988,12 +991,12 @@ export default function DashboardPage() {
               </div>
               <p className="text-sm text-white/60 mt-3">
                 {pace === 'complete'
-                  ? "You did it: 1776 push-ups in July."
+                  ? `You did it: ${displaySeason.goal.toLocaleString()} push-ups in July.`
                   : phase === 'grace'
                     ? 'The challenge window is over — log any missed July reps before midnight tonight.'
                     : requiredPerDay !== null
-                      ? `Target: ${requiredPerDay} push-ups per day from today to hit 1776 by July 31.`
-                      : `Target: ${dailyTarget} push-ups per day to hit 1776 by July 31.`}
+                      ? `Target: ${requiredPerDay} push-ups per day from today to hit ${displaySeason.goal.toLocaleString()} by the final day.`
+                      : `Target: ${dailyTarget} push-ups per day to hit ${displaySeason.goal.toLocaleString()} by the final day.`}
               </p>
             </div>
           )}
@@ -1041,7 +1044,7 @@ export default function DashboardPage() {
 
             <div className="native-safety-note mb-5 border border-amber-300/25 bg-amber-300/[0.06] p-4 text-sm leading-relaxed text-amber-100/80" role="note">
               <strong className="text-amber-100">Train safely.</strong> Use controlled form, rest
-              between sets, and stop if anything feels wrong. Daily cap: 500.
+              between sets, and stop if anything feels wrong. Daily cap: {loggingSeason.dailyCap}.
             </div>
 
             {/* Quick Add Buttons */}
@@ -1071,7 +1074,7 @@ export default function DashboardPage() {
                   onChange={(e) => setPushupCount(e.target.value)}
                   placeholder="0"
                   min="1"
-                  max="500"
+                  max={loggingSeason.dailyCap}
                   inputMode="numeric"
                   className="input text-center text-2xl font-bold flex-1"
                 />
@@ -1083,8 +1086,8 @@ export default function DashboardPage() {
                   type="date"
                   value={logDate}
                   onChange={(e) => setLogDate(e.target.value)}
-                  min="2026-07-01"
-                  max="2026-07-31"
+                  min={loggingSeason.startsOn}
+                  max={loggingSeason.endsOn}
                   className="input text-center flex-1"
                 />
                 </div>
@@ -1169,7 +1172,7 @@ export default function DashboardPage() {
             {/* Progress Bar */}
             <div className="mb-6">
               <div className="flex justify-between text-sm text-white/60 mb-2">
-                <span>Progress to 1776</span>
+                <span>Progress to {displaySeason.goal.toLocaleString()}</span>
                 <span>{progress.toFixed(1)}%</span>
               </div>
               <div className="progress-bar">
@@ -1180,8 +1183,8 @@ export default function DashboardPage() {
               </div>
               <div className="flex justify-between text-xs text-white/40 mt-1">
                 <span>0</span>
-                <span>888</span>
-                <span>1776</span>
+                <span>{Math.round(displaySeason.goal / 2).toLocaleString()}</span>
+                <span>{displaySeason.goal.toLocaleString()}</span>
               </div>
             </div>
 
@@ -1207,7 +1210,7 @@ export default function DashboardPage() {
               </div>
               <div className="text-center p-4 bg-white/[0.04] border border-white/10">
                 <div className="font-bebas text-3xl text-white">
-                  {Math.max(0, 1776 - (stats?.total_pushups || 0))}
+                  {Math.max(0, displaySeason.goal - (stats?.total_pushups || 0))}
                 </div>
                 <div className="text-xs text-white/50 uppercase">Remaining</div>
               </div>
@@ -1248,7 +1251,7 @@ export default function DashboardPage() {
           {/* Personal Progress Chart */}
           <div className="web-dashboard-detail card p-6 mb-8">
             <h2 className="font-bebas text-2xl text-liberty-red mb-4 text-center">
-              YOUR PROGRESS TO 1776
+              YOUR PROGRESS TO {displaySeason.goal.toLocaleString()}
             </h2>
             <div className="h-[300px] sm:h-[350px]">
               <ResponsiveContainer width="100%" height="100%">
@@ -1263,8 +1266,8 @@ export default function DashboardPage() {
                   <YAxis
                     stroke="#666"
                     tick={{ fill: '#999', fontSize: 12 }}
-                    domain={[0, 1776]}
-                    ticks={[0, 444, 888, 1332, 1776]}
+                    domain={[0, displaySeason.goal]}
+                    ticks={[0, 0.25, 0.5, 0.75, 1].map(fraction => Math.round(displaySeason.goal * fraction))}
                   />
                   <Tooltip
                     contentStyle={{
@@ -1279,7 +1282,7 @@ export default function DashboardPage() {
                         ? 'Your Push-ups'
                         : name === 'required'
                           ? `${requiredPerDay}/day Needed`
-                          : '58/day Pace'
+                          : `${dailyPace}/day Pace`
                     ]}
                     labelFormatter={(day) => `July ${day}`}
                   />
@@ -1289,7 +1292,7 @@ export default function DashboardPage() {
                         ? 'Your Push-ups'
                         : value === 'required'
                           ? `${requiredPerDay}/day Needed`
-                          : '58/day Pace'
+                          : `${dailyPace}/day Pace`
                     }
                   />
 
@@ -1328,18 +1331,18 @@ export default function DashboardPage() {
                     activeDot={{ r: 5, fill: '#DC2626' }}
                   />
 
-                  {/* 1776 goal line */}
+                  {/* Season goal line */}
                   <ReferenceLine
-                    y={1776}
+                    y={displaySeason.goal}
                     stroke="#EBE7DC"
                     strokeDasharray="3 3"
-                    label={{ value: '1776', fill: '#EBE7DC', fontSize: 12, position: 'right' }}
+                    label={{ value: displaySeason.goal.toLocaleString(), fill: '#EBE7DC', fontSize: 12, position: 'right' }}
                   />
                 </LineChart>
               </ResponsiveContainer>
             </div>
             <p className="text-center text-white/40 text-sm mt-2">
-              Dashed gray line = 58 push-ups/day pace to hit 1776 by July 31.
+              Dashed gray line = {dailyPace} push-ups/day pace to hit {displaySeason.goal.toLocaleString()} by the final day.
               {requiredPerDay !== null && (
                 <> Dashed blue line = {requiredPerDay} push-ups/day needed from today to finish.</>
               )}
@@ -1349,7 +1352,7 @@ export default function DashboardPage() {
           {/* Calendar */}
           <div className="web-dashboard-detail card p-6 mb-8">
             <h2 className="font-bebas text-3xl text-liberty-red text-center mb-4">
-              JULY 2026
+              JULY {displaySeason.year}
             </h2>
 
             {/* Day headers */}
@@ -1372,9 +1375,9 @@ export default function DashboardPage() {
                   days.push(<div key={`empty-${i}`} className="aspect-square" />)
                 }
 
-                // Days of the month (hardcoded to July 2026)
+                // Days of the current display season.
                 for (let day = 1; day <= daysInMonth; day++) {
-                  const dateStr = `2026-07-${String(day).padStart(2, '0')}`
+                  const dateStr = seasonDate(displaySeason, day)
                   const count = dailyLogs[dateStr] || 0
                   const isToday = dateStr === localDateString()
 
