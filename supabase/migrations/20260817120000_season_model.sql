@@ -35,6 +35,21 @@
 -- disabled.
 begin;
 
+do $$
+begin
+  if to_regclass('public.challenge_seasons') is null
+     or to_regclass('public.pushup_logs') is null
+     or to_regclass('public.user_stats') is null then
+    raise exception 'Season-model prerequisites are missing; apply the earlier migrations first.';
+  end if;
+
+  if to_regclass('public.season_user_stats') is not null
+     or to_regprocedure('public.current_season()') is not null then
+    raise exception 'The season model already appears to be installed; do not run this migration twice.';
+  end if;
+end;
+$$;
+
 -- ============================================================
 -- 1. Season configuration
 -- ============================================================
