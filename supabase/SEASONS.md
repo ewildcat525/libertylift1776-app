@@ -144,3 +144,20 @@ outside the season, and treats a repeated `p_client_log_id` as the same rep —
 which is what makes an offline queue on the phone safe to replay.
 
 `clear_pushups_for_day(p_day)` is the matching delete.
+
+## Migration discipline
+
+Production schema changes must start as a local migration:
+
+```bash
+supabase migration new describe_the_change
+supabase db push --linked --dry-run
+supabase db push --linked
+```
+
+Use the hosted SQL editor for read-only verification, not for applying DDL.
+Before and after a deployment, `supabase migration list --linked` must show the
+same timestamp in both the Local and Remote columns for every row. A final
+`supabase db push --linked --dry-run` must report that the remote database is
+up to date. This keeps fresh environments and Supabase branches reproducible
+from the files committed here.
