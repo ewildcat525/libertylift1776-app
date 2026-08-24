@@ -5,6 +5,64 @@ July: the goal, the caps, the logging window, the Final Push window and the
 closing bell. The app reads it, the database enforces it, and any client — web
 or native — gets it from the `current_season()` RPC.
 
+## Deploying the season model
+
+The database migration must land before the web commit that starts calling
+`log_pushups()` and `clear_pushups_for_day()`. The migration preserves existing
+reads through a compatibility `user_stats` view, but the new write RPCs do not
+exist until the SQL has run.
+
+1. Run `supabase db push --dry-run --linked` and inspect the plan.
+2. If local and remote migration history differ, stop. Do not blindly mark
+   migrations applied or reverted: first confirm which SQL is already present
+   in the remote schema.
+3. Apply `supabase/migrations/20260817120000_season_model.sql` to staging and
+   run the verification queries below.
+4. Apply the same migration to production, verify it, and only then deploy the
+   web commit.
+
+The migration has an explicit transaction so a failure rolls back the table
+rename, trigger replacement and data backfills together.
+
+```sql
+-- The configuration exists and 2027 is still deliberately closed.
+select year, status, goal, daily_cap, logging_opens_at, logging_closes_at
+from public.challenge_seasons
+order by year;
+
+-- The compatibility RPC and both season choices resolve.
+select public.current_season();
+
+-- The 2026 backfill preserved the national total.
+select
+  (select coalesce(sum(count), 0)
+   from public.pushup_logs
+   where season_year = 2026) as log_total,
+  (select coalesce(sum(total_pushups), 0)
+   from public.season_user_stats
+   where season_year = 2026) as stats_total;
+
+-- Internal privileged helpers are not callable through the Data API roles.
+select
+  p.proname,
+  has_function_privilege('anon', p.oid, 'execute') as anon_can_execute,
+  has_function_privilege('authenticated', p.oid, 'execute') as authenticated_can_execute
+from pg_proc p
+join pg_namespace n on n.oid = p.pronamespace
+where n.nspname = 'public'
+  and p.proname in (
+    'achievement_earned_at',
+    'recalculate_user_stats',
+    'reconcile_achievements',
+    'refresh_season_stats'
+  )
+order by p.proname;
+```
+
+`log_total` and `stats_total` must match, both privilege columns must be
+`false`, and the 2027 row must remain `interest` until registration is
+deliberately opened.
+
 ## The two questions
 
 There are two different "current seasons" and mixing them up breaks the

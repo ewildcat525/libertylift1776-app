@@ -29,6 +29,12 @@
 -- Nothing here reopens 2026: its season row is 'closed' and its logging window
 -- ended at the same instant the old freeze trigger used.
 
+-- Keep the table rename, trigger replacement and backfills atomic when this
+-- file is run from either the Supabase CLI or the SQL editor. In particular,
+-- a failed backfill must never leave pushup_logs with its user triggers
+-- disabled.
+begin;
+
 -- ============================================================
 -- 1. Season configuration
 -- ============================================================
@@ -127,7 +133,7 @@ begin
   end if;
   return null;
 end;
-$$ language plpgsql set search_path = public;
+$$ language plpgsql set search_path = '';
 
 drop trigger if exists assert_seasons_disjoint on public.challenge_seasons;
 create constraint trigger assert_seasons_disjoint
@@ -150,7 +156,7 @@ returns integer
 language sql
 stable
 security definer
-set search_path = public
+set search_path = ''
 as $$
   select coalesce(
     (select year from public.challenge_seasons
@@ -171,7 +177,7 @@ returns integer
 language sql
 stable
 security definer
-set search_path = public
+set search_path = ''
 as $$
   select coalesce(
     (select max(year) from public.challenge_seasons
@@ -186,7 +192,7 @@ returns integer
 language sql
 stable
 security definer
-set search_path = public
+set search_path = ''
 as $$
   select year from public.challenge_seasons
   where p_logged_at >= logging_opens_at
@@ -225,6 +231,9 @@ alter table public.pushup_logs alter column season_year set not null;
 
 create index if not exists idx_pushup_logs_season_user
   on public.pushup_logs (season_year, user_id);
+
+create index if not exists idx_pushup_logs_user_season_logged_at
+  on public.pushup_logs (user_id, season_year, logged_at);
 
 -- The old window CHECK is replaced by the season window trigger below, which
 -- reads the same bounds out of challenge_seasons.
@@ -278,7 +287,7 @@ begin
   end if;
   return new;
 end;
-$$ language plpgsql security definer set search_path = public;
+$$ language plpgsql security definer set search_path = '';
 
 drop trigger if exists freeze_pushup_logs on public.pushup_logs;
 drop function if exists public.reject_writes_after_freeze();
@@ -330,7 +339,7 @@ begin
 
   return new;
 end;
-$$ language plpgsql security definer set search_path = public;
+$$ language plpgsql security definer set search_path = '';
 
 -- ============================================================
 -- 6. Stats are per-season
@@ -391,6 +400,9 @@ $$;
 comment on table public.season_user_stats is
   'Materialized per-person, per-season totals. Derived from pushup_logs by trigger; clients read, never write.';
 
+create index if not exists idx_season_user_stats_season_total
+  on public.season_user_stats (season_year, total_pushups desc);
+
 -- The badge trigger hung off the old table and fired on every stats update.
 -- Achievements are reconciled explicitly by refresh_season_stats() now, so a
 -- new season cannot revoke a badge won in an old one.
@@ -427,7 +439,7 @@ create or replace function public.compute_streaks(
     ), 0)::int,
     coalesce(max(len), 0)::int
   from runs;
-$$ language sql stable security definer set search_path = public;
+$$ language sql stable security definer set search_path = '';
 
 -- Kept for callers that predate seasons; answers for the display season.
 create or replace function public.compute_streaks(
@@ -437,7 +449,7 @@ create or replace function public.compute_streaks(
 ) as $$
   select cs.current_streak, cs.longest_streak
   from public.compute_streaks(p_user_id, public.season_for_display()) cs;
-$$ language sql stable security definer set search_path = public;
+$$ language sql stable security definer set search_path = '';
 
 create or replace function public.achievement_earned_at(
   p_user_id uuid,
@@ -495,7 +507,7 @@ create or replace function public.achievement_earned_at(
       limit 1
     )
   end;
-$$ language sql stable security definer set search_path = public;
+$$ language sql stable security definer set search_path = '';
 
 -- Badges are durable and lifetime, earned by your best season.
 --
@@ -549,7 +561,7 @@ begin
       (a.requirement_type = 'daily'  and v_best_day >= a.threshold)
     );
 end;
-$$ language plpgsql security definer set search_path = public;
+$$ language plpgsql security definer set search_path = '';
 
 -- One writer for season_user_stats. Insert and delete paths both land here,
 -- so the two can never compute totals differently again.
@@ -599,7 +611,7 @@ begin
 
   perform public.reconcile_achievements(p_user_id);
 end;
-$$ language plpgsql security definer set search_path = public;
+$$ language plpgsql security definer set search_path = '';
 
 create or replace function public.update_user_stats()
 returns trigger as $$
@@ -607,7 +619,7 @@ begin
   perform public.refresh_season_stats(new.user_id, new.season_year);
   return new;
 end;
-$$ language plpgsql security definer set search_path = public;
+$$ language plpgsql security definer set search_path = '';
 
 create or replace function public.on_pushup_delete()
 returns trigger as $$
@@ -615,7 +627,7 @@ begin
   perform public.refresh_season_stats(old.user_id, old.season_year);
   return old;
 end;
-$$ language plpgsql security definer set search_path = public;
+$$ language plpgsql security definer set search_path = '';
 
 -- Kept for callers that predate seasons: recompute every season the user has.
 create or replace function public.recalculate_user_stats(p_user_id uuid)
@@ -637,7 +649,7 @@ begin
     end if;
   end loop;
 end;
-$$ language plpgsql security definer set search_path = public;
+$$ language plpgsql security definer set search_path = '';
 
 -- Signup seeds a stats row for the season a new patriot is enlisting in, so
 -- the dashboard never has to create one. Existing behaviour, season-aware.
@@ -669,7 +681,7 @@ begin
 
   return new;
 end;
-$$ language plpgsql security definer set search_path = public, auth;
+$$ language plpgsql security definer set search_path = '';
 
 -- ============================================================
 -- 7. Season-scoped boards
@@ -921,6 +933,9 @@ alter table public.community_milestones
 update public.community_milestones set season_year = 2026 where season_year is null;
 alter table public.community_milestones alter column season_year set not null;
 
+create index if not exists idx_community_milestones_season_threshold
+  on public.community_milestones (season_year, threshold);
+
 create or replace function public.claim_community_milestones()
 returns trigger as $$
 declare
@@ -958,7 +973,7 @@ begin
 
   return new;
 end;
-$$ language plpgsql security definer set search_path = public;
+$$ language plpgsql security definer set search_path = '';
 
 create or replace function public.get_community_progress()
 returns json as $$
@@ -984,7 +999,7 @@ returns json as $$
       where m.season_year = public.season_for_display()
     ), '[]'::json)
   );
-$$ language sql stable security definer set search_path = public;
+$$ language sql stable security definer set search_path = '';
 
 revoke all on function public.get_community_progress() from public;
 grant execute on function public.get_community_progress() to anon, authenticated;
@@ -1002,7 +1017,7 @@ returns json
 language sql
 stable
 security definer
-set search_path = public
+set search_path = ''
 as $$
   select json_build_object(
     'logging_year', public.season_for_logging(),
@@ -1080,6 +1095,14 @@ begin
   end if;
 
   if p_client_log_id is not null then
+    -- Serialize retries carrying the same client id. The unique index is the
+    -- final guard, while this lock makes two concurrent deliveries both get
+    -- the idempotent success response instead of making one lose a race with
+    -- a unique-violation error.
+    perform pg_advisory_xact_lock(
+      hashtextextended(v_user::text || ':' || p_client_log_id::text, 0)
+    );
+
     select id into v_id
     from public.pushup_logs
     where user_id = v_user and client_log_id = p_client_log_id;
@@ -1117,7 +1140,7 @@ begin
     'daily_cap', v_season.daily_cap
   );
 end;
-$$ language plpgsql security definer set search_path = public;
+$$ language plpgsql security definer set search_path = '';
 
 revoke all on function public.log_pushups(integer, date, text, uuid) from public;
 grant execute on function public.log_pushups(integer, date, text, uuid) to authenticated;
@@ -1140,7 +1163,7 @@ begin
 
   return json_build_object('cleared', p_day, 'deleted', v_deleted);
 end;
-$$ language plpgsql security definer set search_path = public;
+$$ language plpgsql security definer set search_path = '';
 
 revoke all on function public.clear_pushups_for_day(date) from public;
 grant execute on function public.clear_pushups_for_day(date) to authenticated;
@@ -1154,9 +1177,42 @@ grant execute on function public.clear_pushups_for_day(date) to authenticated;
 -- key in the bundle where anyone can extract it, so every table has to hold on
 -- its own policies. No service-role key goes anywhere near a client.
 
--- Reps: owner-only in both directions, and anon holds no write grant at all.
-revoke insert, update, delete on table public.pushup_logs from anon;
-grant select, insert, update, delete on table public.pushup_logs to authenticated;
+-- Internal SECURITY DEFINER helpers are implementation details for triggers
+-- and the three deliberately exposed RPCs below. PostgreSQL grants EXECUTE to
+-- PUBLIC on new functions by default; without these revokes, PostgREST would
+-- turn stats/achievement maintenance helpers into callable public endpoints.
+revoke all on function public.assert_seasons_disjoint()
+  from public, anon, authenticated, service_role;
+revoke all on function public.enforce_season_write_window()
+  from public, anon, authenticated, service_role;
+revoke all on function public.enforce_daily_pushup_cap()
+  from public, anon, authenticated, service_role;
+revoke all on function public.compute_streaks(uuid, integer)
+  from public, anon, authenticated, service_role;
+revoke all on function public.compute_streaks(uuid)
+  from public, anon, authenticated, service_role;
+revoke all on function public.achievement_earned_at(uuid, text, integer, integer)
+  from public, anon, authenticated, service_role;
+revoke all on function public.reconcile_achievements(uuid)
+  from public, anon, authenticated, service_role;
+revoke all on function public.refresh_season_stats(uuid, integer)
+  from public, anon, authenticated, service_role;
+revoke all on function public.update_user_stats()
+  from public, anon, authenticated, service_role;
+revoke all on function public.on_pushup_delete()
+  from public, anon, authenticated, service_role;
+revoke all on function public.recalculate_user_stats(uuid)
+  from public, anon, authenticated, service_role;
+revoke all on function public.handle_new_user()
+  from public, anon, authenticated, service_role;
+revoke all on function public.claim_community_milestones()
+  from public, anon, authenticated, service_role;
+
+-- Reps: owner-readable, but writes go only through log_pushups() and
+-- clear_pushups_for_day(). Triggers still enforce the same invariants as
+-- defense in depth; the grants ensure clients cannot invent another path.
+revoke insert, update, delete on table public.pushup_logs from anon, authenticated;
+grant select on table public.pushup_logs to authenticated;
 
 drop policy if exists "Users can insert own logs" on public.pushup_logs;
 create policy "Users can insert own logs"
@@ -1227,14 +1283,20 @@ begin
 
   return new;
 end;
-$$ language plpgsql security definer set search_path = public;
+$$ language plpgsql security definer set search_path = '';
 
 drop trigger if exists enforce_contest_season on public.contests;
 create trigger enforce_contest_season
   before insert or update on public.contests
   for each row execute function public.enforce_contest_season();
 
+revoke all on function public.enforce_contest_season()
+  from public, anon, authenticated, service_role;
+
 alter table public.contests alter column season_year set not null;
+
+create index if not exists idx_contests_season_year
+  on public.contests (season_year);
 
 -- The old badge trigger function is unreferenced now that
 -- refresh_season_stats() reconciles explicitly.
@@ -1256,3 +1318,5 @@ begin
   end loop;
 end;
 $$;
+
+commit;
