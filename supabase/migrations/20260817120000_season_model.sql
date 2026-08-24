@@ -1317,6 +1317,11 @@ create index if not exists idx_contests_season_year
 -- refresh_season_stats() reconciles explicitly.
 drop function if exists public.award_achievements();
 
+-- The old three-argument helper read lifetime logs and was executable by
+-- PUBLIC. Every remaining caller uses the season-scoped four-argument form,
+-- so remove the obsolete PostgREST surface entirely.
+drop function if exists public.achievement_earned_at(uuid, text, integer);
+
 -- ============================================================
 -- 10. Backfill
 -- ============================================================

@@ -45,6 +45,7 @@ select
 -- Internal privileged helpers are not callable through the Data API roles.
 select
   p.proname,
+  pg_get_function_identity_arguments(p.oid) as arguments,
   has_function_privilege('anon', p.oid, 'execute') as anon_can_execute,
   has_function_privilege('authenticated', p.oid, 'execute') as authenticated_can_execute
 from pg_proc p
