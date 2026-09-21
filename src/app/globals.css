@@ -6534,7 +6534,9 @@ html[data-app-environment='native'] .native-screen-header {
   top: 0;
   right: 0;
   left: 0;
-  z-index: 200;
+  /* Above the tab bar (190), below the sheet backdrops (198) so an open
+     bottom sheet dims and covers this header the way it covers the page. */
+  z-index: 195;
   display: grid;
   grid-template-columns: 2.75rem minmax(0, 1fr) 2.75rem;
   align-items: center;
@@ -6637,4 +6639,19 @@ html[data-app-environment='native'].native-tabs-visible .native-merch-bar {
    its own group so account actions stay visually distinct from navigation. */
 .native-explore-list {
   margin-bottom: 1rem;
+}
+
+/* The Hall of Honor opens with a full-bleed ceremony. It sits below the
+   native header's stacking level, so in the app the header floated on top of
+   the doors. The ceremony is a modal moment — let it cover the chrome, and
+   the header returns the instant the doors finish opening. */
+html[data-app-environment='native'] .finale-ceremony {
+  z-index: 210;
+}
+
+/* Pages with no nav of their own carry an inline "back to Liberty Lift" link.
+   In the app the header's chevron already does that job, and two back
+   affordances on one screen is one too many. */
+html[data-app-environment='native'] .web-back-link {
+  display: none;
 }

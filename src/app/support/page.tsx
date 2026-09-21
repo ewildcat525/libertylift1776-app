@@ -12,7 +12,7 @@ export default function SupportPage() {
   return (
     <main className="app-surface min-h-screen px-4 pb-12 pt-16">
       <div className="mx-auto max-w-2xl">
-        <Link href="/" className="mb-8 inline-flex min-h-11 items-center gap-2 text-white/60 transition-colors hover:text-white">
+        <Link href="/" className="web-back-link mb-8 inline-flex min-h-11 items-center gap-2 text-white/60 transition-colors hover:text-white">
           ← Back to Liberty Lift 1776
         </Link>
         <div className="app-eyebrow mb-3">We&apos;re here to help</div>

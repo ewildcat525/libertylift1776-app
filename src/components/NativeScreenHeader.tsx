@@ -30,8 +30,9 @@ import NotificationBell from '@/components/NotificationBell'
 // The tab bar owns these — but only for a signed-in patriot.
 const ROOT_TABS = new Set(['/dashboard', '/leaderboard', '/contests', '/profile'])
 
-// Screens that supply their own full-bleed native chrome.
-const SELF_CHROMED = ['/login', '/signup', '/auth', '/final-push']
+// Auth screens carry their own branded native chrome (native-auth-mark) and
+// are deliberate termini, so they keep it instead of this header.
+const SELF_CHROMED = ['/login', '/signup', '/auth']
 
 // Titles for the screens reachable inside the app. Longest match wins, so
 // '/states/VA' inherits the state board title without an entry of its own.

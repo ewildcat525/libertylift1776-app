@@ -10,7 +10,7 @@ export default function PrivacyPage() {
   return (
     <main className="min-h-screen pt-16 pb-12 px-4 app-surface">
       <div className="max-w-2xl mx-auto">
-        <Link href="/" className="inline-flex items-center gap-2 text-white/60 hover:text-white mb-8 transition-colors">
+        <Link href="/" className="web-back-link inline-flex items-center gap-2 text-white/60 hover:text-white mb-8 transition-colors">
           ← Back to Liberty Lift 1776
         </Link>
 
