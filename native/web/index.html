@@ -17,7 +17,8 @@
     </main>
     <script>
       (() => {
-        const productionUrl = 'https://libertylift1776.com/'
+        const origin = 'https://libertylift1776.com'
+        const productionUrl = origin + '/'
         const status = document.getElementById('status')
         const retry = document.getElementById('retry')
         let checking = false
@@ -32,6 +33,53 @@
           hideSplash()
         }
 
+        // When iOS cold-launches the app from a shared link, the destination
+        // arrives as the launch URL. Landing on the homepage and only then
+        // letting the web app correct itself costs a whole extra page load,
+        // and shows the wrong screen while it happens. Resolve the target up
+        // front instead and go straight there.
+        //
+        // Auth callbacks are the deliberate exception: the PKCE verifier lives
+        // in this WebView's storage, so the code must be exchanged by the web
+        // app on the client. Navigating to the HTTPS callback would hand it to
+        // the server, which has no verifier. Those launches load the app
+        // normally and NativeBridge completes the exchange.
+        const targetFromLaunchUrl = (value) => {
+          try {
+            const url = new URL(value)
+            let path = ''
+
+            if (url.protocol === 'https:' && url.hostname.endsWith('libertylift1776.com')) {
+              path = url.pathname + url.search + url.hash
+            } else if (url.protocol === 'libertylift1776:') {
+              const host = url.hostname && url.hostname !== 'open' ? '/' + url.hostname : ''
+              const rest = url.pathname === '/' ? '' : url.pathname
+              path = host + rest + url.search + url.hash
+            }
+
+            if (!path || !path.startsWith('/') || path.startsWith('//')) return null
+            if (path.startsWith('/auth')) return null
+            return origin + path
+          } catch {
+            return null
+          }
+        }
+
+        const resolveTarget = async () => {
+          const app = window.Capacitor?.Plugins?.App
+          if (!app?.getLaunchUrl) return productionUrl
+          try {
+            // Never let a slow or missing bridge hold up the launch.
+            const launch = await Promise.race([
+              app.getLaunchUrl(),
+              new Promise((resolve) => window.setTimeout(() => resolve(null), 1200)),
+            ])
+            return (launch?.url && targetFromLaunchUrl(launch.url)) || productionUrl
+          } catch {
+            return productionUrl
+          }
+        }
+
         const connect = async () => {
           if (checking) return
           checking = true
@@ -44,16 +92,20 @@
             return
           }
 
+          const target = await resolveTarget()
           const controller = new AbortController()
           const timeout = window.setTimeout(() => controller.abort(), 8000)
           try {
+            // Probe the origin, not the target. A shared link can point at a
+            // handle that no longer exists, and a 404 there means the service
+            // is up — it must not be reported to the patriot as being offline.
             const response = await fetch(productionUrl, {
               method: 'HEAD',
               cache: 'no-store',
               signal: controller.signal,
             })
             if (!response.ok) throw new Error('Service unavailable')
-            window.location.replace(productionUrl)
+            window.location.replace(target)
           } catch {
             checking = false
             showUnavailable()
