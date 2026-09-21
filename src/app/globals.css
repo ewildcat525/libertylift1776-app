@@ -6515,3 +6515,126 @@ html[data-app-environment='native'] .offseason-hero-recruit {
 html[data-app-environment='native'] .offseason-hero-recruit .campaign-hero-wash {
   background: linear-gradient(180deg, rgba(11, 11, 12, 0.72), rgba(11, 11, 12, 0.96));
 }
+
+/* Native screen header ------------------------------------------------------
+   The bottom tab bar owns the four root screens. Everything else — the state
+   board, a crew, the pledge page, the Hall of Honor, chat, the legal pages —
+   used to open with no visible way back, because native mode hides the web
+   nav. This is the chrome those screens were missing. */
+.native-screen-header {
+  display: none;
+}
+
+html[data-app-environment='native'] {
+  --native-header-height: 3.25rem;
+}
+
+html[data-app-environment='native'] .native-screen-header {
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 200;
+  display: grid;
+  grid-template-columns: 2.75rem minmax(0, 1fr) 2.75rem;
+  align-items: center;
+  height: calc(var(--native-header-height) + var(--safe-area-top));
+  padding: var(--safe-area-top) max(0.35rem, var(--safe-area-right)) 0 max(0.35rem, var(--safe-area-left));
+  background: rgba(10, 10, 10, 0.82);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border-bottom: 1px solid rgba(235, 231, 220, 0.08);
+}
+
+html[data-app-environment='native'] .native-screen-header > button {
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border: 0;
+  background: none;
+  color: var(--campaign-paper);
+  -webkit-tap-highlight-color: transparent;
+}
+
+html[data-app-environment='native'] .native-screen-header > button:active {
+  opacity: 0.5;
+}
+
+html[data-app-environment='native'] .native-screen-header > button svg {
+  width: 1.45rem;
+  height: 1.45rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.1;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+html[data-app-environment='native'] .native-screen-header > h1 {
+  margin: 0;
+  overflow: hidden;
+  font-family: 'Inter', sans-serif;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--campaign-paper);
+}
+
+.native-screen-header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+/* Pages pad their top for a nav bar native mode removes. When the header is
+   standing, that space is load-bearing again. */
+html[data-app-environment='native'].native-header-visible .app-surface.pt-24,
+html[data-app-environment='native'].native-header-visible .app-surface.pt-20,
+html[data-app-environment='native'].native-header-visible .app-surface.pt-16,
+html[data-app-environment='native'].native-header-visible .native-screen,
+html[data-app-environment='native'].native-header-visible main.min-h-screen {
+  padding-top: calc(var(--native-header-height) + var(--safe-area-top) + 1rem);
+}
+
+html[data-app-environment='native'].native-header-visible {
+  scroll-padding-top: calc(var(--native-header-height) + var(--safe-area-top) + 1rem);
+}
+
+/* Chat in the native shell -------------------------------------------------
+   The chat screen pins itself to 100dvh and never scrolls, so it cannot be
+   left to the generic padding rules: its top padding sits on an inner element
+   the .app-surface override does not match, and its composer would otherwise
+   sit underneath the tab bar. */
+html[data-app-environment='native'] .native-chat-screen {
+  height: 100dvh;
+}
+
+html[data-app-environment='native'].native-tabs-visible .native-chat-screen {
+  height: calc(100dvh - var(--native-tab-height) - var(--safe-area-bottom));
+}
+
+html[data-app-environment='native'] .native-chat-body {
+  padding-top: calc(0.75rem + var(--safe-area-top));
+}
+
+html[data-app-environment='native'].native-header-visible .native-chat-body {
+  padding-top: calc(var(--native-header-height) + var(--safe-area-top) + 0.75rem);
+}
+
+/* The tab bar is fixed at bottom:0 with z-index 190. A page-level sticky bar
+   at z-index 40 loses that argument and disappears underneath it, which is how
+   the merch buy bar ended up invisible in the app. Lift it above the tabs. */
+html[data-app-environment='native'].native-tabs-visible .native-merch-bar {
+  bottom: calc(var(--native-tab-height) + var(--safe-area-bottom));
+  padding-bottom: 0.75rem;
+}
+
+/* The explore hub on the Me tab. Same chrome as the settings list, spaced as
+   its own group so account actions stay visually distinct from navigation. */
+.native-explore-list {
+  margin-bottom: 1rem;
+}

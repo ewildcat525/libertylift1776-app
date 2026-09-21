@@ -6,6 +6,7 @@ import AppEnvironment from '@/components/AppEnvironment'
 import NativeBridge from '@/components/NativeBridge'
 import ConnectivityNotice from '@/components/ConnectivityNotice'
 import NativeAppNavigation from '@/components/NativeAppNavigation'
+import NativeScreenHeader from '@/components/NativeScreenHeader'
 import './globals.css'
 
 export const viewport: Viewport = {
@@ -75,6 +76,7 @@ export default function RootLayout({
         <AppEnvironment />
         <NativeBridge />
         <ConnectivityNotice />
+        <NativeScreenHeader />
         {children}
         <NativeAppNavigation />
         <Analytics />

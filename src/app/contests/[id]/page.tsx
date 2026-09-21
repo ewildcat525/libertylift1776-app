@@ -229,7 +229,7 @@ export default function ContestDetailPage() {
     return (
       <>
         <Navigation />
-        <div className="min-h-screen pt-20 pb-12 px-4">
+        <div className="app-surface min-h-screen pt-20 pb-12 px-4">
           <div className="max-w-4xl mx-auto text-center text-white/50 py-12">
             Loading contest...
           </div>

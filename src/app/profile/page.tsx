@@ -7,7 +7,8 @@ import Navigation from '@/components/Navigation'
 import AccountSettings from '@/components/AccountSettings'
 import ShareProgress from '@/components/ShareProgress'
 import { createClient, Profile, UserStats, US_STATES } from '@/lib/supabase'
-import { liveStreak } from '@/lib/dates'
+import { liveStreak, isHallOpen } from '@/lib/dates'
+import { canUseChat } from '@/lib/flags'
 
 export default function ProfilePage() {
   const router = useRouter()
@@ -22,6 +23,13 @@ export default function ProfilePage() {
   const [nameError, setNameError] = useState<string | null>(null)
   const [signingOut, setSigningOut] = useState(false)
   const [signOutError, setSignOutError] = useState<string | null>(null)
+  const [email, setEmail] = useState<string | null>(null)
+  // Resolved after mount so the prerendered HTML matches the first render.
+  const [hallOpen, setHallOpen] = useState(false)
+
+  useEffect(() => {
+    setHallOpen(isHallOpen())
+  }, [])
 
   const loadProfile = useCallback(async () => {
     setLoading(true)
@@ -38,6 +46,8 @@ export default function ProfilePage() {
         router.replace('/login')
         return
       }
+
+      setEmail(user.email ?? null)
 
       const [profileResult, statsResult] = await Promise.all([
         supabase.from('profiles').select('*').eq('id', user.id).single(),
@@ -199,10 +209,28 @@ export default function ProfilePage() {
                 </form>
               )}
 
+              {/* The native tab bar only carries four screens, and the web nav
+                  is hidden in the app. Without this hub the state battle, the
+                  chat, the pledge board, the merch page and the Hall of Honor
+                  have no entry point on iOS at all. */}
+              <section className="native-settings-list native-explore-list" aria-label="Explore the campaign">
+                {hallOpen && (
+                  <Link href="/finale"><span>🏛️ Hall of Honor</span><b aria-hidden="true">›</b></Link>
+                )}
+                <Link href="/states"><span>🗽 State battle</span><b aria-hidden="true">›</b></Link>
+                {canUseChat(email) && (
+                  <Link href="/chat"><span>💬 Nationwide chat</span><b aria-hidden="true">›</b></Link>
+                )}
+                <Link href="/pledge/leaderboard"><span>🎖️ Pledge board</span><b aria-hidden="true">›</b></Link>
+                <Link href="/merch"><span>👕 Merch</span><b aria-hidden="true">›</b></Link>
+                <Link href="/spread-the-word"><span>📣 Spread the word</span><b aria-hidden="true">›</b></Link>
+              </section>
+
               <section className="native-settings-list" aria-label="Account links">
                 <button type="button" onClick={() => setEditingName(true)}><span>Edit public handle</span><b aria-hidden="true">›</b></button>
                 <Link href="/support"><span>Help and support</span><b aria-hidden="true">›</b></Link>
                 <Link href="/privacy"><span>Privacy policy</span><b aria-hidden="true">›</b></Link>
+                <Link href="/terms"><span>Terms of use</span><b aria-hidden="true">›</b></Link>
                 <button type="button" onClick={() => void signOut()} disabled={signingOut}>
                   <span>{signingOut ? 'Signing out…' : 'Sign out'}</span><b aria-hidden="true">›</b>
                 </button>

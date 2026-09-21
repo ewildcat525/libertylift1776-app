@@ -34,8 +34,8 @@ export default function ChatPage() {
       {/* App-style chat screen: the page never scrolls, only the message list
           does. 100dvh tracks the mobile browser's collapsing toolbars; the
           inline style falls back to h-screen where dvh is unsupported. */}
-      <div className="app-surface flex flex-col h-screen" style={{ height: '100dvh' }}>
-        <div className="flex-1 min-h-0 flex flex-col w-full max-w-3xl mx-auto px-4 pt-20 sm:pt-24 pb-[max(1rem,env(safe-area-inset-bottom))]">
+      <div className="native-chat-screen app-surface flex flex-col h-screen" style={{ height: '100dvh' }}>
+        <div className="native-chat-body flex-1 min-h-0 flex flex-col w-full max-w-3xl mx-auto px-4 pt-20 sm:pt-24 pb-[max(1rem,env(safe-area-inset-bottom))]">
           <div className="flex items-baseline justify-between gap-4 mb-3 sm:mb-5">
             <div className="flex items-center gap-3">
               <h1 className="app-title text-4xl sm:text-6xl">Chat</h1>

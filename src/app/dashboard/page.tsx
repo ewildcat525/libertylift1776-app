@@ -17,6 +17,7 @@ import {
 } from '@/lib/seasons'
 import { clearPushupsForDay, logPushups as logPushupsRpc } from '@/lib/pushups'
 import { clearReferral } from '@/lib/referral'
+import { canUseChat } from '@/lib/flags'
 import BadgeCase from '@/components/BadgeCase'
 import CommunityMilestoneBanner from '@/components/CommunityMilestoneBanner'
 import Countdown from '@/components/Countdown'
@@ -812,6 +813,10 @@ export default function DashboardPage() {
             <nav className="native-quick-links" aria-label="Quick links">
               <Link href="/leaderboard"><span aria-hidden="true">⌁</span><div><strong>Standings</strong><small>See where you rank</small></div><b aria-hidden="true">›</b></Link>
               <Link href="/contests"><span aria-hidden="true">◉</span><div><strong>Your crews</strong><small>Train with your people</small></div><b aria-hidden="true">›</b></Link>
+              <Link href="/states"><span aria-hidden="true">🗽</span><div><strong>State battle</strong><small>How your state is holding</small></div><b aria-hidden="true">›</b></Link>
+              {canUseChat(user?.email) && (
+                <Link href="/chat"><span aria-hidden="true">💬</span><div><strong>Nationwide chat</strong><small>Talk to the whole country</small></div><b aria-hidden="true">›</b></Link>
+              )}
             </nav>
           </section>
 
