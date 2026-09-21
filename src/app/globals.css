@@ -6655,3 +6655,16 @@ html[data-app-environment='native'] .finale-ceremony {
 html[data-app-environment='native'] .web-back-link {
   display: none;
 }
+
+/* Screens whose top padding is built into a bespoke layout rather than the
+   shared .app-surface utilities. They are prime universal-link landings — a
+   shared profile, a crew invite, the sealed record — so they are exactly the
+   screens the header stands on, and they need the room for it. */
+html[data-app-environment='native'].native-header-visible .auth-shell,
+html[data-app-environment='native'].native-header-visible .auth-shell-center {
+  padding-top: calc(var(--native-header-height) + var(--safe-area-top) + 1rem);
+}
+
+html[data-app-environment='native'].native-header-visible .record-2026 {
+  padding-top: calc(var(--native-header-height) + var(--safe-area-top) + 1rem);
+}
