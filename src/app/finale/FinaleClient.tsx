@@ -356,7 +356,7 @@ export default function FinaleClient() {
     supabase.auth.getUser().then(({ data: { user: current } }) => setUser(current))
 
     supabase.rpc('get_community_progress').then(({ data }) => {
-      if (data) setProgress(data as CommunityProgress)
+      if (data) setProgress(data)
     })
 
     supabase.rpc('participant_count').then(({ data }) => {

@@ -9,6 +9,7 @@
     "lint": "eslint src --ext .js,.jsx,.ts,.tsx --max-warnings=0",
     "typecheck": "tsc --noEmit",
     "test": "TZ=America/New_York vitest run",
+    "db:types": "(echo \"// Generated from the live schema by \\`npm run db:types\\`. Do not edit by hand;\"; echo \"// corrections the generator cannot infer live in database.types.ts.\"; echo; npx supabase gen types typescript --linked --schema public) > src/lib/database.generated.ts",
     "ios:sync": "cap sync ios",
     "ios:open": "cap open ios",
     "ios:run": "cap run ios",

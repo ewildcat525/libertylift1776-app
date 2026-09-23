@@ -1,5 +1,6 @@
 'use client'
 
+import type { User } from '@supabase/supabase-js'
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -103,7 +104,7 @@ const buildChartData = (logs: Record<string, number>, season: Season): ChartPoin
 }
 
 export default function DashboardPage() {
-  const [user, setUser] = useState<any>(null)
+  const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [stats, setStats] = useState<UserStats | null>(null)
   const [pushupCount, setPushupCount] = useState('')

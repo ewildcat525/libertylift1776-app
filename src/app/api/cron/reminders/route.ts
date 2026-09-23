@@ -16,6 +16,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { createAdminClient } from '@/lib/supabase-admin'
+import type { Database } from '@/lib/database.types'
 import {
   buildFinaleEmail,
   buildFinalPushEmail,
@@ -40,7 +41,7 @@ const PAGE_SIZE = 500
 // would overflow the request line; 100 UUIDs is about 4 KB.
 const IN_CHUNK = 100
 
-type Admin = SupabaseClient
+type Admin = SupabaseClient<Database>
 type Recipient = { id: string; email: string; display_name: string | null }
 
 function chunks<T>(items: T[], size: number): T[][] {
@@ -81,7 +82,7 @@ async function pendingRecipients(supabase: Admin, campaign: string): Promise<Rec
     if (!page || page.length === 0) break
 
     const ids = page.map((p) => p.id as string)
-    const sent = await selectIn<{ user_id: string }>(ids, (chunk) =>
+    const sent = await selectIn(ids, (chunk) =>
       supabase.from('email_campaign_sends').select('user_id').eq('campaign', campaign).in('user_id', chunk)
     )
     const alreadySent = new Set(sent.map((row) => row.user_id))
@@ -187,7 +188,7 @@ export async function GET(request: NextRequest) {
           const { dayStart, dayEnd } = dayBounds(today, season.timeZone)
 
           const [stats, todayLogs, pledges] = await Promise.all([
-            selectIn<{ user_id: string; total_pushups: number; current_streak: number; last_log_date: string | null }>(
+            selectIn(
               ids,
               (chunk) =>
                 supabase
@@ -195,7 +196,7 @@ export async function GET(request: NextRequest) {
                   .select('user_id, total_pushups, current_streak, last_log_date')
                   .in('user_id', chunk)
             ),
-            selectIn<{ user_id: string }>(ids, (chunk) =>
+            selectIn(ids, (chunk) =>
               supabase
                 .from('pushup_logs')
                 .select('user_id')
@@ -203,7 +204,7 @@ export async function GET(request: NextRequest) {
                 .lt('logged_at', dayEnd)
                 .in('user_id', chunk)
             ),
-            selectIn<{ user_id: string }>(ids, (chunk) =>
+            selectIn(ids, (chunk) =>
               supabase.from('pledges').select('user_id').eq('is_active', true).in('user_id', chunk)
             ),
           ])
@@ -240,7 +241,7 @@ export async function GET(request: NextRequest) {
         supabase,
         campaignKey('final-push', season, today),
         async (recipients) => {
-          const stats = await selectIn<{ user_id: string; total_pushups: number }>(
+          const stats = await selectIn(
             recipients.map((p) => p.id),
             (chunk) => supabase.from('user_stats').select('user_id, total_pushups').in('user_id', chunk)
           )
@@ -268,7 +269,7 @@ export async function GET(request: NextRequest) {
         async (recipients) => {
           const ids = recipients.map((p) => p.id)
           const [stats, pledges, { data: community }] = await Promise.all([
-            selectIn<{ user_id: string; total_pushups: number; best_day: number; longest_streak: number }>(
+            selectIn(
               ids,
               (chunk) =>
                 supabase
@@ -276,7 +277,7 @@ export async function GET(request: NextRequest) {
                   .select('user_id, total_pushups, best_day, longest_streak')
                   .in('user_id', chunk)
             ),
-            selectIn<{ user_id: string }>(ids, (chunk) =>
+            selectIn(ids, (chunk) =>
               supabase.from('pledges').select('user_id').eq('is_active', true).in('user_id', chunk)
             ),
             supabase.rpc('get_community_progress'),

@@ -236,13 +236,16 @@ export default function GlobalChat({ userId, canBroadcast = false }: GlobalChatP
 
     const partial = mention[1]
 
-    const { data } = await supabase
+    let query = supabase
       .from('public_profiles')
       .select('id, display_name')
       .ilike('display_name', `${partial}%`)
       .not('display_name', 'is', null)
-      .neq('id', userId)
       .limit(5)
+    // Without a signed-in user there is no one to leave out; neq('id', null)
+    // would send the literal "null" as a uuid and fail the whole lookup.
+    if (userId) query = query.neq('id', userId)
+    const { data } = await query
 
     const people = (data || []).filter(
       (p: { display_name: string | null }) => p.display_name

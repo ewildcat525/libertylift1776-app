@@ -1,5 +1,6 @@
 'use client'
 
+import type { User } from '@supabase/supabase-js'
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -13,7 +14,7 @@ import { isNativeApp } from '@/lib/native-auth'
 const publicContestsEnabled = canUsePublicContests()
 
 export default function ContestsPage() {
-  const [user, setUser] = useState<any>(null)
+  const [user, setUser] = useState<User | null>(null)
   const [contests, setContests] = useState<Contest[]>([])
   const [myContests, setMyContests] = useState<Contest[]>([])
   const [loading, setLoading] = useState(true)

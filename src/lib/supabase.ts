@@ -1,14 +1,18 @@
 import { createBrowserClient } from '@supabase/ssr'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import type { Database, Tables, TablesUpdate, Views } from './database.types'
 
-let browserClient: SupabaseClient<any> | undefined
+export type { Database, Tables, TablesUpdate, Views }
+export type { CommunityMilestone, CommunityProgress } from './database.types'
+
+let browserClient: SupabaseClient<Database> | undefined
 
 export function createClient() {
   if (browserClient) {
     return browserClient
   }
 
-  const client = createBrowserClient<any>(
+  const client = createBrowserClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
@@ -28,129 +32,20 @@ export function createClient() {
   return browserClient
 }
 
-// Types for our database
-export interface Profile {
-  id: string
-  email: string
-  display_name: string | null
-  state_code: string | null
-  avatar_url: string | null
-  referred_by?: string | null
-  created_at: string
-}
-
-export interface PushupLog {
-  id: string
-  user_id: string
-  count: number
-  logged_at: string
-  notes: string | null
-  season_year?: number
-  client_log_id?: string | null
-}
-
+// Row types, derived from the schema so a migration that renames or retypes
+// a column breaks the build instead of a page. See lib/database.types.ts.
+export type Profile = Tables<'profiles'>
+export type PushupLog = Tables<'pushup_logs'>
 // The user_stats view: this season's numbers, zeroed before the first rep.
-export interface UserStats {
-  user_id: string
-  total_pushups: number
-  current_streak: number
-  longest_streak: number
-  best_day: number
-  days_logged: number
-  last_log_date: string | null
-  season_year?: number
-}
-
-export interface LeaderboardEntry {
-  id: string
-  display_name: string | null
-  state_code: string | null
-  avatar_url: string | null
-  total_pushups: number
-  current_streak: number
-  longest_streak: number
-  best_day: number
-  days_logged: number
-  global_rank: number
-  recruits?: number
-  created_at?: string
-}
-
-export interface Contest {
-  id: string
-  name: string
-  description: string | null
-  creator_id: string
-  invite_code: string
-  is_public: boolean
-  start_date: string
-  end_date: string
-  season_year?: number
-  created_at: string
-}
-
-export interface ChatMessage {
-  id: string
-  user_id: string
-  body: string
-  created_at: string
-}
-
-export interface ChatMessageReaction {
-  id: string
-  message_id: string
-  user_id: string
-  created_at: string
-}
-
-export interface AppNotification {
-  id: string
-  user_id: string
-  actor_id: string
-  type: string
-  message_id: string | null
-  body: string | null
-  read_at: string | null
-  created_at: string
-}
-
-export interface Achievement {
-  id: string
-  name: string
-  description: string
-  icon: string
-  threshold: number | null
-  requirement_type: string
-}
-
-export interface UserAchievement {
-  id: string
-  user_id: string
-  achievement_id: string
-  earned_at: string
-}
-
-export interface Pledge {
-  id: string
-  user_id: string
-  charity: 'wounded_warrior' | 'save_the_children'
-  pledge_type: 'per_completed' | 'per_short'
-  rate_cents: number
-  is_active: boolean
-}
-
-export interface CommunityMilestone {
-  threshold: number
-  hit_by: string | null
-  hit_at: string | null
-  hit_by_name: string | null
-  hit_by_state: string | null
-}
-
-export interface CommunityProgress {
-  total_pushups: number
-  milestones: CommunityMilestone[]
-}
+export type UserStats = Views<'user_stats'>
+export type LeaderboardEntry = Views<'leaderboard'>
+export type Contest = Tables<'contests'>
+export type ChatMessage = Tables<'chat_messages'>
+export type ChatMessageReaction = Tables<'chat_message_reactions'>
+export type AppNotification = Tables<'notifications'>
+export type Achievement = Tables<'achievements'>
+export type UserAchievement = Tables<'user_achievements'>
+export type Pledge = Tables<'pledges'>
 
 export const DAILY_PACE = 58 // push-ups/day target to finish by July 31
 
