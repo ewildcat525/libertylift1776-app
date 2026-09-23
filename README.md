@@ -48,7 +48,9 @@ and each season starts fresh. Recipients are paged through in id order, so the l
 no fixed size limit. Every email carries an HMAC-signed one-click unsubscribe link.
 
 Required environment variables: `SUPABASE_SERVICE_ROLE_KEY`, `RESEND_API_KEY`,
-`EMAIL_FROM`, and `CRON_SECRET` (see `.env.local.example`). The route is a no-op until
+`EMAIL_FROM`, `CRON_SECRET`, and `UNSUBSCRIBE_SECRET` (see `.env.local.example`; set
+`UNSUBSCRIBE_SECRET` to the current `CRON_SECRET` value on existing deployments so links
+already sent keep working). The route is a no-op until
 they are configured, and outside each season's email window.
 
 Set `EMAIL_TEST_RECIPIENT` to a single address to enable a protected delivery check at

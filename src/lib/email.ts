@@ -9,21 +9,37 @@ export function getSiteUrl() {
   return siteUrl
 }
 
-// Unsubscribe links are signed with CRON_SECRET so they can't be forged.
-export function unsubscribeToken(scope: 'profile' | 'subscriber', id: string) {
-  const secret = process.env.CRON_SECRET
-  if (!secret) return null
+// Unsubscribe links are HMAC-signed so they can't be forged. They are signed
+// with UNSUBSCRIBE_SECRET, which should never change: every link already in
+// an inbox depends on it. Deployments that predate it signed with
+// CRON_SECRET; set UNSUBSCRIBE_SECRET to that same value once, and
+// CRON_SECRET can then be rotated without breaking a single sent link.
+function unsubscribeSecrets(): string[] {
+  return [process.env.UNSUBSCRIBE_SECRET, process.env.CRON_SECRET].filter(
+    (secret): secret is string => Boolean(secret)
+  )
+}
+
+function sign(secret: string, scope: 'profile' | 'subscriber', id: string) {
   return createHmac('sha256', secret).update(`${scope}:${id}`).digest('hex')
 }
 
+export function unsubscribeToken(scope: 'profile' | 'subscriber', id: string) {
+  const [secret] = unsubscribeSecrets()
+  return secret ? sign(secret, scope, id) : null
+}
+
+// Accept a link signed with either secret, so links sent before
+// UNSUBSCRIBE_SECRET existed keep working until CRON_SECRET is rotated.
 export function verifyUnsubscribeToken(
   scope: 'profile' | 'subscriber',
   id: string,
   token: string
 ) {
-  const expected = unsubscribeToken(scope, id)
-  if (!expected || token.length !== expected.length) return false
-  return timingSafeEqual(Buffer.from(token), Buffer.from(expected))
+  return unsubscribeSecrets().some((secret) => {
+    const expected = sign(secret, scope, id)
+    return token.length === expected.length && timingSafeEqual(Buffer.from(token), Buffer.from(expected))
+  })
 }
 
 export function unsubscribeUrl(scope: 'profile' | 'subscriber', id: string) {
