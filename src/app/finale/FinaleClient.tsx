@@ -5,13 +5,8 @@ import Link from 'next/link'
 import Image from 'next/image'
 import type { User } from '@supabase/supabase-js'
 import { track } from '@vercel/analytics'
-import {
-  createClient,
-  CommunityProgress,
-  LeaderboardEntry,
-  US_STATES,
-} from '@/lib/supabase'
-import { challengePhase, ChallengePhase } from '@/lib/dates'
+import { createClient, LeaderboardEntry, US_STATES } from '@/lib/supabase'
+import { challengePhase, ChallengePhase, seasonForDisplay } from '@/lib/dates'
 import { useHallOpen } from '@/lib/useHallOpen'
 import { CHARITY_DONATE_URLS } from '@/lib/charities'
 import Navigation from '@/components/Navigation'
@@ -19,6 +14,7 @@ import Fireworks from '@/components/Fireworks'
 import IwoJimaFlagRaising from '@/components/IwoJimaFlagRaising'
 import MoonLanding from '@/components/MoonLanding'
 import ArtemisEarthset from '@/components/ArtemisEarthset'
+import { loadHallData, type FinalPushRow, type FinisherRow, type HallData, type StateRow } from './hallData'
 
 // The five one-of-a-kind community milestones and how each one replays.
 // Thresholds and badge ids match the community_milestones migrations.
@@ -66,30 +62,6 @@ const MILESTONE_META: Record<
   },
 }
 
-interface StateRow {
-  state_code: string
-  participants: number
-  total_pushups: number
-  avg_pushups: number
-  state_rank: number
-}
-
-interface FinisherRow {
-  id: string
-  display_name: string | null
-  state_code: string | null
-  total_pushups: number
-}
-
-// The Final Push: most reps logged on July 31 (see final_push_board).
-interface FinalPushRow {
-  id: string
-  display_name: string | null
-  state_code: string | null
-  final_day_pushups: number
-  final_push_rank: number
-}
-
 // A replay in progress: which scene to mount and the overlay copy.
 interface Replay {
   scene: Scene
@@ -133,13 +105,6 @@ function useCountUp(target: number | null, durationMs = 2200) {
 }
 
 // Everyone tied at the top shares the crown.
-function topTied<K extends keyof LeaderboardEntry>(rows: LeaderboardEntry[], key: K) {
-  if (rows.length === 0) return []
-  const best = rows[0][key] ?? 0
-  if (!best) return []
-  return rows.filter((r) => (r[key] ?? 0) === best)
-}
-
 function championNames(rows: LeaderboardEntry[]) {
   return rows.map((r) => r.display_name || 'A patriot').join(' & ')
 }
@@ -267,24 +232,33 @@ function TrophyReveal({ trophy, onClose }: { trophy: Trophy; onClose: () => void
   )
 }
 
-export default function FinaleClient() {
+// Stable empties, so memoized sections don't recompute every render.
+const NONE: LeaderboardEntry[] = []
+const NO_FINAL_PUSH: FinalPushRow[] = []
+const NO_STATES: StateRow[] = []
+const NO_FINISHERS: FinisherRow[] = []
+
+export default function FinaleClient({ initialData = null }: { initialData?: HallData | null }) {
   const [phase, setPhase] = useState<ChallengePhase | null>(null)
   const [previewMode, setPreviewMode] = useState(false)
   const [ceremony, setCeremony] = useState<'closed' | 'opening' | 'open'>('closed')
   const [deepLinkHash, setDeepLinkHash] = useState<string | null>(null)
   const [activeTrophy, setActiveTrophy] = useState<Trophy | null>(null)
   const [user, setUser] = useState<User | null>(null)
-  const [progress, setProgress] = useState<CommunityProgress | null>(null)
-  const [podium, setPodium] = useState<LeaderboardEntry[]>([])
-  const [streakChamps, setStreakChamps] = useState<LeaderboardEntry[]>([])
-  const [dayChamps, setDayChamps] = useState<LeaderboardEntry[]>([])
-  const [recruitChamps, setRecruitChamps] = useState<LeaderboardEntry[]>([])
-  const [finalPushChamps, setFinalPushChamps] = useState<FinalPushRow[]>([])
-  const [states, setStates] = useState<StateRow[]>([])
-  const [finishers, setFinishers] = useState<FinisherRow[]>([])
-  const [finisherCount, setFinisherCount] = useState(0)
-  const [pledged, setPledged] = useState<{ total: number; pledgers: number } | null>(null)
-  const [participants, setParticipants] = useState<number | null>(null)
+  // Rendered on the server when it could reach the database; otherwise
+  // fetched here once the Hall opens.
+  const [hall, setHall] = useState<HallData | null>(initialData)
+  const progress = hall?.progress ?? null
+  const podium = hall?.podium ?? NONE
+  const streakChamps = hall?.streakChamps ?? NONE
+  const dayChamps = hall?.dayChamps ?? NONE
+  const recruitChamps = hall?.recruitChamps ?? NONE
+  const finalPushChamps = hall?.finalPushChamps ?? NO_FINAL_PUSH
+  const states = hall?.states ?? NO_STATES
+  const finishers = hall?.finishers ?? NO_FINISHERS
+  const finisherCount = hall?.finisherCount ?? 0
+  const pledged = hall?.pledged ?? null
+  const participants = hall?.participants ?? null
   const [replaying, setReplaying] = useState<Replay | null>(null)
   const [nextYearEmail, setNextYearEmail] = useState('')
   const [nextYearBusy, setNextYearBusy] = useState(false)
@@ -355,81 +329,10 @@ export default function FinaleClient() {
 
     supabase.auth.getUser().then(({ data: { user: current } }) => setUser(current))
 
-    supabase.rpc('get_community_progress').then(({ data }) => {
-      if (data) setProgress(data as CommunityProgress)
-    })
-
-    supabase.rpc('participant_count').then(({ data }) => {
-      if (typeof data === 'number') setParticipants(data)
-    })
-
-    supabase
-      .from('leaderboard')
-      .select('*')
-      .order('total_pushups', { ascending: false })
-      .limit(3)
-      .then(({ data }) => setPodium(data || []))
-
-    supabase
-      .from('leaderboard')
-      .select('*')
-      .order('longest_streak', { ascending: false })
-      .limit(5)
-      .then(({ data }) => setStreakChamps(topTied(data || [], 'longest_streak')))
-
-    supabase
-      .from('leaderboard')
-      .select('*')
-      .order('best_day', { ascending: false })
-      .limit(5)
-      .then(({ data }) => setDayChamps(topTied(data || [], 'best_day')))
-
-    supabase
-      .from('leaderboard')
-      .select('*')
-      .order('recruits', { ascending: false })
-      .limit(5)
-      .then(({ data }) => setRecruitChamps(topTied(data || [], 'recruits')))
-
-    supabase
-      .from('final_push_board')
-      .select('*')
-      .order('final_push_rank', { ascending: true })
-      .limit(5)
-      .then(({ data }) => {
-        const rows = (data as FinalPushRow[]) || []
-        setFinalPushChamps(rows.filter((r) => r.final_push_rank === 1))
-      })
-
-    supabase
-      .from('state_leaderboard')
-      .select('*')
-      .order('state_rank', { ascending: true })
-      .limit(51)
-      .then(({ data }) => setStates((data as StateRow[]) || []))
-
-    supabase
-      .from('leaderboard')
-      .select('id, display_name, state_code, total_pushups', { count: 'exact' })
-      .gte('total_pushups', 1776)
-      .order('total_pushups', { ascending: false })
-      .limit(100)
-      .then(({ data, count }) => {
-        setFinishers((data as FinisherRow[]) || [])
-        setFinisherCount(count ?? (data?.length || 0))
-      })
-
-    supabase
-      .from('pledge_leaderboard')
-      .select('pledged_amount')
-      .then(({ data }) => {
-        if (!data) return
-        const total = data.reduce(
-          (sum: number, row: { pledged_amount: number | null }) => sum + (row.pledged_amount || 0),
-          0
-        )
-        setPledged({ total, pledgers: data.length })
-      })
+    if (initialData) return
+    loadHallData(supabase, seasonForDisplay().goal, { strict: false })
+      .then(setHall)
+      .catch((error) => console.error('Hall of Honor failed to load:', error))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hallOpen, previewMode])
 

@@ -1,23 +1,15 @@
 'use client'
 
+import type { User } from '@supabase/supabase-js'
 import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase'
+import { createClient, type Pledge } from '@/lib/supabase'
 import { CHARITY_DONATE_URLS } from '@/lib/charities'
 import Navigation from '@/components/Navigation'
 import PledgeSetup from '@/components/PledgeSetup'
 
-interface Pledge {
-  id: string
-  user_id: string
-  charity: 'wounded_warrior' | 'save_the_children'
-  pledge_type: 'per_completed' | 'per_short'
-  rate_cents: number
-  is_active: boolean
-}
-
 export default function PledgePage() {
-  const [user, setUser] = useState<any>(null)
+  const [user, setUser] = useState<User | null>(null)
   const [existingPledge, setExistingPledge] = useState<Pledge | null>(null)
   const [loading, setLoading] = useState(true)
   const [showSuccess, setShowSuccess] = useState(false)
@@ -54,7 +46,7 @@ export default function PledgePage() {
     }, 2000)
   }
 
-  if (loading) {
+  if (loading || !user) {
     return (
       <>
         <Navigation />

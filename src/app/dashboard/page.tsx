@@ -1,609 +1,68 @@
 'use client'
 
-import { useState, useEffect, useMemo, useRef } from 'react'
-import { useRouter } from 'next/navigation'
-import Link from 'next/link'
+// The signed-in patriot's board. Data loading lives in useDashboardData,
+// logging in useRepLogger, the iOS sheet in useNativeLogger, and the math in
+// lib/progress; this file only lays the sections out.
+import { useEffect, useMemo, useState } from 'react'
 import { track } from '@vercel/analytics'
-import { isNativeApp, nativeRepLoggedFeedback } from '@/lib/native-auth'
-import { createClient, UserStats, Profile, AMERICAN_FACTS, isValidStateCode, US_STATES } from '@/lib/supabase'
-import { clearPendingSignup, generateDisplayName, readPendingSignup } from '@/lib/onboarding'
-import { challengePhase, ChallengePhase, localDateString, liveStreak } from '@/lib/dates'
-import {
-  isSeasonDay,
-  seasonForDisplay,
-  seasonForLogging,
-  seasonLengthInDays,
-  type Season,
-} from '@/lib/seasons'
-import { clearPushupsForDay, logPushups as logPushupsRpc } from '@/lib/pushups'
-import { clearReferral } from '@/lib/referral'
+import { challengePhase, localDateString, type ChallengePhase } from '@/lib/dates'
+import { seasonForDisplay, seasonForLogging } from '@/lib/seasons'
+import { buildChartData, paceFor, requiredPerDay as requiredPerDayFor } from '@/lib/progress'
+import AccountSettings from '@/components/AccountSettings'
 import BadgeCase from '@/components/BadgeCase'
 import CommunityMilestoneBanner from '@/components/CommunityMilestoneBanner'
-import Countdown from '@/components/Countdown'
 import FinalPushBanner from '@/components/FinalPushBanner'
 import Fireworks from '@/components/Fireworks'
 import Navigation from '@/components/Navigation'
 import PledgeWidget from '@/components/PledgeWidget'
-import ShareProgress from '@/components/ShareProgress'
-import AccountSettings from '@/components/AccountSettings'
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  ReferenceLine,
-} from 'recharts'
-
-type ChartPoint = { day: number; pace: number; you: number; required: number | null }
+import LogCard from './LogCard'
+import MerchUnlockDialog from './MerchUnlockDialog'
+import NativeToday from './NativeToday'
+import ProfileHeader from './ProfileHeader'
+import ProgressChart from './ProgressChart'
+import RecruitCard from './RecruitCard'
+import SeasonCalendar from './SeasonCalendar'
+import StatsCard from './StatsCard'
+import StatusCard from './StatusCard'
+import { useDashboardData } from './useDashboardData'
+import { useNativeLogger } from './useNativeLogger'
+import { useRepLogger } from './useRepLogger'
 
 const displaySeason = seasonForDisplay()
 const loggingSeason = seasonForLogging()
-const displaySeasonDays = seasonLengthInDays(displaySeason)
-const dailyPace = Math.ceil(displaySeason.goal / displaySeasonDays)
-const displaySeasonFinalDay = new Date(`${displaySeason.endsOn}T12:00:00`).toLocaleDateString(
-  'en-US',
-  { month: 'long', day: 'numeric' },
-)
+const NO_LOGS: Record<string, number> = {}
 
-function seasonDate(season: Season, day: number): string {
-  return `${season.startsOn.slice(0, 8)}${String(day).padStart(2, '0')}`
-}
-
-function seasonDayNumber(date: string, season: Season): number {
-  const start = Date.parse(`${season.startsOn}T00:00:00Z`)
-  const current = Date.parse(`${date}T00:00:00Z`)
-  return Math.round((current - start) / 86_400_000) + 1
-}
-
-// Day of the season the "required pace" projection starts from, clamped to
-// the challenge window. Returns one past the final day once it is over.
-const requiredStartDay = (now: Date, season: Season) => {
-  const today = localDateString(now)
-  if (today < season.startsOn) return 1
-  if (today > season.endsOn) return seasonLengthInDays(season) + 1
-  return seasonDayNumber(today, season)
-}
-
-const buildChartData = (logs: Record<string, number>, season: Season): ChartPoint[] => {
-  const daysInSeason = seasonLengthInDays(season)
-  const seasonLogs: Record<number, number> = {}
-  for (let d = 1; d <= daysInSeason; d++) seasonLogs[d] = 0
-  Object.entries(logs).forEach(([dateStr, count]) => {
-    if (dateStr >= season.startsOn && dateStr <= season.endsOn) {
-      seasonLogs[seasonDayNumber(dateStr, season)] = count
-    }
-  })
-
-  let cumulative = 0
-  const points: ChartPoint[] = Array.from({ length: daysInSeason }, (_, i) => {
-    const day = i + 1
-    cumulative += seasonLogs[day]
-    return { day, pace: Math.min(season.goal, Math.round(dailyPace * day)), you: cumulative, required: null }
-  })
-
-  // Straight line to the goal on the final day, anchored at the last elapsed day.
-  // Today is still in progress, so it counts as one of the remaining days.
-  const startDay = requiredStartDay(new Date(), season)
-  const anchorDay = startDay - 1
-  const anchorTotal = anchorDay >= 1 ? points[anchorDay - 1].you : 0
-  const currentTotal = points[Math.min(startDay, daysInSeason) - 1].you
-  const daysLeft = daysInSeason - anchorDay
-  if (currentTotal < season.goal && daysLeft > 0) {
-    const perDay = (season.goal - anchorTotal) / daysLeft
-    for (let day = Math.max(anchorDay, 1); day <= daysInSeason; day++) {
-      points[day - 1].required = Math.round(anchorTotal + perDay * (day - anchorDay))
-    }
-  }
-
-  return points
+// The day a new log defaults to: today, clamped into the logging season.
+function defaultLogDate(): string {
+  const today = localDateString()
+  if (today < loggingSeason.startsOn) return loggingSeason.startsOn
+  if (today > loggingSeason.endsOn) return loggingSeason.endsOn
+  return today
 }
 
 export default function DashboardPage() {
-  const [user, setUser] = useState<any>(null)
-  const [profile, setProfile] = useState<Profile | null>(null)
-  const [stats, setStats] = useState<UserStats | null>(null)
-  const [pushupCount, setPushupCount] = useState('')
-  const [logDate, setLogDate] = useState(() => {
-    const today = localDateString()
-    if (today < loggingSeason.startsOn) return loggingSeason.startsOn
-    if (today > loggingSeason.endsOn) return loggingSeason.endsOn
-    return today
-  })
-  const [logging, setLogging] = useState(false)
-  const [showSuccess, setShowSuccess] = useState(false)
-  const [fireworksShow, setFireworksShow] = useState<'fourth' | 'liberty' | null>(null)
-  const [showMerchUnlock, setShowMerchUnlock] = useState(false)
-  const [showError, setShowError] = useState<string | null>(null)
-  const [editingProfile, setEditingProfile] = useState(false)
-  const [profileName, setProfileName] = useState('')
-  const [profileSaving, setProfileSaving] = useState(false)
-  const [profileMessage, setProfileMessage] = useState<string | null>(null)
-  const [profileError, setProfileError] = useState<string | null>(null)
-  const [currentFact, setCurrentFact] = useState<string | null>(null)
-  const [dailyLogs, setDailyLogs] = useState<Record<string, number>>({})
-  const [calendarMonth] = useState(() => new Date(`${displaySeason.startsOn}T12:00:00`))
-  const [chartData, setChartData] = useState<ChartPoint[]>([])
-  const [recruitCount, setRecruitCount] = useState(0)
   // Challenge lifecycle, resolved after mount so the prerendered HTML (which
   // has no clock) matches the first client render.
   const [phase, setPhase] = useState<ChallengePhase | null>(null)
-  const [finalRank, setFinalRank] = useState<number | null>(null)
-  const [boardSize, setBoardSize] = useState<number | null>(null)
-  const [nativeMode, setNativeMode] = useState(false)
-  const [nativeLoggerOpen, setNativeLoggerOpen] = useState(false)
-  const nativeRepInputRef = useRef<HTMLInputElement>(null)
-  const nativeLoggerSheetRef = useRef<HTMLDivElement>(null)
-  const router = useRouter()
-  const supabase = useMemo(() => createClient(), [])
+  const [logDate, setLogDate] = useState(defaultLogDate)
+  const [showMerchUnlock, setShowMerchUnlock] = useState(false)
 
   useEffect(() => {
     setPhase(challengePhase())
   }, [])
 
-  useEffect(() => {
-    if (!isNativeApp()) return
-    setNativeMode(true)
-
-    const openLogger = () => setNativeLoggerOpen(true)
-    window.addEventListener('libertylift:open-log', openLogger)
-    if (new URLSearchParams(window.location.search).get('log') === '1') {
-      setNativeLoggerOpen(true)
-      window.history.replaceState(window.history.state, '', '/dashboard')
-    }
-
-    return () => {
-      window.removeEventListener('libertylift:open-log', openLogger)
-    }
-  }, [])
-
-  useEffect(() => {
-    if (!nativeLoggerOpen) return
-
-    const previouslyFocused = document.activeElement instanceof HTMLElement
-      ? document.activeElement
-      : null
-    const previousOverflow = document.body.style.overflow
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        event.preventDefault()
-        setNativeLoggerOpen(false)
-        return
-      }
-
-      if (event.key !== 'Tab') return
-      const focusable = Array.from(
-        nativeLoggerSheetRef.current?.querySelectorAll<HTMLElement>(
-          'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])',
-        ) ?? [],
-      ).filter(element => !element.hasAttribute('hidden'))
-      if (focusable.length === 0) return
-
-      const first = focusable[0]
-      const last = focusable[focusable.length - 1]
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault()
-        last.focus()
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault()
-        first.focus()
-      }
-    }
-
-    document.body.style.overflow = 'hidden'
-    document.addEventListener('keydown', handleKeyDown)
-    const focusTimer = window.setTimeout(() => nativeRepInputRef.current?.focus(), 280)
-    return () => {
-      window.clearTimeout(focusTimer)
-      document.removeEventListener('keydown', handleKeyDown)
-      document.body.style.overflow = previousOverflow
-      previouslyFocused?.focus()
-    }
-  }, [nativeLoggerOpen])
-
-  // Final standing for the after-action report, once the books are closed.
-  useEffect(() => {
-    if (phase !== 'ended' || !user) return
-    supabase
-      .from('leaderboard')
-      .select('global_rank')
-      .eq('id', user.id)
-      .limit(1)
-      .then(({ data }) => setFinalRank(data?.[0]?.global_rank ?? null))
-    supabase
-      .from('leaderboard')
-      .select('id', { count: 'exact', head: true })
-      .then(({ count }) => setBoardSize(count ?? null))
-  }, [phase, user, supabase])
-
-  useEffect(() => {
-    setProfileName(profile?.display_name || '')
-  }, [profile?.display_name])
-
-  useEffect(() => {
-    const loadData = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
-        router.push('/login')
-        return
-      }
-      setUser(user)
-
-      // Load profile (create if missing - handles users created before trigger was added)
-      let { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single()
-
-      if (profileError && profileError.code === 'PGRST116') {
-        // No profile exists, create one
-        const { data: newProfile, error: insertError } = await supabase
-          .from('profiles')
-          .insert({ id: user.id, email: user.email })
-          .select()
-          .single()
-        if (!insertError) {
-          profileData = newProfile
-        } else {
-          console.error('Failed to create profile:', insertError)
-        }
-      }
-
-      const pendingSignup = readPendingSignup()
-      if (profileData) {
-        const profileUpdates: Partial<Profile> = {}
-
-        if (!profileData.display_name) {
-          profileUpdates.display_name = pendingSignup?.displayName || generateDisplayName(profileData.state_code || undefined)
-        }
-
-        if (!profileData.state_code && pendingSignup && isValidStateCode(pendingSignup.stateCode)) {
-          profileUpdates.state_code = pendingSignup.stateCode
-        }
-
-        if (Object.keys(profileUpdates).length > 0) {
-          const { data: updatedProfile, error: updateError } = await supabase
-            .from('profiles')
-            .update(profileUpdates)
-            .eq('id', user.id)
-            .select()
-            .single()
-
-          if (!updateError && updatedProfile) {
-            profileData = updatedProfile
-          } else if (updateError) {
-            console.error('Failed to update onboarding profile:', updateError)
-          }
-        }
-      }
-
-      // Credit the recruiter once, on first dashboard load after signup.
-      if (profileData && !profileData.referred_by && pendingSignup?.referredBy) {
-        const { data: referrerId } = await supabase.rpc('resolve_handle', {
-          p_handle: pendingSignup.referredBy,
-        })
-        const referrer = referrerId && referrerId !== user.id ? { id: referrerId } : null
-
-        if (referrer) {
-          const { data: referredProfile, error: referralError } = await supabase
-            .from('profiles')
-            .update({ referred_by: referrer.id })
-            .eq('id', user.id)
-            .select()
-            .single()
-          if (!referralError && referredProfile) {
-            profileData = referredProfile
-            track('referral_attributed')
-          } else if (referralError) {
-            console.error('Failed to record referral:', referralError)
-          }
-        }
-      }
-
-      if (pendingSignup) {
-        clearPendingSignup()
-        clearReferral()
-      }
-
-      setProfile(profileData)
-
-      // Recruits: people who signed up from this user's share links.
-      const { data: recruits } = await supabase.rpc('get_recruit_count')
-      setRecruitCount(recruits || 0)
-
-      // user_stats is a view over this season's stats with a zeroed row for
-      // every profile, so there is never a missing row to create.
-      const { data: statsData } = await supabase
-        .from('user_stats')
-        .select('*')
-        .eq('user_id', user.id)
-        .maybeSingle()
-
-      setStats(statsData)
-
-      // Load daily logs for calendar
-      const { data: logsData } = await supabase
-        .from('pushup_logs')
-        .select('logged_at, count')
-        .eq('user_id', user.id)
-        .eq('season_year', displaySeason.year)
-
-      if (logsData) {
-        const grouped: Record<string, number> = {}
-        logsData.forEach(log => {
-          const date = localDateString(new Date(log.logged_at))
-          grouped[date] = (grouped[date] || 0) + log.count
-        })
-        setDailyLogs(grouped)
-
-        setChartData(buildChartData(grouped, displaySeason))
-      }
-    }
-
-    loadData()
-  }, [router, supabase])
-
-  const saveProfileName = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    if (!user || !profile) return
-
-    const nextName = profileName.trim().replace(/\s+/g, ' ')
-    const currentName = profile.display_name || ''
-
-    if (nextName.length < 3) {
-      setProfileError('Handle must be at least 3 characters.')
-      setProfileMessage(null)
-      return
-    }
-
-    if (nextName.length > 40) {
-      setProfileError('Handle must be 40 characters or fewer.')
-      setProfileMessage(null)
-      return
-    }
-
-    if (!/^[A-Za-z0-9 _-]+$/.test(nextName)) {
-      setProfileError('Use letters, numbers, spaces, hyphens, or underscores.')
-      setProfileMessage(null)
-      return
-    }
-
-    if (nextName.toLowerCase() === currentName.toLowerCase()) {
-      setProfileName(currentName)
-      setEditingProfile(false)
-      setProfileError(null)
-      return
-    }
-
-    setProfileSaving(true)
-    setProfileError(null)
-    setProfileMessage(null)
-
-    const { data: isAvailable, error: availabilityError } = await supabase.rpc(
-      'is_handle_available',
-      { p_handle: nextName }
-    )
-
-    if (availabilityError) {
-      setProfileSaving(false)
-      setProfileError(availabilityError.message)
-      return
-    }
-
-    if (isAvailable === false) {
-      setProfileSaving(false)
-      setProfileError('That handle is already taken.')
-      return
-    }
-
-    const { data: updatedProfile, error } = await supabase
-      .from('profiles')
-      .update({ display_name: nextName })
-      .eq('id', user.id)
-      .select()
-      .single()
-
-    setProfileSaving(false)
-
-    if (error) {
-      setProfileError(error.code === '23505' ? 'That handle is already taken.' : error.message)
-      return
-    }
-
-    if (updatedProfile) {
-      setProfile(updatedProfile)
-      setProfileName(updatedProfile.display_name || '')
-      setEditingProfile(false)
-      setProfileMessage('Public handle updated.')
-      setTimeout(() => setProfileMessage(null), 3000)
-    }
-  }
-
-  const logPushups = async () => {
-    const count = parseInt(pushupCount)
-    if (!count || count < 1 || !user) return
-
-    const season = seasonForLogging()
-
-    if (!isSeasonDay(logDate, season)) {
-      setShowError('🇺🇸 The Liberty Lift challenge is for the month of July only!')
-      setTimeout(() => setShowError(null), 4000)
-      return
-    }
-
-    setLogging(true)
-
-    // The RPC stamps the timestamp, enforces the daily cap and rejects a day
-    // outside the season. The client no longer decides any of it.
-    const { error } = await logPushupsRpc(supabase, { count, day: logDate })
-
-    if (error) {
-      console.error('Error logging pushups:', error)
-      setShowError(`Error: ${error.message}`)
-      setTimeout(() => setShowError(null), 4000)
-      setLogging(false)
-      return
-    }
-
-    if (!error) {
-      // Refresh stats
-      const { data: newStats } = await supabase
-        .from('user_stats')
-        .select('*')
-        .eq('user_id', user.id)
-        .single()
-
-      // Check for milestone
-      const newTotal = newStats?.total_pushups || 0
-      const oldTotal = stats?.total_pushups || 0
-      const fact = AMERICAN_FACTS.find(f => f.threshold > oldTotal && f.threshold <= newTotal)
-      if (fact) {
-        setCurrentFact(fact.fact)
-      }
-
-      setStats(newStats)
-
-      // Update daily logs for calendar and rebuild chart
-      setDailyLogs(prev => {
-        const updated = { ...prev, [logDate]: (prev[logDate] || 0) + count }
-        setChartData(buildChartData(updated, displaySeason))
-        return updated
-      })
-
-      track('pushups_logged', { count })
-      void nativeRepLoggedFeedback()
-
-      // Crossing the season goal gets the full fireworks show; it outranks the
-      // Independence Day easter egg for reps logged on July 4th.
-      if (oldTotal < displaySeason.goal && newTotal >= displaySeason.goal) {
-        setFireworksShow('liberty')
-        track('liberty_achieved_fireworks')
-        // Finishing the challenge unlocks the merch shop; the CTA to order
-        // waits for the fireworks to finish (see Fireworks onDone below).
-      } else if (logDate === `${loggingSeason.year}-07-04`) {
-        setFireworksShow('fourth')
-        track('july_4th_fireworks')
-      }
-
-      setPushupCount('')
-      setShowSuccess(true)
-      setTimeout(() => setShowSuccess(false), 8000)
-    }
-
-    setLogging(false)
-  }
-
-  const clearLogsForDay = async () => {
-    if (!user || !logDate) return
-
-    const count = dailyLogs[logDate] || 0
-    if (count === 0) {
-      setShowError('No push-ups logged for this day')
-      setTimeout(() => setShowError(null), 3000)
-      return
-    }
-
-    if (!confirm(`Clear all ${count} push-ups for ${logDate}?`)) return
-
-    // Clearing a day is the same rule set as logging one, so it runs through
-    // the database too.
-    const { error } = await clearPushupsForDay(supabase, logDate)
-
-    if (error) {
-      setShowError(`Error: ${error.message}`)
-      setTimeout(() => setShowError(null), 4000)
-      return
-    }
-
-    // Update local state and rebuild chart
-    setDailyLogs(prev => {
-      const updated = { ...prev }
-      delete updated[logDate]
-      setChartData(buildChartData(updated, displaySeason))
-      return updated
-    })
-
-    // Refresh stats
-    const { data: newStats } = await supabase
-      .from('user_stats')
-      .select('*')
-      .eq('user_id', user.id)
-      .single()
-    setStats(newStats)
-
-    setShowSuccess(true)
-    setTimeout(() => setShowSuccess(false), 3000)
-  }
-
-  // Calendar helpers
-  const getDaysInMonth = (date: Date) => {
-    const year = date.getFullYear()
-    const month = date.getMonth()
-    const firstDay = new Date(year, month, 1)
-    const lastDay = new Date(year, month + 1, 0)
-    const daysInMonth = lastDay.getDate()
-    const startingDay = firstDay.getDay()
-    return { daysInMonth, startingDay, year, month }
-  }
-
-  const progress = stats ? (stats.total_pushups / displaySeason.goal) * 100 : 0
-  const totalPushups = stats?.total_pushups ?? 0
-  const remainingPushups = Math.max(0, displaySeason.goal - totalPushups)
-  const nextMilestone = AMERICAN_FACTS.find(milestone => milestone.threshold > totalPushups)
-  const activeDays = stats?.days_logged ?? Object.values(dailyLogs).filter(Boolean).length
-  const averageActiveDay = activeDays > 0 ? Math.round(totalPushups / activeDays) : 0
-  const seasonActivity = Array.from({ length: displaySeasonDays }, (_, index) => {
-    const day = index + 1
-    const count = dailyLogs[seasonDate(displaySeason, day)] ?? 0
-    return { day, count }
-  })
-  const recentLogEntries = Object.entries(dailyLogs)
-    .filter(([, count]) => count > 0)
-    .sort(([left], [right]) => right.localeCompare(left))
-    .slice(0, 3)
-  const dailyTarget = dailyPace
-  const daysInSeason = displaySeasonDays
-  const today = new Date()
-  const todayString = localDateString(today)
-
-  // Push-ups per day needed (today included) to reach the goal by the final day.
-  const reqStartDay = requiredStartDay(today, displaySeason)
-  const reqAnchorDay = reqStartDay - 1
-  const reqAnchorTotal = reqAnchorDay >= 1 ? chartData[reqAnchorDay - 1]?.you ?? 0 : 0
-  const reqCurrentTotal = chartData[Math.min(reqStartDay, daysInSeason) - 1]?.you ?? 0
-  const requiredPerDay =
-    chartData.length > 0 && reqCurrentTotal < displaySeason.goal && reqAnchorDay < daysInSeason
-      ? Math.ceil((displaySeason.goal - reqAnchorTotal) / (daysInSeason - reqAnchorDay))
-      : null
-
-  // Determine challenge phase and pace
-  let pace: 'before' | 'ahead' | 'ontrack' | 'behind' | 'complete'
-
-  if (todayString < displaySeason.startsOn) {
-    pace = 'before'
-  } else if (todayString > displaySeason.endsOn) {
-    pace = stats && stats.total_pushups >= displaySeason.goal ? 'complete' : 'behind'
-  } else {
-    const dayOfSeason = seasonDayNumber(todayString, displaySeason)
-    const total = stats?.total_pushups ?? 0
-    // The current day is still in progress, so its target isn't owed yet.
-    // You're only "behind" if you've fallen short of the days that have
-    // already fully elapsed. Once you've met that, you're "on track" until
-    // you clear today's cumulative target, at which point you're "ahead".
-    const requiredByYesterday = ((dayOfSeason - 1) / daysInSeason) * displaySeason.goal
-    const targetByToday = (dayOfSeason / daysInSeason) * displaySeason.goal
-    if (total >= targetByToday) {
-      pace = 'ahead'
-    } else if (total < requiredByYesterday) {
-      pace = 'behind'
-    } else {
-      pace = 'ontrack'
-    }
-  }
+  const data = useDashboardData(displaySeason, phase)
+  const { user, profile, stats } = data
+  const logger = useRepLogger(data, displaySeason, logDate)
+  const nativeSheet = useNativeLogger()
+
+  const dailyLogs = data.dailyLogs ?? NO_LOGS
+  const chartData = useMemo(
+    () => (data.dailyLogs ? buildChartData(data.dailyLogs, displaySeason) : []),
+    [data.dailyLogs],
+  )
+  const requiredPerDay = requiredPerDayFor(chartData, displaySeason)
+  const pace = paceFor(stats?.total_pushups ?? 0, displaySeason)
 
   if (!user) {
     return (
@@ -619,387 +78,56 @@ export default function DashboardPage() {
   return (
     <>
       <Navigation />
-      {fireworksShow && (
+      {logger.fireworksShow && (
         <Fireworks
           onDone={() => {
             // The archived finisher merch belongs to the 2026 campaign.
-            if (fireworksShow === 'liberty' && displaySeason.year === 2026) {
+            if (logger.fireworksShow === 'liberty' && displaySeason.year === 2026) {
               setShowMerchUnlock(true)
               track('merch_unlock_cta_shown')
             }
-            setFireworksShow(null)
+            logger.endFireworks()
           }}
-          {...(fireworksShow === 'liberty' && {
+          {...(logger.fireworksShow === 'liberty' && {
             title: '🇺🇸 LIBERTY ACHIEVED 🇺🇸',
             subtitle: `${displaySeason.goal.toLocaleString()} push-ups — Founding Father`,
           })}
         />
       )}
       {showMerchUnlock && (
-        <div
-          className="fixed inset-0 z-[110] flex items-center justify-center px-4"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="merch-unlock-title"
-        >
-          <button
-            type="button"
-            aria-label="Close"
-            onClick={() => setShowMerchUnlock(false)}
-            className="absolute inset-0 bg-liberty-dark/80 backdrop-blur-sm"
-          />
-          <div className="card relative w-full max-w-md p-8 text-center">
-            <button
-              type="button"
-              onClick={() => setShowMerchUnlock(false)}
-              aria-label="Close"
-              className="absolute right-3 top-3 inline-flex h-8 w-8 items-center justify-center text-white/40 transition-colors hover:text-white"
-            >
-              <svg aria-hidden="true" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M18 6 6 18" />
-                <path d="m6 6 12 12" />
-              </svg>
-            </button>
-            <div className="app-eyebrow mb-3">2026 finisher edition</div>
-            <h2 id="merch-unlock-title" className="font-bebas text-4xl text-white mb-3">
-              You earned the shirt.
-            </h2>
-            <p className="text-white/60 text-sm mb-6 max-w-sm mx-auto">
-              All {displaySeason.goal.toLocaleString()} push-ups, done. The Reps for the Republic tee was made
-              for finishers like you. Sales are complete for 2026, but the edition
-              remains part of the record.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <a
-                href="/merch"
-                onClick={() => track('merch_unlock_cta_clicked')}
-                className="btn-primary px-8 py-3"
-              >
-                View the 2026 edition
-              </a>
-              <button
-                type="button"
-                onClick={() => setShowMerchUnlock(false)}
-                className="btn-secondary px-8 py-3"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
+        <MerchUnlockDialog season={displaySeason} onClose={() => setShowMerchUnlock(false)} />
       )}
       <div className="native-dashboard-screen min-h-screen pt-24 pb-12 px-4 app-surface">
         <div className="native-dashboard-content max-w-4xl mx-auto">
-          <section className="native-today" aria-labelledby="native-today-title">
-            <header className="native-today-heading">
-              <div>
-                <div className="native-overline">Your campaign</div>
-                <h1 id="native-today-title">Ready, {profile?.display_name?.split(' ')[0] || 'Patriot'}?</h1>
-                <p>{phase === 'ended' ? `Your ${displaySeason.year} campaign is in the books.` : 'Keep the promise you made to yourself.'}</p>
-              </div>
-              <Link href="/profile" className="native-avatar" aria-label="Open your profile">
-                {profile?.display_name
-                  ?.split(/\s+/)
-                  .slice(0, 2)
-                  .map(part => part[0])
-                  .join('')
-                  .toUpperCase() || 'LL'}
-              </Link>
-            </header>
+          <NativeToday
+            profile={profile}
+            stats={stats}
+            dailyLogs={dailyLogs}
+            phase={phase}
+            season={displaySeason}
+            onOpenLogger={() => nativeSheet.setOpen(true)}
+          />
 
-            <div className="native-progress-hero">
-              <div className="native-progress-copy">
-                <span>Total completed</span>
-                <strong>{totalPushups.toLocaleString()}</strong>
-                <small>of {displaySeason.goal.toLocaleString()} push-ups</small>
-              </div>
-              <div
-                className="native-progress-ring"
-                style={{ '--native-progress': `${Math.min(progress, 100)}%` } as React.CSSProperties}
-                role="progressbar"
-                aria-label="Challenge completion"
-                aria-valuemin={0}
-                aria-valuemax={displaySeason.goal}
-                aria-valuenow={Math.min(totalPushups, displaySeason.goal)}
-                aria-valuetext={`${Math.round(progress)} percent complete`}
-              >
-                <span>{Math.round(progress)}%</span>
-              </div>
-              <div className="native-progress-track" aria-hidden="true">
-                <span style={{ width: `${Math.min(progress, 100)}%` }} />
-              </div>
-            </div>
+          <ProfileHeader
+            supabase={data.supabase}
+            userId={user.id}
+            profile={profile}
+            onProfileChange={data.setProfile}
+            totalPushups={stats?.total_pushups ?? 0}
+            phase={phase}
+            season={displaySeason}
+          />
 
-            <div className="native-today-stats">
-              <div><span>Today</span><strong>{dailyLogs[localDateString()] || 0}</strong><small>reps</small></div>
-              <div><span>Streak</span><strong>{liveStreak(stats?.current_streak, stats?.last_log_date)}</strong><small>days</small></div>
-              <div><span>Remaining</span><strong>{remainingPushups}</strong><small>reps</small></div>
-            </div>
-
-            {phase === 'ended' ? (
-              <Link href="/finale" className="native-primary-action">
-                <span>View your final result</span><b aria-hidden="true">›</b>
-              </Link>
-            ) : (
-              <button type="button" className="native-primary-action" onClick={() => setNativeLoggerOpen(true)}>
-                <span className="native-primary-action-icon" aria-hidden="true">＋</span>
-                <span>Log a set</span>
-              </button>
-            )}
-
-            <section className="native-momentum-card" aria-labelledby="native-momentum-title">
-              <div className="native-section-heading">
-                <div>
-                  <span>Consistency</span>
-                  <h2 id="native-momentum-title">July activity</h2>
-                </div>
-                <strong>{activeDays}<small>/{displaySeasonDays} days</small></strong>
-              </div>
-              <div className="native-activity-grid" aria-label={`${activeDays} active days in July`}>
-                <span className="sr-only">
-                  {seasonActivity.filter(day => day.count > 0).map(day => `July ${day.day}: ${day.count} push-ups`).join('; ') || 'No activity logged'}
-                </span>
-                {seasonActivity.map(({ day, count }) => (
-                  <span
-                    key={day}
-                    className={count > 0 ? 'is-active' : ''}
-                    style={{ '--activity-strength': Math.min(1, 0.32 + count / 140) } as React.CSSProperties}
-                    title={`July ${day}: ${count} push-ups`}
-                  />
-                ))}
-              </div>
-              <div className="native-momentum-stats">
-                <div><span>Active-day average</span><strong>{averageActiveDay}</strong></div>
-                <div><span>Best day</span><strong>{stats?.best_day ?? 0}</strong></div>
-                <div><span>Longest streak</span><strong>{stats?.longest_streak ?? 0}</strong></div>
-              </div>
-            </section>
-
-            {nextMilestone && (
-              <section className="native-milestone-card" aria-label="Next milestone">
-                <span className="native-milestone-icon" aria-hidden="true">✦</span>
-                <div>
-                  <span>Next milestone</span>
-                  <strong>{nextMilestone.threshold.toLocaleString()} reps</strong>
-                  <small>{(nextMilestone.threshold - totalPushups).toLocaleString()} to go</small>
-                </div>
-              </section>
-            )}
-
-            {recentLogEntries.length > 0 && (
-              <section className="native-recent-card" aria-labelledby="native-recent-title">
-                <div className="native-section-heading">
-                  <div>
-                    <span>History</span>
-                    <h2 id="native-recent-title">Recent work</h2>
-                  </div>
-                </div>
-                <div className="native-recent-list">
-                  {recentLogEntries.map(([date, count]) => (
-                    <div key={date}>
-                      <span className="native-recent-check" aria-hidden="true">✓</span>
-                      <div>
-                        <strong>{new Date(`${date}T12:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</strong>
-                        <small>Completed</small>
-                      </div>
-                      <b>{count.toLocaleString()}<small> reps</small></b>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            )}
-
-            <nav className="native-quick-links" aria-label="Quick links">
-              <Link href="/leaderboard"><span aria-hidden="true">⌁</span><div><strong>Standings</strong><small>See where you rank</small></div><b aria-hidden="true">›</b></Link>
-              <Link href="/contests"><span aria-hidden="true">◉</span><div><strong>Your crews</strong><small>Train with your people</small></div><b aria-hidden="true">›</b></Link>
-            </nav>
-          </section>
-
-          {/* Header */}
-          <div id="profile-name" className="web-dashboard-header mb-8">
-            <div className="flex flex-wrap items-center gap-3 mb-3">
-              <div className="app-eyebrow">Personal board</div>
-              {(stats?.total_pushups ?? 0) >= displaySeason.goal && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 border border-liberty-gold/50 bg-liberty-gold/10 text-liberty-gold text-[10px] font-bold uppercase tracking-[0.15em]">
-                  🏛️ Founding Father
-                </span>
-              )}
-              {profile?.created_at && profile.created_at < '2026-07-01' && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 border border-liberty-gold/50 bg-liberty-gold/10 text-liberty-gold text-[10px] font-bold uppercase tracking-[0.15em]">
-                  📜 Declaration Signer
-                </span>
-              )}
-            </div>
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
-              <h1 className="app-title text-5xl sm:text-7xl">
-                Welcome back, <em>{profile?.display_name || 'Patriot'}</em>
-              </h1>
-              {!editingProfile && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEditingProfile(true)
-                    setProfileName(profile?.display_name || '')
-                    setProfileError(null)
-                    setProfileMessage(null)
-                  }}
-                  className="mt-1 inline-flex h-10 w-10 items-center justify-center border border-white/20 bg-white/[0.04] text-white/60 transition-colors hover:border-liberty-red/60 hover:text-white"
-                  aria-label="Edit public handle"
-                  title="Edit public handle"
-                >
-                  <svg aria-hidden="true" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M12 20h9" />
-                    <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
-                  </svg>
-                </button>
-              )}
-            </div>
-            <p className="text-white/60 mt-3">
-              {phase === 'ended'
-                ? `Your ${displaySeason.year} campaign, in the books.`
-                : `Your journey to ${displaySeason.goal.toLocaleString()}.`}
-            </p>
-            {editingProfile && (
-              <form onSubmit={saveProfileName} className="mt-5 max-w-xl">
-                <label htmlFor="profile-name" className="sr-only">
-                  Public handle
-                </label>
-                <div className="flex flex-col sm:flex-row gap-2">
-                  <input
-                    id="profile-name"
-                    type="text"
-                    value={profileName}
-                    onChange={(event) => {
-                      setProfileName(event.target.value)
-                      setProfileError(null)
-                      setProfileMessage(null)
-                    }}
-                    minLength={3}
-                    maxLength={40}
-                    className="input"
-                    placeholder="Your public handle"
-                    disabled={profileSaving}
-                  />
-                  <button
-                    type="submit"
-                    disabled={profileSaving || !profileName.trim()}
-                    className="btn-gold px-5 py-3 disabled:opacity-50"
-                  >
-                    {profileSaving ? 'Saving...' : 'Save'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEditingProfile(false)
-                      setProfileName(profile?.display_name || '')
-                      setProfileError(null)
-                      setProfileMessage(null)
-                    }}
-                    disabled={profileSaving}
-                    className="btn-secondary px-5 py-3 disabled:opacity-50"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </form>
-            )}
-            {(profileMessage || profileError) && (
-              <div
-                role={profileError ? 'alert' : 'status'}
-                className={`mt-3 text-sm ${profileError ? 'text-red-300' : 'text-green-300'}`}
-              >
-                {profileError || profileMessage}
-              </div>
-            )}
-          </div>
-
-          {/* Grace day: the books are still open for July reps. */}
-          {phase === 'grace' && (
-            <div
-              className="web-dashboard-status mb-8 p-4 bg-yellow-500/15 border border-yellow-500/40 text-center text-yellow-200 text-sm"
-              role="status"
-            >
-              🔔 <strong>Last call.</strong> The contest ended {displaySeasonFinalDay} — you have until midnight
-              tonight to log any July reps you missed. After that, the books are closed for good.
-            </div>
-          )}
-
-          {/* After-action report replaces the pace card once standings are final. */}
-          {phase === 'ended' ? (
-            <div className="web-dashboard-status card p-8 mb-8 text-center">
-              <div className="app-eyebrow mb-3 justify-center">After-action report</div>
-              <h2 className="font-bebas text-4xl sm:text-5xl text-white mb-2">
-                {(stats?.total_pushups ?? 0) >= displaySeason.goal ? 'Liberty achieved.' : 'You answered the call.'}
-              </h2>
-              <p className="text-white/60 text-sm max-w-lg mx-auto">
-                {(stats?.total_pushups ?? 0) >= displaySeason.goal
-                  ? `All ${displaySeason.goal.toLocaleString()} push-ups, in the books. Founding Father, forever.`
-                  : `${(stats?.total_pushups ?? 0).toLocaleString()} push-ups on the board${
-                      profile?.state_code ? ` for ${US_STATES[profile.state_code]}` : ''
-                    } — every one of them counted in the national total.`}
-              </p>
-              {finalRank !== null && (
-                <p className="text-white/80 text-sm mt-3">
-                  Final standing:{' '}
-                  <span className="text-liberty-gold font-bold">#{finalRank.toLocaleString()}</span>{' '}
-                  in the nation
-                  {boardSize !== null && ` of ${boardSize.toLocaleString()} on the board`}.
-                </p>
-              )}
-              {(stats?.total_pushups ?? 0) >= displaySeason.goal && (
-                <p className="text-sm mt-3">
-                  <a
-                    href="/merch"
-                    onClick={() => track('merch_unlock_cta_clicked')}
-                    className="text-liberty-gold hover:underline"
-                  >
-                    You earned the Reps for the Republic tee — view the 2026 edition →
-                  </a>
-                </p>
-              )}
-              <div className="flex flex-wrap justify-center gap-3 mt-6">
-                <a href="/finale" className="btn-gold px-8 py-3">
-                  Enter the Hall of Honor
-                </a>
-              </div>
-              {profile?.display_name && (
-                <ShareProgress
-                  handle={profile.display_name}
-                  totalPushups={stats?.total_pushups || 0}
-                  currentStreak={liveStreak(stats?.current_streak, stats?.last_log_date)}
-                  stateCode={profile.state_code}
-                  context="finale_recap"
-                  className="mt-4"
-                />
-              )}
-            </div>
-          ) : pace === 'before' ? (
-            <Countdown className="web-dashboard-status dashboard-countdown mb-8" hideWhenLive />
-          ) : (
-            <div className="web-dashboard-status card p-6 text-center mb-8">
-              <div className={`inline-flex items-center gap-2 px-4 py-2 border ${
-                pace === 'ahead' ? 'bg-green-500/20 text-green-300 border-green-500/40' :
-                pace === 'ontrack' ? 'bg-blue-500/20 text-blue-300 border-blue-500/40' :
-                pace === 'behind' ? 'bg-yellow-500/20 text-yellow-300 border-yellow-500/40' :
-                'bg-liberty-red/20 text-liberty-red border-liberty-red/40'
-              }`}>
-                <span>
-                  {pace === 'ahead' ? 'Ahead' :
-                   pace === 'ontrack' ? 'On Track' :
-                   pace === 'behind' ? 'Behind' : 'Complete'}
-                </span>
-              </div>
-              <p className="text-sm text-white/60 mt-3">
-                {pace === 'complete'
-                  ? `You did it: ${displaySeason.goal.toLocaleString()} push-ups in July.`
-                  : phase === 'grace'
-                    ? 'The challenge window is over — log any missed July reps before midnight tonight.'
-                    : requiredPerDay !== null
-                      ? `Target: ${requiredPerDay} push-ups per day from today to hit ${displaySeason.goal.toLocaleString()} by the final day.`
-                      : `Target: ${dailyTarget} push-ups per day to hit ${displaySeason.goal.toLocaleString()} by the final day.`}
-              </p>
-            </div>
-          )}
+          <StatusCard
+            phase={phase}
+            pace={pace}
+            season={displaySeason}
+            profile={profile}
+            stats={stats}
+            requiredPerDay={requiredPerDay}
+            finalRank={data.finalRank}
+            boardSize={data.boardSize}
+          />
 
           {/* The Final Push: last-day blitz. Keyed to the user's total so the
               day board moves the moment their reps land. */}
@@ -1009,146 +137,28 @@ export default function DashboardPage() {
             className="mb-8"
           />
 
-          {/* Log Push-ups Card (hidden once the books are closed) */}
-          {phase !== 'ended' && (!nativeMode || nativeLoggerOpen) && (
-          <>
-          {nativeMode && nativeLoggerOpen && (
-            <button
-              type="button"
-              className="native-sheet-backdrop"
-              onClick={() => setNativeLoggerOpen(false)}
-              aria-label="Close rep logger"
-              tabIndex={-1}
+          {/* Hidden once the books are closed; a sheet in the iOS app. */}
+          {phase !== 'ended' && (!nativeSheet.nativeMode || nativeSheet.open) && (
+            <LogCard
+              season={loggingSeason}
+              profile={profile}
+              stats={stats}
+              pushupCount={logger.pushupCount}
+              onPushupCountChange={logger.setPushupCount}
+              logDate={logDate}
+              onLogDateChange={setLogDate}
+              logging={logger.logging}
+              onLog={logger.log}
+              showSuccess={logger.showSuccess}
+              error={logger.error}
+              fact={logger.fact}
+              onDismissFact={logger.dismissFact}
+              nativeMode={nativeSheet.nativeMode}
+              sheetOpen={nativeSheet.open}
+              onCloseSheet={() => nativeSheet.setOpen(false)}
+              sheetRef={nativeSheet.sheetRef}
+              inputRef={nativeSheet.inputRef}
             />
-          )}
-          <div
-            ref={nativeLoggerSheetRef}
-            id="log-pushups"
-            className={`card p-8 mb-8 ${nativeMode ? `native-log-sheet ${nativeLoggerOpen ? 'is-open' : ''}` : ''}`}
-            role={nativeMode && nativeLoggerOpen ? 'dialog' : undefined}
-            aria-modal={nativeMode && nativeLoggerOpen ? true : undefined}
-            aria-labelledby={nativeMode && nativeLoggerOpen ? 'native-log-sheet-title' : 'log-pushups-title'}
-          >
-            {nativeMode && (
-              <div className="native-sheet-header">
-                <div>
-                  <span>Quick entry</span>
-                  <strong id="native-log-sheet-title">Add push-ups</strong>
-                </div>
-                <button type="button" onClick={() => setNativeLoggerOpen(false)} aria-label="Close rep logger">Done</button>
-              </div>
-            )}
-            <h2 id="log-pushups-title" className="font-bebas text-3xl text-liberty-red mb-5 text-center">
-              LOG YOUR PUSH-UPS
-            </h2>
-
-            <div className="native-safety-note mb-5 border border-amber-300/25 bg-amber-300/[0.06] p-4 text-sm leading-relaxed text-amber-100/80" role="note">
-              <strong className="text-amber-100">Train safely.</strong> Use controlled form, rest
-              between sets, and stop if anything feels wrong. Daily cap: {loggingSeason.dailyCap}.
-            </div>
-
-            {/* Quick Add Buttons */}
-            <div className="native-log-presets grid grid-cols-5 gap-2 mb-4" aria-label="Rep presets">
-              {[10, 20, 25, 50, 100].map((num) => (
-                <button
-                  key={num}
-                  type="button"
-                  onClick={() => setPushupCount(num.toString())}
-                  className={`min-h-12 bg-white/10 hover:bg-white/20 text-sm font-bold transition-colors ${pushupCount === num.toString() ? 'is-selected' : ''}`}
-                  aria-pressed={pushupCount === num.toString()}
-                >
-                  +{num}
-                </button>
-              ))}
-            </div>
-
-            <div className="flex flex-col gap-3 items-center justify-center">
-              <div className="native-log-fields flex flex-col sm:flex-row gap-3 items-center w-full max-w-xl">
-                <div className="native-log-field">
-                <label htmlFor="pushup-count" className="sr-only native-field-label">Reps completed</label>
-                <input
-                  id="pushup-count"
-                  ref={nativeRepInputRef}
-                  type="number"
-                  value={pushupCount}
-                  onChange={(e) => setPushupCount(e.target.value)}
-                  placeholder="0"
-                  min="1"
-                  max={loggingSeason.dailyCap}
-                  inputMode="numeric"
-                  className="input text-center text-2xl font-bold flex-1"
-                />
-                </div>
-                <div className="native-log-field">
-                <label htmlFor="pushup-date" className="sr-only native-field-label">Date completed</label>
-                <input
-                  id="pushup-date"
-                  type="date"
-                  value={logDate}
-                  onChange={(e) => setLogDate(e.target.value)}
-                  min={loggingSeason.startsOn}
-                  max={loggingSeason.endsOn}
-                  className="input text-center flex-1"
-                />
-                </div>
-              </div>
-              <button
-                onClick={logPushups}
-                disabled={logging || !pushupCount}
-                className="btn-gold px-8 py-3 disabled:opacity-50 w-full max-w-xl"
-              >
-                {logging ? 'Saving…' : nativeMode ? 'Save set' : 'Log push-ups'}
-              </button>
-            </div>
-
-            {/* Success Message */}
-            {showSuccess && (
-              <div className="mt-4 p-4 bg-green-500/20 border border-green-500/50 text-center text-green-300">
-                <div className="mb-3">Push-ups logged. Keep going.</div>
-                {profile?.display_name && (
-                  <ShareProgress
-                    handle={profile.display_name}
-                    totalPushups={stats?.total_pushups || 0}
-                    currentStreak={liveStreak(stats?.current_streak, stats?.last_log_date)}
-                    stateCode={profile.state_code}
-                    context="log_success"
-                  />
-                )}
-              </div>
-            )}
-
-            {/* Error Message */}
-            {showError && (
-              <div className="mt-4 p-4 bg-red-500/20 border border-red-500/50 text-center text-red-300">
-                {showError}
-              </div>
-            )}
-
-            {/* Fun Fact */}
-            {currentFact && (
-              <div className="mt-4 p-4 bg-liberty-red/20 border border-liberty-red/50 text-center">
-                <div className="text-liberty-red font-semibold mb-1">Milestone reached.</div>
-                <div className="text-white/80">{currentFact}</div>
-                {profile?.display_name && (
-                  <ShareProgress
-                    handle={profile.display_name}
-                    totalPushups={stats?.total_pushups || 0}
-                    currentStreak={liveStreak(stats?.current_streak, stats?.last_log_date)}
-                    stateCode={profile.state_code}
-                    context="milestone"
-                    className="mt-3"
-                  />
-                )}
-                <button
-                  onClick={() => setCurrentFact(null)}
-                  className="mt-2 text-sm text-white/50 hover:text-white"
-                >
-                  Dismiss
-                </button>
-              </div>
-            )}
-          </div>
-          </>
           )}
 
           {/* Nationwide count + milestone celebration. Keyed to the user's
@@ -1160,294 +170,35 @@ export default function DashboardPage() {
             className="mb-8"
           />
 
-          {/* Main Stats Card */}
-          <div className="web-dashboard-detail card p-8 mb-8">
-            <div className="text-center mb-6">
-              <div className="font-bebas text-8xl text-white">
-                {stats?.total_pushups.toLocaleString() || 0}
-              </div>
-              <div className="text-white/50 uppercase tracking-wider">Total Push-ups</div>
-            </div>
+          <StatsCard stats={stats} season={displaySeason} />
 
-            {/* Progress Bar */}
-            <div className="mb-6">
-              <div className="flex justify-between text-sm text-white/60 mb-2">
-                <span>Progress to {displaySeason.goal.toLocaleString()}</span>
-                <span>{progress.toFixed(1)}%</span>
-              </div>
-              <div className="progress-bar">
-                <div
-                  className="progress-fill"
-                  style={{ width: `${Math.min(progress, 100)}%` }}
-                />
-              </div>
-              <div className="flex justify-between text-xs text-white/40 mt-1">
-                <span>0</span>
-                <span>{Math.round(displaySeason.goal / 2).toLocaleString()}</span>
-                <span>{displaySeason.goal.toLocaleString()}</span>
-              </div>
-            </div>
-
-            {/* Quick Stats */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <div className="text-center p-4 bg-white/[0.04] border border-liberty-red/30">
-                <div className="font-bebas text-3xl text-liberty-red">
-                  {liveStreak(stats?.current_streak, stats?.last_log_date)}
-                </div>
-                <div className="text-xs text-white/50 uppercase">Day Streak</div>
-              </div>
-              <div className="text-center p-4 bg-white/[0.04] border border-white/10">
-                <div className="font-bebas text-3xl text-white">
-                  {stats?.best_day || 0}
-                </div>
-                <div className="text-xs text-white/50 uppercase">Best Day</div>
-              </div>
-              <div className="text-center p-4 bg-white/[0.04] border border-white/10">
-                <div className="font-bebas text-3xl text-white">
-                  {stats?.days_logged || 0}
-                </div>
-                <div className="text-xs text-white/50 uppercase">Days Logged</div>
-              </div>
-              <div className="text-center p-4 bg-white/[0.04] border border-white/10">
-                <div className="font-bebas text-3xl text-white">
-                  {Math.max(0, displaySeason.goal - (stats?.total_pushups || 0))}
-                </div>
-                <div className="text-xs text-white/50 uppercase">Remaining</div>
-              </div>
-            </div>
-          </div>
-
-          {/* Badge Case */}
           <div className="web-dashboard-detail"><BadgeCase userId={user.id} stats={stats} /></div>
 
-          {/* Recruit Card */}
           {profile?.display_name && (
-            <div className="web-dashboard-detail card p-8 mb-8 text-center">
-              <h2 className="font-bebas text-3xl text-liberty-red mb-2">
-                BRING YOUR PEOPLE
-              </h2>
-              <p className="text-white/60 mb-2">
-                Every rep counts twice — once for you, once for your state. Share
-                your board and recruit your crew.
-              </p>
-              <p className="text-white/50 text-sm mb-5">
-                Patriots recruited so far:{' '}
-                <span className="text-liberty-gold font-bold">{recruitCount}</span>
-              </p>
-              <ShareProgress
-                handle={profile.display_name}
-                totalPushups={stats?.total_pushups || 0}
-                currentStreak={liveStreak(stats?.current_streak, stats?.last_log_date)}
-                stateCode={profile.state_code}
-                context="dashboard"
-                showInviteLink
-              />
-              <a href="/spread-the-word" className="inline-block mt-4 text-sm text-white/50 hover:text-white">
-                Need ammo? Grab ready-made captions →
-              </a>
-            </div>
+            <RecruitCard
+              handle={profile.display_name}
+              stateCode={profile.state_code}
+              stats={stats}
+              recruitCount={data.recruitCount}
+            />
           )}
 
-          {/* Personal Progress Chart */}
-          <div className="web-dashboard-detail card p-6 mb-8">
-            <h2 className="font-bebas text-2xl text-liberty-red mb-4 text-center">
-              YOUR PROGRESS TO {displaySeason.goal.toLocaleString()}
-            </h2>
-            <div className="h-[300px] sm:h-[350px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-                  <XAxis
-                    dataKey="day"
-                    stroke="#666"
-                    tick={{ fill: '#999', fontSize: 12 }}
-                    label={{ value: 'July', position: 'insideBottom', offset: -5, fill: '#666' }}
-                  />
-                  <YAxis
-                    stroke="#666"
-                    tick={{ fill: '#999', fontSize: 12 }}
-                    domain={[0, displaySeason.goal]}
-                    ticks={[0, 0.25, 0.5, 0.75, 1].map(fraction => Math.round(displaySeason.goal * fraction))}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: '#1a1a1a',
-                      border: '1px solid #333',
-                      borderRadius: '8px',
-                    }}
-                    labelStyle={{ color: '#999' }}
-                    formatter={(value: number, name: string) => [
-                      value.toLocaleString(),
-                      name === 'you'
-                        ? 'Your Push-ups'
-                        : name === 'required'
-                          ? `${requiredPerDay}/day Needed`
-                          : `${dailyPace}/day Pace`
-                    ]}
-                    labelFormatter={(day) => `July ${day}`}
-                  />
-                  <Legend
-                    formatter={(value) =>
-                      value === 'you'
-                        ? 'Your Push-ups'
-                        : value === 'required'
-                          ? `${requiredPerDay}/day Needed`
-                          : `${dailyPace}/day Pace`
-                    }
-                  />
+          <ProgressChart chartData={chartData} requiredPerDay={requiredPerDay} season={displaySeason} />
 
-                  {/* Pace line */}
-                  <Line
-                    type="monotone"
-                    dataKey="pace"
-                    name="pace"
-                    stroke="#666"
-                    strokeDasharray="5 5"
-                    strokeWidth={2}
-                    dot={false}
-                  />
+          <SeasonCalendar
+            season={displaySeason}
+            dailyLogs={dailyLogs}
+            selectedDate={logDate}
+            onSelectDate={setLogDate}
+            phase={phase}
+            onClearDay={logger.clearSelectedDay}
+          />
 
-                  {/* Required pace from today */}
-                  {requiredPerDay !== null && (
-                    <Line
-                      type="monotone"
-                      dataKey="required"
-                      name="required"
-                      stroke="#3B82F6"
-                      strokeDasharray="5 5"
-                      strokeWidth={2}
-                      dot={false}
-                    />
-                  )}
-
-                  {/* User's line */}
-                  <Line
-                    type="monotone"
-                    dataKey="you"
-                    name="you"
-                    stroke="#DC2626"
-                    strokeWidth={3}
-                    dot={false}
-                    activeDot={{ r: 5, fill: '#DC2626' }}
-                  />
-
-                  {/* Season goal line */}
-                  <ReferenceLine
-                    y={displaySeason.goal}
-                    stroke="#EBE7DC"
-                    strokeDasharray="3 3"
-                    label={{ value: displaySeason.goal.toLocaleString(), fill: '#EBE7DC', fontSize: 12, position: 'right' }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-            <p className="text-center text-white/40 text-sm mt-2">
-              Dashed gray line = {dailyPace} push-ups/day pace to hit {displaySeason.goal.toLocaleString()} by the final day.
-              {requiredPerDay !== null && (
-                <> Dashed blue line = {requiredPerDay} push-ups/day needed from today to finish.</>
-              )}
-            </p>
-          </div>
-
-          {/* Calendar */}
-          <div className="web-dashboard-detail card p-6 mb-8">
-            <h2 className="font-bebas text-3xl text-liberty-red text-center mb-4">
-              JULY {displaySeason.year}
-            </h2>
-
-            {/* Day headers */}
-            <div className="grid grid-cols-7 gap-1 mb-2">
-              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-                <div key={day} className="text-center text-xs text-white/50 font-semibold py-1">
-                  {day}
-                </div>
-              ))}
-            </div>
-
-            {/* Calendar grid */}
-            <div className="grid grid-cols-7 gap-1">
-              {(() => {
-                const { daysInMonth, startingDay, year, month } = getDaysInMonth(calendarMonth)
-                const days = []
-
-                // Empty cells for days before the 1st
-                for (let i = 0; i < startingDay; i++) {
-                  days.push(<div key={`empty-${i}`} className="aspect-square" />)
-                }
-
-                // Days of the current display season.
-                for (let day = 1; day <= daysInMonth; day++) {
-                  const dateStr = seasonDate(displaySeason, day)
-                  const count = dailyLogs[dateStr] || 0
-                  const isToday = dateStr === localDateString()
-
-                  days.push(
-                    <button
-                      key={day}
-                      type="button"
-                      onClick={() => setLogDate(dateStr)}
-                      aria-label={`July ${day}: ${count > 0 ? `${count} push-ups logged` : 'no push-ups logged'}`}
-                      aria-pressed={logDate === dateStr}
-                      className={`aspect-square flex flex-col items-center justify-center cursor-pointer transition-all text-xs
-                        ${count > 0
-                          ? count >= dailyTarget
-                            ? 'bg-liberty-red/40 border border-liberty-red/60'
-                            : 'bg-liberty-red/20 border border-liberty-red/30'
-                          : 'bg-white/5 hover:bg-white/10'
-                        }
-                        ${isToday ? 'ring-2 ring-liberty-gold' : ''}
-                        ${logDate === dateStr ? 'ring-2 ring-white' : ''}
-                      `}
-                    >
-                      <span className={`font-semibold ${count > 0 ? 'text-white' : 'text-white/60'}`}>
-                        {day}
-                      </span>
-                      {count > 0 && (
-                        <span className="text-[10px] text-liberty-red font-bold">{count}</span>
-                      )}
-                    </button>
-                  )
-                }
-
-                return days
-              })()}
-            </div>
-
-            {/* Legend */}
-            <div className="flex items-center justify-center gap-4 mt-4 text-xs text-white/50">
-              <div className="flex items-center gap-1">
-                <div className="w-3 h-3 bg-liberty-red/20 border border-liberty-red/30"></div>
-                <span>Logged</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <div className="w-3 h-3 bg-liberty-red/40 border border-liberty-red/60"></div>
-                <span>{dailyTarget}+ (on pace)</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <div className="w-3 h-3 ring-2 ring-liberty-gold"></div>
-                <span>Today</span>
-              </div>
-            </div>
-
-            {/* Clear day button (retired with the rest of the editing UI once
-                the books are closed — the database freeze would reject it) */}
-            {phase !== 'ended' && dailyLogs[logDate] > 0 && (
-              <button
-                onClick={clearLogsForDay}
-                className="mt-4 w-full py-2 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors"
-              >
-                Clear {dailyLogs[logDate]} push-ups for {new Date(logDate + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-              </button>
-            )}
-          </div>
-
-          {/* Pledge Widget */}
           <div className="web-dashboard-detail">
             <PledgeWidget userId={user.id} totalPushups={stats?.total_pushups || 0} />
           </div>
 
           <div className="web-dashboard-detail"><AccountSettings /></div>
-
         </div>
       </div>
     </>

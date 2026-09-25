@@ -1,12 +1,14 @@
 'use client'
 
+import type { User } from '@supabase/supabase-js'
 import { useState, useEffect, useMemo } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { createClient, Contest, US_STATES, DAILY_PACE } from '@/lib/supabase'
 import Navigation from '@/components/Navigation'
 import ClickableName from '@/components/UserPushupChartModal'
 import Link from 'next/link'
-import { liveStreak } from '@/lib/dates'
+import { liveStreak, seasonForDisplay } from '@/lib/dates'
+import { seasonByYear } from '@/lib/seasons'
 import {
   LineChart,
   Line,
@@ -55,7 +57,7 @@ export default function ContestDetailPage() {
   const [contest, setContest] = useState<Contest | null>(null)
   const [members, setMembers] = useState<ContestMember[]>([])
   const [chartData, setChartData] = useState<DailyData[]>([])
-  const [user, setUser] = useState<any>(null)
+  const [user, setUser] = useState<User | null>(null)
   const [isMember, setIsMember] = useState(false)
   const [loading, setLoading] = useState(true)
   const [joining, setJoining] = useState(false)
@@ -90,6 +92,8 @@ export default function ContestDetailPage() {
 
       if (participants && participants.length > 0) {
         const userIds = participants.map(p => p.user_id)
+        // Chart the month of the season this contest belongs to.
+        const season = seasonByYear(contestData.season_year) ?? seasonForDisplay()
         
         const { data: profiles } = await supabase
           .from('public_profiles')
@@ -107,11 +111,11 @@ export default function ContestDetailPage() {
           .from('public_user_daily_pushups')
           .select('user_id, daily_pushups, log_date')
           .in('user_id', userIds)
-          .gte('log_date', '2026-07-01')
-          .lte('log_date', '2026-07-31')
+          .gte('log_date', season.startsOn)
+          .lte('log_date', season.endsOn)
           .order('log_date', { ascending: true })
 
-        const memberData: ContestMember[] = participants.map((p: any) => {
+        const memberData: ContestMember[] = participants.map((p) => {
           const profile = profiles?.find(pr => pr.id === p.user_id)
           const stat = stats?.find(s => s.user_id === p.user_id)
           return {

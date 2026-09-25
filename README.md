@@ -32,19 +32,26 @@ Liberty Lift 1776 is a Next.js campaign app for a July 1-31, 2026 push-up challe
 
 ## Email Reminders
 
-A Vercel Cron job (`vercel.json`) hits `/api/cron/reminders` daily at 13:00 UTC. During
-July 2026 it sends a launch announcement to the pre-launch email list (July 1) and a
-weekly (Mondays, July only) personalized pace/streak reminder to participants who have
-not logged that day. On July 30 it sends the one-time Final Push announcement (with
-day-of copy for anyone retried on the 31st). On August 2 it sends a one-time finale blast — personal after-action
-stats, the final national count, the Hall of Honor link, plus the merch CTA for finishers
-and a pledge-fulfillment nudge for pledgers — idempotent via `profiles.finale_emailed_at`,
-with retry headroom through August 4. Every email carries an HMAC-signed one-click
-unsubscribe link.
+A Vercel Cron job (`vercel.json`) hits `/api/cron/reminders` daily at 13:00 UTC. It only
+sends inside a season's email window, and every date comes from the season row
+(`src/lib/email-schedule.ts`), so opening a new July needs no code change: a launch
+announcement on the first day, a weekly (Mondays, challenge month only) personalized
+pace/streak reminder to participants who have not logged that day, the one-time Final
+Push announcement on the eve of the last day (with day-of copy for anyone retried on the
+day), and, the day after the grace day, a one-time finale blast (personal after-action
+stats, the final national count, the Hall of Honor link, plus the merch CTA for
+finishers and a pledge-fulfillment nudge for pledgers) with two more days of retry
+headroom. Nothing is sent for a season whose `challenge_seasons.status` is still
+`interest`. Every send is recorded in `email_campaign_sends` under a per-season key
+(`launch-2027`, `finale-2027`, `reminder-2027-07-05`, ...), so re-runs never double-send
+and each season starts fresh. Recipients are paged through in id order, so the list has
+no fixed size limit. Every email carries an HMAC-signed one-click unsubscribe link.
 
 Required environment variables: `SUPABASE_SERVICE_ROLE_KEY`, `RESEND_API_KEY`,
-`EMAIL_FROM`, and `CRON_SECRET` (see `.env.local.example`). The route is a no-op until
-they are configured, and outside the July 1 – August 4, 2026 window.
+`EMAIL_FROM`, `CRON_SECRET`, and `UNSUBSCRIBE_SECRET` (see `.env.local.example`; set
+`UNSUBSCRIBE_SECRET` to the current `CRON_SECRET` value on existing deployments so links
+already sent keep working). The route is a no-op until
+they are configured, and outside each season's email window.
 
 Set `EMAIL_TEST_RECIPIENT` to a single address to enable a protected delivery check at
 `POST /api/email/test`. It requires `Authorization: Bearer <CRON_SECRET>` and never

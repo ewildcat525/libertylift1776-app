@@ -6,6 +6,7 @@
 // cap, the season window and the timestamp convention live in Postgres where
 // the native iOS client reaches them too.
 import type { SupabaseClient } from '@supabase/supabase-js'
+import type { Database } from './database.types'
 
 export interface LogPushupsResult {
   log_id: string
@@ -29,17 +30,18 @@ function newClientLogId(): string | null {
 }
 
 export async function logPushups(
-  supabase: SupabaseClient<any>,
+  supabase: SupabaseClient<Database>,
   options: { count: number; day?: string | null; notes?: string | null; clientLogId?: string | null },
 ) {
+  // Omitted arguments take the SQL defaults (null), the same as before.
   return supabase.rpc('log_pushups', {
     p_count: options.count,
-    p_logged_on: options.day ?? null,
-    p_notes: options.notes ?? null,
-    p_client_log_id: options.clientLogId ?? newClientLogId(),
+    p_logged_on: options.day ?? undefined,
+    p_notes: options.notes ?? undefined,
+    p_client_log_id: options.clientLogId ?? newClientLogId() ?? undefined,
   })
 }
 
-export async function clearPushupsForDay(supabase: SupabaseClient<any>, day: string) {
+export async function clearPushupsForDay(supabase: SupabaseClient<Database>, day: string) {
   return supabase.rpc('clear_pushups_for_day', { p_day: day })
 }

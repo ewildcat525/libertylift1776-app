@@ -76,7 +76,7 @@ export default function Home() {
     // Once the contest wraps, the hero leads with the final nationwide count.
     if (hallOpen === true) {
       supabase.rpc('get_community_progress').then(({ data }) => {
-        if (data?.total_pushups) setFinalCount(data.total_pushups as number)
+        if (data?.total_pushups) setFinalCount(data.total_pushups)
       })
     }
   }, [hallOpen, supabase])

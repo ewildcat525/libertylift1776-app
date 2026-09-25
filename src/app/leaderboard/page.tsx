@@ -8,6 +8,7 @@ import {
   FINAL_PUSH_DATE,
   finalPushPhase,
   localDateString,
+  seasonForDisplay,
 } from '@/lib/dates'
 import CommunityMilestoneBanner from '@/components/CommunityMilestoneBanner'
 import FinalPushBanner, { FinalPushRow } from '@/components/FinalPushBanner'
@@ -16,10 +17,29 @@ import ClickableName from '@/components/UserPushupChartModal'
 import Link from 'next/link'
 import { canUseChat } from '@/lib/flags'
 
+type BoardFilter = 'all' | 'streak' | 'daily' | 'recruits'
+
+const BOARD_SIZE = 100
+
+// The view column each tab ranks by.
+function sortColumn(filter: BoardFilter, ended: boolean) {
+  switch (filter) {
+    case 'streak':
+      return ended ? 'longest_streak' : 'current_streak'
+    case 'daily':
+      return 'best_day'
+    case 'recruits':
+      return 'recruits'
+    default:
+      return 'total_pushups'
+  }
+}
+
 export default function LeaderboardPage() {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([])
+  const [myStanding, setMyStanding] = useState<{ entry: LeaderboardEntry; rank: number } | null>(null)
   const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState<'all' | 'streak' | 'daily' | 'recruits' | 'finalpush'>('all')
+  const [filter, setFilter] = useState<BoardFilter | 'finalpush'>('all')
   const [userId, setUserId] = useState<string | null>(null)
   const [showChat, setShowChat] = useState(false)
   // Resolved after mount so the prerendered HTML matches the first render.
@@ -58,40 +78,106 @@ export default function LeaderboardPage() {
     })
   }, [])
 
-  useEffect(() => {
-    const loadLeaderboard = async () => {
-      try {
-        const supabase = createClient()
-        const { data, error } = await supabase
-          .from('leaderboard')
-          .select('*')
-          .limit(100)
-        
-        if (error) {
-          console.error('Leaderboard error:', error)
-        }
-        setLeaderboard(data || [])
-      } catch (err) {
-        console.error('Leaderboard fetch failed:', err)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    loadLeaderboard()
-  }, [])
-
   // Once the contest ends every current streak has expired to 0 (the view
   // applies the live-streak rule), so the final board ranks longest streak.
   const ended = phase === 'ended'
   const streakOf = (e: LeaderboardEntry) => (ended ? e.longest_streak : e.current_streak)
+  const board: BoardFilter = filter === 'finalpush' ? 'all' : filter
 
-  const sortedLeaderboard = [...leaderboard].sort((a, b) => {
-    if (filter === 'streak') return streakOf(b) - streakOf(a)
-    if (filter === 'daily') return b.best_day - a.best_day
-    if (filter === 'recruits') return (b.recruits || 0) - (a.recruits || 0)
-    return b.total_pushups - a.total_pushups
-  })
+  // Each tab is ranked by the database over everyone on the board, not by
+  // re-sorting whoever happened to make the top 100 by total.
+  useEffect(() => {
+    if (filter === 'finalpush' || phase === null) return
+    const column = sortColumn(board, ended)
+    let cancelled = false
+    setLoading(true)
+    const supabase = createClient()
+    supabase
+      .from('leaderboard')
+      .select('*')
+      .order(column, { ascending: false })
+      .order('total_pushups', { ascending: false })
+      .limit(BOARD_SIZE)
+      .then(({ data, error }) => {
+        if (cancelled) return
+        if (error) console.error('Leaderboard error:', error)
+        setLeaderboard(data || [])
+        setLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [filter, board, ended, phase])
+
+  // A patriot below the top 100 still gets to see where they stand.
+  useEffect(() => {
+    setMyStanding(null)
+    if (!userId || loading || filter === 'finalpush') return
+    if (leaderboard.some((entry) => entry.id === userId)) return
+    const column = sortColumn(board, ended)
+    let cancelled = false
+    const supabase = createClient()
+    supabase
+      .from('leaderboard')
+      .select('*')
+      .eq('id', userId)
+      .maybeSingle()
+      .then(async ({ data: me }) => {
+        if (cancelled || !me) return
+        // Competition ranking, like the view's global_rank: one more than
+        // the number of patriots strictly ahead.
+        const { count } = await supabase
+          .from('leaderboard')
+          .select('id', { count: 'exact', head: true })
+          .gt(column, me[column])
+        if (!cancelled && count !== null) setMyStanding({ entry: me, rank: count + 1 })
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [userId, leaderboard, loading, filter, board, ended])
+
+  const renderRow = (entry: LeaderboardEntry, rank: number) => (
+    <div key={entry.id} className={`native-leaderboard-row flex items-center gap-4 p-4 transition-colors ${entry.id === userId ? 'is-you' : ''}`} role="listitem">
+      <div className={`native-rank-badge w-10 h-10 flex items-center justify-center font-bold text-lg ${
+        rank === 1 ? 'bg-liberty-red text-white' :
+        rank === 2 ? 'bg-white text-liberty-dark' :
+        rank === 3 ? 'bg-white/70 text-liberty-dark' :
+        'bg-white/10 text-white/70'
+      }`}>
+        {String(rank).padStart(2, '0')}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="font-semibold text-white truncate">
+          <ClickableName
+            userId={entry.id}
+            displayName={entry.display_name}
+            stateCode={entry.state_code}
+            className="max-w-full truncate"
+          />
+        </div>
+        <div className="text-sm text-white/50">
+          {entry.state_code ? US_STATES[entry.state_code] : 'No state'}
+          {ended
+            ? entry.longest_streak > 0 && ` / best streak ${entry.longest_streak} days`
+            : entry.current_streak > 0 && ` / ${entry.current_streak} day streak`}
+        </div>
+      </div>
+      <div className="text-right">
+        <div className="font-bebas text-2xl text-white">
+          {filter === 'streak' ? streakOf(entry) :
+           filter === 'daily' ? entry.best_day :
+           filter === 'recruits' ? entry.recruits :
+           entry.total_pushups.toLocaleString()}
+        </div>
+        <div className="text-xs text-white/50">
+          {filter === 'streak' ? 'days' :
+           filter === 'daily' ? 'in one day' :
+           filter === 'recruits' ? 'recruited' : 'push-ups'}
+        </div>
+      </div>
+    </div>
+  )
 
   return (
     <>
@@ -111,7 +197,7 @@ export default function LeaderboardPage() {
             </div>
             <p className="text-white/60 mt-3">
               {ended
-                ? 'The 2026 books are closed. These standings are permanent.'
+                ? `The ${seasonForDisplay().year} books are closed. These standings are permanent.`
                 : phase === 'grace'
                   ? 'Last call — standings are certified after tonight.'
                   : 'The people putting in the work.'}
@@ -142,7 +228,7 @@ export default function LeaderboardPage() {
             ].map((tab) => (
               <button
                 key={tab.key}
-                onClick={() => setFilter(tab.key as 'all' | 'streak' | 'daily' | 'recruits' | 'finalpush')}
+                onClick={() => setFilter(tab.key as BoardFilter | 'finalpush')}
                 role="tab"
                 aria-selected={filter === tab.key}
                 className={`min-h-11 shrink-0 px-4 py-2 text-xs font-extrabold uppercase tracking-[0.1em] transition-colors border ${
@@ -237,49 +323,19 @@ export default function LeaderboardPage() {
               <p className="text-white/60">Be the first to log your push-ups and claim the top spot.</p>
             </div>
           ) : (
+            <>
             <div className="native-leaderboard-list card overflow-hidden divide-y divide-white/10" role="list">
-              {sortedLeaderboard.map((entry, index) => (
-                <div key={entry.id} className={`native-leaderboard-row flex items-center gap-4 p-4 transition-colors ${entry.id === userId ? 'is-you' : ''}`} role="listitem">
-                  <div className={`native-rank-badge w-10 h-10 flex items-center justify-center font-bold text-lg ${
-                    index === 0 ? 'bg-liberty-red text-white' :
-                    index === 1 ? 'bg-white text-liberty-dark' :
-                    index === 2 ? 'bg-white/70 text-liberty-dark' :
-                    'bg-white/10 text-white/70'
-                  }`}>
-                    {String(index + 1).padStart(2, '0')}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-semibold text-white truncate">
-                      <ClickableName
-                        userId={entry.id}
-                        displayName={entry.display_name}
-                        stateCode={entry.state_code}
-                        className="max-w-full truncate"
-                      />
-                    </div>
-                    <div className="text-sm text-white/50">
-                      {entry.state_code ? US_STATES[entry.state_code] : 'No state'}
-                      {ended
-                        ? entry.longest_streak > 0 && ` / best streak ${entry.longest_streak} days`
-                        : entry.current_streak > 0 && ` / ${entry.current_streak} day streak`}
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="font-bebas text-2xl text-white">
-                      {filter === 'streak' ? streakOf(entry) :
-                       filter === 'daily' ? entry.best_day :
-                       filter === 'recruits' ? (entry.recruits || 0) :
-                       entry.total_pushups.toLocaleString()}
-                    </div>
-                    <div className="text-xs text-white/50">
-                      {filter === 'streak' ? 'days' :
-                       filter === 'daily' ? 'in one day' :
-                       filter === 'recruits' ? 'recruited' : 'push-ups'}
-                    </div>
-                  </div>
-                </div>
-              ))}
+              {leaderboard.map((entry, index) => renderRow(entry, index + 1))}
             </div>
+            {myStanding && (
+              <div className="mt-4">
+                <div className="app-eyebrow mb-2">Your standing</div>
+                <div className="card overflow-hidden" role="list">
+                  {renderRow(myStanding.entry, myStanding.rank)}
+                </div>
+              </div>
+            )}
+            </>
           )}
 
           {/* Trash Talk CTA */}

@@ -79,8 +79,8 @@ export default function PledgeSetup({ userId, onComplete, existingPledge }: Pled
       }
 
       onComplete?.()
-    } catch (err: any) {
-      setError(err.message || 'Failed to save pledge')
+    } catch (err) {
+      setError((err as { message?: string } | null)?.message || 'Failed to save pledge')
     } finally {
       setSaving(false)
     }

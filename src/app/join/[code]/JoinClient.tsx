@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
-import { createClient, isValidStateCode } from '@/lib/supabase'
+import { createClient, isValidStateCode, type TablesUpdate } from '@/lib/supabase'
 import { clearPendingSignup, generateDisplayName, readPendingSignup } from '@/lib/onboarding'
 
 type JoinState = 'loading' | 'needs-auth' | 'joining' | 'joined' | 'error'
@@ -50,7 +50,7 @@ export default function JoinClient({ contestName, participantCount }: JoinClient
           .eq('id', user.id)
           .single()
 
-        const profileUpdates: Record<string, string> = {}
+        const profileUpdates: TablesUpdate<'profiles'> = {}
         if (!profile?.display_name) {
           profileUpdates.display_name = pendingSignup.displayName || generateDisplayName(pendingSignup.stateCode)
         }

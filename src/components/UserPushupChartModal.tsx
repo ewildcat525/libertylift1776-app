@@ -106,7 +106,7 @@ function useUserDailyPushups(userId: string | null) {
   return { data, summary, loading, error }
 }
 
-function ChartTooltip({ active, payload }: any) {
+function ChartTooltip({ active, payload }: { active?: boolean; payload?: { payload: DayBar }[] }) {
   if (!active || !payload?.length) return null
   const { day, count } = payload[0].payload as DayBar
   return (

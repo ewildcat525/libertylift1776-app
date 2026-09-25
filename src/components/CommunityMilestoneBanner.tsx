@@ -58,7 +58,7 @@ export default function CommunityMilestoneBanner({
     let cancelled = false
     supabase.rpc('get_community_progress').then(({ data }) => {
       if (cancelled || !data) return
-      const next = data as CommunityProgress
+      const next = data
       setProgress(next)
 
       // Fireworks once per milestone per device, for hero and crowd alike.
